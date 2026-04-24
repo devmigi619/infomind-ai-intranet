@@ -1,14 +1,34 @@
-# ADR-002: 백엔드 — Spring Boot + FastAPI 분리
+# ADR-002: Backend — Spring Boot + FastAPI Split
 
-## 결정
-업무 로직은 Spring Boot, AI/RAG는 FastAPI로 분리
+**Status**: Accepted
 
-## 이유
-- Spring Boot: 복잡한 결재 로직, Spring Security 기반 인증, JPA
-- FastAPI: Python AI 생태계 (LangChain, RAG) 활용
-- Python 단일 백엔드는 업무 로직 구현에 불리 (Spring Security 대비 취약)
-- AI 레이어를 격리하면 모델/전략 교체 시 업무 로직 영향 없음
+## Decision
 
-## 트레이드오프
-- Docker 서비스 2개 운영
-- 서비스 간 통신 오버헤드 (내부 네트워크라 미미)
+Business logic runs on Spring Boot (Java 21). AI and RAG workloads run on FastAPI (Python 3.11) as a separate service.
+
+## Context
+
+The system requires both complex business workflow logic (electronic approval with multi-level approval chains, FCM notifications) and AI capabilities (LLM inference, RAG, streaming). A single backend technology cannot serve both optimally.
+
+## Rationale
+
+| Concern | Spring Boot | FastAPI |
+|---|---|---|
+| Approval workflow, JPA, Spring Security | ✅ Mature, well-suited | ❌ Significantly more effort |
+| LangChain, Qdrant client, async streaming | ❌ Limited ecosystem | ✅ Native Python AI ecosystem |
+| Team familiarity | ✅ Java background | Acceptable learning curve |
+
+Isolating the AI layer means model or strategy changes (e.g., switching from Ollama to an external API) have zero impact on business logic.
+
+## Trade-offs
+
+| Factor | Impact |
+|---|---|
+| Operational complexity | Two Docker services to maintain instead of one |
+| Inter-service latency | Spring Boot → FastAPI calls over the internal Docker network; negligible at this scale |
+| Shared JWT secret | Required by the JWT Delegation Pattern (see ADR-003) |
+
+## Rejected Alternatives
+
+- **Python-only backend**: Spring Security has no Python equivalent. Implementing complex approval workflow logic and authentication in Python would be significantly more difficult.
+- **Java-only backend (no FastAPI)**: Integrating LangChain and Qdrant in Java is possible but the ecosystem maturity gap compared to Python is large.

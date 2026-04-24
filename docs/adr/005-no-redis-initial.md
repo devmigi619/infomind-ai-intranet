@@ -1,17 +1,37 @@
-# ADR-005: Redis — 초기 미사용
+# ADR-005: Redis — Deferred
 
-## 결정
-초기 버전에서 Redis 미사용, 필요 시 추가
+**Status**: Accepted
 
-## 이유
-35명 규모에서 Redis 실익이 있는 항목:
-- JWT 블랙리스트: 내부 시스템 + 8시간 만료로 감수 가능
-- RAG 캐시: 유의미하나 초기엔 문서량 적어 효과 제한적
-- Rate limiting / 세션 캐시: 이 규모에서 불필요
+## Decision
 
-## 추가 기준
-RAG 캐시 필요성이 커지거나, 즉시 로그아웃 무효화가 요구될 때 추가
+Redis is not included in the initial deployment. It will be added when a concrete requirement justifies the operational cost.
 
-## 트레이드오프
-- 로그아웃 후 토큰 만료 전까지 유효 상태 유지
-- 동일 RAG 질의 반복 시 매번 Ollama 추론 발생
+## Context
+
+Redis is commonly used for JWT token blacklisting, caching, rate limiting, and session storage. Each use case was evaluated against the target scale (35 users).
+
+## Rationale
+
+| Use case | Assessment |
+|---|---|
+| JWT token blacklist (immediate logout invalidation) | Accepted risk: internal system + 8-hour token expiry. See ADR-003. |
+| RAG query cache | Useful, but document corpus is small at launch; cache hit rate will be low. |
+| Rate limiting | Unnecessary at 35-user scale. |
+| Session cache | No session-based auth in this architecture. |
+
+None of the use cases provide sufficient value to justify adding Redis to the initial stack.
+
+## Criteria for Addition
+
+Add Redis when any of the following conditions is met:
+
+1. Immediate token invalidation on logout becomes a hard requirement.
+2. RAG query latency becomes a user-visible problem due to repeated identical queries.
+3. A new feature explicitly requires pub/sub or distributed locking.
+
+## Trade-offs
+
+| Factor | Impact |
+|---|---|
+| Logout token validity | Tokens remain valid until expiry after logout. Accepted for an internal intranet. |
+| Repeated RAG queries | Each query triggers a full Ollama inference. Acceptable while document volume is small. |

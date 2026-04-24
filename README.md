@@ -1,66 +1,74 @@
-# Infomind 사내 업무포탈
+# Infomind AI Intranet
 
-AI 허브 중심의 그룹웨어. 자연어 대화로 업무에 접근하는 새로운 패러다임.
+AI-hub-centered groupware for internal business operations. Provides natural language access to workflows including electronic approvals, bulletin boards, weekly reports, and scheduling.
 
-## 기술 스택
+## Technology Stack
 
-| 레이어 | 기술 |
+| Layer | Technology |
 |---|---|
-| 프론트엔드 + 모바일 | Expo (React Native Web) |
-| 백엔드 (업무로직) | Spring Boot 3.5 (Java 21) |
-| 백엔드 (AI/RAG) | FastAPI (Python 3.11) |
-| LLM | Ollama (Qwen 2.5 8B, 온프레미스) |
-| 관계형 DB | PostgreSQL 16 |
-| 벡터 DB | Qdrant |
-| 알림 | FCM (모바일) + SSE (웹) |
-| 인프라 | Docker Compose, 온프레미스 GPU 서버 |
+| Frontend / Mobile | Expo (React Native Web) — web + iOS + Android unified codebase |
+| Business Backend | Spring Boot 3.5 (Java 21) |
+| AI Backend | FastAPI (Python 3.11) |
+| LLM | Ollama — Qwen 2.5 8B (on-premise) |
+| Relational DB | PostgreSQL 16 |
+| Vector DB | Qdrant |
+| Push Notifications | FCM (mobile background) |
+| Real-time Streaming | SSE (web) |
+| Infrastructure | Docker Compose, on-premise GPU server |
 
-## 아키텍처
+## Architecture
 
 ```
-[Expo 웹/모바일]
-       ↓ HTTPS
-   [Nginx]
-    ↙              ↘
-[Spring Boot]     [FastAPI]
- - JWT 발급         - JWT 검증
- - 업무 로직        - AI 채팅 (SSE 스트리밍)
- - FCM 발송         - RAG / Qdrant
-    ↓                    ↓
-[PostgreSQL]          [Qdrant]
-                      [Ollama]
+[Expo Web / Mobile]
+        │ HTTPS
+    [Nginx]
+    ┌───┴───────────┐
+[Spring Boot]    [FastAPI]
+  JWT issuance     JWT self-validation (shared secret)
+  Business logic   AI chat (SSE streaming)
+  FCM dispatch     RAG / Qdrant
+        │                │
+  [PostgreSQL]      [Qdrant] [Ollama]
 ```
 
-## 프로젝트 구조
+**Auth pattern**: Spring Boot issues JWTs; FastAPI validates the same JWT using the shared secret, enabling direct SSE connections without proxy buffering. See [ADR-003](docs/adr/003-auth-jwt-delegation.md).
+
+## Repository Structure
 
 ```
 infomind-ai-intranet/
-├── frontend/    # Expo 앱
-├── backend/     # Spring Boot
-├── ai/          # FastAPI
-├── infra/       # Docker Compose, Nginx
-├── docs/        # 설계문서, ADR, 개발계획
-└── sample/      # UI 와이어프레임 (참고용)
+├── frontend/        # Expo application
+├── backend/         # Spring Boot application
+├── ai/              # FastAPI application
+├── infra/           # Docker Compose files, Nginx configuration
+├── docs/            # Architecture, ADRs, development plan, conventions
+└── sample/          # UI wireframes (reference only)
 ```
 
-## 빠른 시작
+## Quick Start
 
 ```bash
-# 1. 환경변수 설정
+# 1. Configure environment variables
 cp .env.example .env.dev
-# .env.dev 값 채우기
+# Edit .env.dev — set DB credentials, JWT secret, etc.
 
-# 2. 전체 서비스 실행
+# 2. Start all services (GPU server)
 cd infra
-docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file ../.env.dev up -d
+docker compose -f docker-compose.yml --env-file ../.env.dev up -d
 
-# 3. Ollama 모델 다운로드 (최초 1회)
+# 3. Pull Ollama models (first run only)
 docker exec -it infra-ollama-1 ollama pull qwen2.5:8b
+docker exec -it infra-ollama-1 ollama pull bona/bge-m3
 ```
 
-## 문서
+See [docs/SETUP.md](docs/SETUP.md) for full setup instructions.
 
-- [아키텍처](docs/ARCHITECTURE.md)
-- [개발 계획](docs/PLAN.md)
-- [개발환경 설정](docs/SETUP.md)
-- [의사결정 기록](docs/adr/)
+## Documentation
+
+| Document | Description |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Service topology, routing, auth flow |
+| [PLAN.md](docs/PLAN.md) | Development phases and feature checklist |
+| [SETUP.md](docs/SETUP.md) | Environment setup and deployment |
+| [CONVENTIONS.md](docs/CONVENTIONS.md) | Branch naming, commit format, coding standards |
+| [ADR Index](docs/adr/) | Architecture decision records |

@@ -1,14 +1,37 @@
-# ADR-003: 인증 — JWT 위임 패턴
+# ADR-003: Authentication — JWT Delegation Pattern
 
-## 결정
-JWT를 Spring Boot에서 발급, FastAPI에서 공유 시크릿으로 자체 검증
+**Status**: Accepted
 
-## 이유
-- Spring Boot: 단일 인증 권한 (발급/관리)
-- FastAPI: Spring Boot 호출 없이 독립 검증 → SSE 스트리밍 직접 연결 가능
-- A안(Spring Boot 경유 스트리밍)은 버퍼링 문제
-- B안(FastAPI 자체 인증)은 사용자 정보 이중 관리 문제
+## Decision
 
-## 트레이드오프
-- FastAPI가 JWT 시크릿을 공유받아야 함 → .env로 관리
-- 로그아웃 즉시 토큰 무효화 불가 (Redis 블랙리스트 없을 시)
+Spring Boot issues JWTs. FastAPI validates the same JWT using the shared secret independently, without calling Spring Boot.
+
+## Context
+
+The system has two backend services. AI chat requires SSE (Server-Sent Events) streaming. Three authentication patterns were evaluated.
+
+## Rationale
+
+**Option A — Stream through Spring Boot** (rejected): Client connects to Spring Boot, which proxies to FastAPI. Spring Boot's response buffering breaks SSE streaming.
+
+**Option B — FastAPI owns authentication** (rejected): FastAPI manages its own user store, duplicating user data and creating two sources of truth for identity.
+
+**Option C — JWT Delegation** (selected):
+- Spring Boot is the single authority for JWT issuance and user management.
+- FastAPI validates incoming JWTs using the same HS256 secret via environment variable injection.
+- FastAPI receives all necessary claims (user ID, roles) from the JWT payload — no Spring Boot call required.
+- Client connects to FastAPI directly for SSE, with no intermediary buffering.
+
+## Trade-offs
+
+| Factor | Impact |
+|---|---|
+| Secret sharing | `JWT_SECRET` must be injected into both services via `.env`. Treat as a high-sensitivity credential. |
+| Immediate logout invalidation | Not supported without a Redis token blacklist. On logout, tokens remain valid until expiry. Accepted for Phase 1; re-evaluate in Phase 3. |
+
+## Implementation Notes
+
+- Algorithm: HS256
+- Secret minimum length: 32 characters
+- Claims included in token: `sub` (user ID), `roles`, `iat`, `exp`
+- Token lifetime: configurable via `JWT_EXPIRY_HOURS` (default: 8 hours)

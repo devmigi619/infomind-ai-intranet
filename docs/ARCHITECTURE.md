@@ -1,54 +1,83 @@
-# 아키텍처 개요
+# Architecture
 
-## 서비스 구조
+## Service Topology
 
 ```
-[Expo 웹/모바일]
-       ↓ HTTPS
-   [Nginx]
-    ↙              ↘
-[Spring Boot]     [FastAPI]
- - JWT 발급         - JWT 검증 (공유 시크릿)
- - 업무 로직        - AI 채팅 / RAG
- - FCM 발송         - Ollama 호출
- - SSE              - Qdrant 검색
-    ↓                    ↓
-[PostgreSQL]          [Qdrant]
-                      [Ollama]
+[Expo Web / Mobile]
+        │ HTTPS
+    [Nginx :80/443]
+    ┌───┴────────────────┐
+[Spring Boot :8080]   [FastAPI :8000]
+  - JWT issuance          - JWT validation (shared secret)
+  - Business APIs         - AI chat (SSE streaming)
+  - FCM dispatch          - RAG pipeline
+  - SSE (web notify)      - Ollama inference
+        │                       │
+  [PostgreSQL :5432]    [Qdrant :6333]
+                        [Ollama :11434]
 ```
 
-## 서비스 역할
+All services run within a single Docker Compose network (`infomind-net`). No service port is exposed to the host except Nginx.
 
-| 서비스 | 역할 | 포트 (내부) |
+## Service Roles
+
+| Service | Role | Internal Port |
 |---|---|---|
-| nginx | 리버스 프록시, 라우팅 | 80/443 |
-| spring-boot | 업무 API, 인증, FCM | 8080 |
-| fastapi | AI 채팅, RAG, Ollama 연동 | 8000 |
-| postgresql | 업무 데이터 | 5432 |
-| qdrant | 벡터 검색 (RAG용) | 6333 |
-| ollama | 로컬 LLM 서버 | 11434 |
+| nginx | Reverse proxy, TLS termination, routing | 80 / 443 |
+| spring-boot | Business APIs, JWT issuance, FCM | 8080 |
+| fastapi | AI chat, RAG, Ollama integration | 8000 |
+| postgresql | Business relational data | 5432 |
+| qdrant | Vector search (RAG) | 6333 |
+| ollama | On-premise LLM server | 11434 |
 
-## 라우팅 규칙
+## Routing Rules
 
-| 경로 | 목적지 |
+| Path Prefix | Upstream |
 |---|---|
-| `/api/*` | Spring Boot |
-| `/ai/*` | FastAPI (SSE 스트리밍) |
-| `/` | 프론트엔드 정적 파일 |
+| `/api/*` | spring-boot |
+| `/ai/*` | fastapi (SSE: `proxy_buffering off`) |
+| `/` | Expo static build |
 
-## 인증 흐름
+## Authentication Flow
 
-1. 로그인 → Spring Boot → JWT 발급
-2. 업무 API → Spring Boot에서 JWT 검증
-3. AI 채팅 → FastAPI에서 JWT 자체 검증 (공유 시크릿)
+1. **Login** — Client `POST /api/auth/login` → Spring Boot validates credentials → issues JWT (HS256, shared secret).
+2. **Business API** — Client sends `Authorization: Bearer <token>` → Nginx forwards to Spring Boot → Spring Boot validates JWT.
+3. **AI chat** — Client sends `Authorization: Bearer <token>` → Nginx forwards to FastAPI → FastAPI validates JWT independently using the same shared secret. Spring Boot is not in the request path, enabling direct SSE streaming.
 
-## 알림
+**Rationale**: See [ADR-003](adr/003-auth-jwt-delegation.md).
 
-- 모바일 백그라운드: FCM (expo-notifications)
-- 웹 실시간: SSE (Spring Boot)
+**Token invalidation**: Immediate invalidation on logout is not supported without a Redis token blacklist. Accepted trade-off for Phase 1; re-evaluate in Phase 3.
 
-## 인프라
+## Notification Strategy
 
-- 온프레미스 GPU 서버 1대
-- Docker Compose로 전체 서비스 관리
-- 환경 분리: `.env.dev` / `.env.prod`
+| Scenario | Mechanism |
+|---|---|
+| Mobile app in background | FCM (via Firebase Admin SDK in Spring Boot) |
+| Web browser, real-time | SSE endpoint on Spring Boot |
+
+## AI Autonomy Policy
+
+Actions are classified by operational weight:
+
+| Action Type | Behavior |
+|---|---|
+| Read (schedules, approval lists, etc.) | AI responds directly |
+| Submit / Apply | AI drafts payload; user confirms before execution |
+| Approve / Reject | Explicit user confirmation always required |
+
+## Models
+
+| Purpose | Model | Dimensions |
+|---|---|---|
+| LLM (chat, reasoning) | `qwen2.5:8b` | — |
+| Text embedding (RAG) | `bona/bge-m3` | 1024 |
+
+The same models are used on both local development machines and the production GPU server. Only the `OLLAMA_URL` environment variable changes between environments.
+
+## Infrastructure
+
+- **Runtime**: Single on-premise GPU server with NVIDIA GPU.
+- **Orchestration**: Docker Compose (base file + environment override files).
+- **Environment separation**: `.env.dev` / `.env.prod` passed via `--env-file`.
+- **Deployment**: Manual — `git pull` → `docker compose up -d`.
+- **Volumes**: `postgres-data`, `qdrant-data`, `ollama-models` (persistent across container restarts).
