@@ -1,59 +1,59 @@
 # WHITEBOARD
 
-## Active Tasks
+## 진행 중인 작업
 
-| # | Item | Status |
+| # | 항목 | 상태 |
 |---|---|---|
-| 1 | Technology stack | ✅ Complete |
-| 2 | Architecture design | ✅ Complete |
-| 3 | Project setup | ✅ Complete |
-| 4 | Git repository + GitHub | ✅ Complete |
-| 5 | Documentation formalization | ✅ Complete |
-| 6 | Phase 1 development | 🔜 Next |
+| 1 | 기술스택 결정 | ✅ 완료 |
+| 2 | 아키텍처 설계 | ✅ 완료 |
+| 3 | 프로젝트 셋업 | ✅ 완료 |
+| 4 | Git 리포지토리 + GitHub | ✅ 완료 |
+| 5 | 문서 형식화 | ✅ 완료 |
+| 6 | Phase 1 개발 | 🔜 다음 |
 
-## Next Steps
+## 다음 할 일
 
-1. Deploy to GPU server → run full Docker Compose stack → verify all services healthy
-2. Begin Phase 1 development — see `docs/PLAN.md` for feature checklist
-3. Recommended first task: Backend JWT filter + Login API (`POST /api/auth/login`)
+1. GPU 서버에서 Docker Compose 전체 기동 확인 (전 서비스 정상 구동 여부)
+2. Phase 1 개발 시작 → 상세 내용: `docs/PLAN.md`
+3. 첫 작업 권장: Backend JWT 필터 + 로그인 API (`POST /api/auth/login`)
 
 ---
 
-## Confirmed Decisions
+## 확정 사항
 
-### Product Direction
-- AI chatbot hub-centered groupware / business portal
-- AI autonomy by action weight: read=auto / submit=confirm / approve=explicit
+### 제품 방향
+- AI 챗봇 허브 중심 그룹웨어/업무포탈
+- AI 자율도: 액션 무게 기준 (조회 자율 / 상신 확인 / 승인 명시)
 
-### Technology Stack
+### 기술 스택
 
-| Layer | Technology |
+| 레이어 | 기술 |
 |---|---|
-| Frontend + Mobile | Expo (React Native Web) |
-| Business Backend | Spring Boot 3.5 (Java 21) |
-| AI Backend | FastAPI (Python 3.11) |
-| LLM | Ollama — Qwen 2.5 8B (on-premise) |
+| 프론트엔드 + 모바일 | Expo (React Native Web) |
+| 백엔드 (업무로직) | Spring Boot 3.5 (Java 21) |
+| 백엔드 (AI/RAG) | FastAPI (Python 3.11) |
+| LLM | Ollama — Qwen 2.5 8B (온프레미스) |
 | DB | PostgreSQL 16 + Qdrant |
-| Notifications | FCM + SSE |
-| Infrastructure | Docker Compose, on-premise GPU server |
-| Redis | Deferred — add in Phase 3 if needed |
+| 알림 | FCM + SSE |
+| 인프라 | Docker Compose, 온프레미스 GPU 서버 |
+| Redis | 초기 미사용, Phase 3 시 재검토 |
 
-### Architecture — JWT Delegation Pattern
+### 아키텍처 — JWT 위임 패턴
 
 ```
-[Expo] → [Nginx] → [Spring Boot]  (Business APIs, JWT issuance)
-                 → [FastAPI]      (AI chat SSE, JWT self-validation)
+[Expo] → [Nginx] → [Spring Boot]  (업무 API, JWT 발급)
+                 → [FastAPI]      (AI 채팅 SSE, JWT 자체검증)
 [Spring Boot] → [PostgreSQL]
 [FastAPI]     → [Qdrant] + [Ollama]
 ```
 
-### Development Phases
+### 개발 페이즈
 
-- **Phase 1**: Electronic approval + weekly report + bulletin board + AI chat
-- **Phase 2**: Calendar, meeting room reservation, vehicle reservation
-- **Phase 3**: Certificate printing, role management, admin screen, RAG
+- **Phase 1**: 전자결재 + 주간보고 + 게시판 + AI 채팅
+- **Phase 2**: 캘린더, 회의실 예약, 차량 예약
+- **Phase 3**: 증명서 출력, 권한관리, 관리자 화면, RAG
 
-### Team
+### 팀
 
-- Dev team: 3 (lead × 1, engineer × 2)
-- Target users: ~35 employees
+- 개발팀: 부장 1인 + 사원 2인 (총 3명)
+- 대상 사용자: 약 35명
