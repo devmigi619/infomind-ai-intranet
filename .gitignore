@@ -1,0 +1,37 @@
+# 환경변수 (절대 커밋 금지)
+.env
+.env.dev
+.env.prod
+.env.local
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Frontend (Expo)
+frontend/node_modules/
+frontend/.expo/
+frontend/dist/
+
+# Backend (Spring Boot)
+backend/build/
+backend/.gradle/
+backend/bin/
+
+# AI (FastAPI)
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+ai/.venv/
+
+# Claude Code
+.claude/
+.omc/
+
+# Logs
+*.log

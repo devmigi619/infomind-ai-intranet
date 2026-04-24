@@ -1,0 +1,30 @@
+services:
+  nginx:
+    ports:
+      - "80:80"
+
+  spring-boot:
+    # 개발 중엔 빌드 없이 Gradle 직접 실행 권장
+    # ./gradlew bootRun
+    ports:
+      - "8080:8080"
+
+  fastapi:
+    # 개발 중엔 직접 실행 권장
+    # uvicorn main:app --reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../ai:/app
+
+  postgresql:
+    ports:
+      - "5432:5432"    # 로컬 DB 클라이언트 접속용
+
+  qdrant:
+    ports:
+      - "6333:6333"    # Qdrant 대시보드 접속용
+
+  ollama:
+    ports:
+      - "11434:11434"  # Ollama API 직접 접속용

@@ -1,0 +1,20 @@
+services:
+  nginx:
+    ports:
+      - "80:80"
+      - "443:443"
+
+  spring-boot:
+    restart: always
+
+  fastapi:
+    restart: always
+
+  postgresql:
+    restart: always
+
+  qdrant:
+    restart: always
+
+  ollama:
+    restart: always
