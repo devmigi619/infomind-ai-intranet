@@ -1,0 +1,1283 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 1단계 전체 레이아웃 셸</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font-family: inherit; }
+svg { stroke: currentColor; fill: none; }
+
+/* ===== Layout ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+.body {
+  display: grid;
+  grid-template-columns: 64px 0px 1fr 360px;
+  height: calc(100vh - 48px);
+  transition: grid-template-columns 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+.app.lp-open .body { grid-template-columns: 64px 360px 1fr 360px; }
+.app.rp-closed .body { grid-template-columns: 64px 0px 1fr 0px; }
+.app.lp-open.rp-closed .body { grid-template-columns: 64px 360px 1fr 0px; }
+.app.rp-closed .right-panel { display: none; }
+.left-panel { overflow: hidden; }
+.app:not(.lp-open) .left-panel { display: none; }
+
+/* ===== TopHeader ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: #000;
+  cursor: pointer;
+  user-select: none;
+  flex-shrink: 0;
+}
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.5;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 16px 0 40px;
+  background: #F0F0F0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
+  cursor: not-allowed;
+}
+.search-bar svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: rgba(0,0,0,0.3);
+}
+.search-bar .preparing-tag {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.04em;
+}
+
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* 관리자 토글 스위치 */
+.admin-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px;
+  user-select: none;
+}
+.admin-label {
+  font-size: 12px;
+  color: rgba(0,0,0,0.55);
+}
+.app.admin-on .admin-label { color: #0A2463; font-weight: 500; }
+
+.switch {
+  width: 32px;
+  height: 18px;
+  background: rgba(0,0,0,0.15);
+  border-radius: 9px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.switch::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+.app.admin-on .switch { background: #0A2463; }
+.app.admin-on .switch::after { left: 16px; }
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: rgba(0,0,0,0.6);
+}
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.icon-btn.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0A2463;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* ===== NavRail ===== */
+.nav-rail {
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  overflow: hidden;
+}
+.nav-item {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  color: rgba(0,0,0,0.55);
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: #0A2463; }
+.nav-item.active { background: rgba(10,36,99,0.08); color: #0A2463; }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: #0A2463;
+  border-radius: 0 2px 2px 0;
+}
+.nav-item .badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+}
+.nav-divider {
+  width: 32px;
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 4px 0;
+}
+/* 관리자 모드 시 NavRail 메뉴 완전 교체 */
+.nav-user { display: flex; }
+.nav-admin { display: none; }
+.app.admin-on .nav-user { display: none; }
+.app.admin-on .nav-admin { display: flex; }
+
+/* ===== LeftPanel ===== */
+.left-panel {
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.lp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.lp-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #000;
+  white-space: nowrap;
+}
+.lp-actions { display: flex; gap: 4px; }
+.lp-btn {
+  border: none;
+  background: #0A2463;
+  color: #fff;
+  padding: 6px 12px 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.lp-btn:hover { background: #082052; }
+.lp-btn.icon-only {
+  background: transparent;
+  color: rgba(0,0,0,0.5);
+  padding: 6px;
+}
+.lp-btn.icon-only:hover { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.8); }
+.lp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lp-content.switching {
+  animation: lpFade 0.25s ease;
+}
+@keyframes lpFade {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* LeftPanel 콘텐츠 (예시: 결재) */
+.lp-card {
+  padding: 12px;
+  background: #FAFAFA;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.04);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.lp-card:hover { background: #fff; border-color: rgba(10,36,99,0.2); box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+.lp-card-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  gap: 8px;
+}
+.lp-card-title {
+  font-size: 13px;
+  color: #000;
+  font-weight: 500;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.status-badge {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #fff;
+  flex-shrink: 0;
+}
+.status-pending { background: #F59E0B; }
+.status-approved { background: #10B981; }
+.status-rejected { background: #EF4444; }
+.lp-card-meta {
+  font-size: 11px;
+  color: rgba(0,0,0,0.5);
+}
+.lp-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 8px 4px 4px;
+}
+
+/* ===== Main Content ===== */
+.main-content {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+}
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(10,36,99,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #0A2463;
+}
+.welcome-title {
+  font-size: 22px;
+  font-weight: 500;
+  color: #000;
+}
+.welcome-subtitle {
+  font-size: 14px;
+  color: rgba(0,0,0,0.55);
+  margin-bottom: 16px;
+}
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.quick-btn {
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.quick-btn:hover { background: rgba(10,36,99,0.12); }
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px;
+  display: none;
+  flex-direction: column;
+  gap: 20px;
+}
+.app.chat-active .welcome { display: none; }
+.app.chat-active .messages { display: flex; }
+
+.msg {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.msg.user {
+  background: #0A2463;
+  color: #fff;
+  align-self: flex-end;
+  border-bottom-right-radius: 4px;
+}
+.msg.ai {
+  background: #F5F5F5;
+  color: #000;
+  align-self: flex-start;
+  border-bottom-left-radius: 4px;
+}
+
+.chat-input-wrap {
+  padding: 12px 20px 20px;
+}
+.chat-input {
+  display: flex;
+  align-items: center;
+  background: #F5F5F5;
+  border-radius: 24px;
+  padding: 4px 4px 4px 20px;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.chat-input:focus-within {
+  background: #fff;
+  border-color: rgba(10,36,99,0.3);
+  box-shadow: 0 0 0 3px rgba(10,36,99,0.08);
+}
+.chat-input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  height: 40px;
+  color: #000;
+}
+.chat-input input::placeholder { color: rgba(0,0,0,0.4); }
+.send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0A2463;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== RightPanel ===== */
+.right-panel {
+  background: #FAFAFA;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.rp-tabs {
+  display: flex;
+  padding: 12px 16px 8px;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.rp-tab {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(0,0,0,0.4);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+}
+.rp-tab:hover { color: rgba(0,0,0,0.7); background: rgba(0,0,0,0.03); }
+.rp-tab.active {
+  color: #0A2463;
+  background: rgba(10,36,99,0.08);
+}
+.rp-tab.active::before {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px;
+  height: 2px;
+  background: #0A2463;
+  border-radius: 1px;
+}
+.rp-tab-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(0,0,0,0.1);
+  margin: 0 4px;
+}
+.rp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* RightPanel 홈 탭 콘텐츠 */
+.rp-home, .rp-ai { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.2s; }
+.app.rp-tab-home .rp-home { display: flex; }
+.app.rp-tab-ai .rp-ai { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.briefing-greet {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(10,36,99,0.08), rgba(10,36,99,0.02));
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #0A2463;
+}
+.card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.card:hover { border-color: rgba(10,36,99,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.card-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+.icon-blue { background: rgba(10,36,99,0.1); color: #0A2463; }
+.icon-amber { background: rgba(245,158,11,0.12); color: #F59E0B; }
+.icon-red { background: rgba(239,68,68,0.12); color: #EF4444; }
+.card-title { font-size: 13px; font-weight: 500; color: rgba(0,0,0,0.85); flex: 1; }
+.card-count { font-size: 18px; font-weight: 600; color: #000; }
+.card-body { font-size: 12px; color: rgba(0,0,0,0.6); line-height: 1.5; }
+.card-body strong { color: #000; font-weight: 500; }
+
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 8px 4px 4px;
+}
+.qa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.qa-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(0,0,0,0.7);
+  transition: all 0.15s;
+}
+.qa-card:hover { border-color: rgba(10,36,99,0.2); color: #0A2463; }
+.qa-icon { font-size: 18px; margin-bottom: 4px; display: block; }
+
+/* AI 탭 - empty state */
+.ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  text-align: center;
+  flex: 1;
+}
+.ai-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(10,36,99,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+  color: rgba(10,36,99,0.6);
+}
+.ai-empty-title {
+  font-size: 14px;
+  color: rgba(0,0,0,0.7);
+  margin-bottom: 8px;
+}
+.ai-empty-sub {
+  font-size: 12px;
+  color: rgba(0,0,0,0.45);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.ai-suggestion {
+  font-size: 11px;
+  color: rgba(0,0,0,0.4);
+  margin-bottom: 8px;
+}
+.suggestion-chips {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 240px;
+}
+.chip {
+  padding: 8px 12px;
+  background: rgba(10,36,99,0.05);
+  color: #0A2463;
+  border-radius: 16px;
+  font-size: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { background: rgba(10,36,99,0.1); }
+
+/* AI 탭 - 응답 콘텐츠 */
+.ai-active { display: none; flex-direction: column; gap: 16px; }
+.app.chat-active .ai-empty { display: none; }
+.app.chat-active .ai-active { display: flex; }
+
+.ai-card {
+  background: #fff;
+  border: 1px solid rgba(10,36,99,0.2);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(10,36,99,0.04);
+}
+.ai-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0A2463;
+}
+.ai-card-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(0,0,0,0.85);
+  margin-bottom: 12px;
+}
+.action-btn {
+  width: 100%;
+  padding: 10px 16px;
+  background: #0A2463;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.action-btn:hover { background: #082052; }
+
+.ai-section-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 8px;
+}
+.related-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px;
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: all 0.15s;
+}
+.related-link:hover { border-color: rgba(10,36,99,0.2); }
+.related-icon {
+  width: 28px;
+  height: 28px;
+  background: rgba(10,36,99,0.06);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0A2463;
+  flex-shrink: 0;
+}
+.related-info { flex: 1; min-width: 0; }
+.related-title { font-size: 12px; color: #000; }
+.related-sub { font-size: 11px; color: rgba(0,0,0,0.45); }
+.related-arrow { color: rgba(0,0,0,0.3); flex-shrink: 0; }
+
+/* Avatar dropdown */
+.avatar-wrap { position: relative; }
+.avatar-dropdown {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  width: 220px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  display: none;
+  flex-direction: column;
+  z-index: 1000;
+  overflow: hidden;
+}
+.avatar-wrap.open .avatar-dropdown { display: flex; }
+.dd-user {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.dd-name { font-size: 14px; font-weight: 500; color: #000; }
+.dd-meta { font-size: 12px; color: rgba(0,0,0,0.5); margin-top: 2px; }
+.dd-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #000;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.dd-item:hover { background: rgba(0,0,0,0.04); }
+.dd-item.danger { color: #EF4444; }
+.dd-item.danger:hover { background: rgba(239,68,68,0.06); }
+.dd-divider { height: 1px; background: rgba(0,0,0,0.06); }
+
+/* ===== 데모 컨트롤 ===== */
+.demo-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000;
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+  flex-wrap: wrap;
+  max-width: 90vw;
+}
+.demo-controls span { padding: 0 4px; opacity: 0.7; }
+.demo-controls button {
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.demo-controls button.active { background: #fff; color: #000; }
+.demo-controls button:hover:not(.active) { background: rgba(255,255,255,0.2); }
+.demo-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 4px;
+}
+</style>
+</head>
+<body>
+
+<div class="app rp-tab-home" id="app">
+
+  <!-- ============ TopHeader ============ -->
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+
+    <div class="search-bar" title="Phase 2에서 동작 시작">
+      <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="통합검색 준비 중..." disabled />
+      <span class="preparing-tag">준비 중</span>
+    </div>
+
+    <div class="top-actions">
+      <!-- 관리자 토글 (ADMIN 계정만 노출) -->
+      <div class="admin-toggle" id="admin-toggle" title="관리자 모드 토글">
+        <span class="admin-label">관리자 모드</span>
+        <div class="switch"></div>
+      </div>
+
+      <button class="icon-btn" title="알림" id="bell-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="dot"></span>
+      </button>
+
+      <button class="icon-btn" title="RightPanel 토글" id="rp-toggle">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>
+      </button>
+
+      <div class="avatar-wrap" id="avatar-wrap">
+        <div class="avatar">홍</div>
+        <div class="avatar-dropdown">
+          <div class="dd-user">
+            <div class="dd-name">홍길동</div>
+            <div class="dd-meta">개발팀 · 사원</div>
+          </div>
+          <button class="dd-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            설정
+          </button>
+          <div class="dd-divider"></div>
+          <button class="dd-item danger">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ Body ============ -->
+  <div class="body">
+
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <!-- 일반 사용자 메뉴 (디폴트) -->
+      <div class="nav-user" style="flex-direction: column; gap: 4px; align-items: center;">
+        <div class="nav-item active" data-panel="home" title="홈 (AI 채팅)">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-item" data-panel="board" title="게시판">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+        </div>
+        <div class="nav-item" data-panel="approval" title="전자결재">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+          <span class="badge">2</span>
+        </div>
+        <div class="nav-item" data-panel="report" title="주간보고">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+        </div>
+        <div class="nav-item" data-panel="calendar" title="캘린더">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+        </div>
+        <div class="nav-item" data-panel="meeting" title="회의실">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+        </div>
+        <div class="nav-item" data-panel="vehicle" title="차량">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 17h2l1.5-7h11L19 17h2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>
+        </div>
+      </div>
+
+      <!-- 관리자 메뉴 (토글 ON 시 NavRail 자체가 교체) -->
+      <div class="nav-admin" style="flex-direction: column; gap: 4px; align-items: center;">
+        <div class="nav-item active" data-panel="admin-home" title="관리자 홈">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-item" data-panel="admin-users" title="사용자 관리">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="nav-item" data-panel="admin-roles" title="권한 관리">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M9 12l2 2 4-4M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c1.5 0 2.91.37 4.15 1.02"/></svg>
+        </div>
+        <div class="nav-item" data-panel="admin-categories" title="게시판 카테고리">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5"/></svg>
+        </div>
+        <div class="nav-item" data-panel="admin-approval-line" title="결재선 템플릿">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h6"/></svg>
+        </div>
+        <div class="nav-item" data-panel="admin-system" title="시스템 설정">
+          <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- LeftPanel (열기/닫기) -->
+    <aside class="left-panel">
+      <div class="lp-header">
+        <div class="lp-title" id="lp-title">전자결재</div>
+        <div class="lp-actions">
+          <button class="lp-btn">
+            열기
+            <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
+          <button class="lp-btn icon-only" id="lp-close" title="닫기">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="lp-content" id="lp-content">
+        <div class="lp-section-label">대기 중</div>
+        <div class="lp-card">
+          <div class="lp-card-row">
+            <div class="lp-card-title">연차 신청 4/28</div>
+            <div class="status-badge status-pending">대기</div>
+          </div>
+          <div class="lp-card-meta">홍길동 · 어제</div>
+        </div>
+        <div class="lp-card">
+          <div class="lp-card-row">
+            <div class="lp-card-title">출장비 정산 - 부산</div>
+            <div class="status-badge status-pending">대기</div>
+          </div>
+          <div class="lp-card-meta">김철수 · 2일 전</div>
+        </div>
+
+        <div class="lp-section-label">최근 처리</div>
+        <div class="lp-card">
+          <div class="lp-card-row">
+            <div class="lp-card-title">법인카드 사용 보고</div>
+            <div class="status-badge status-approved">승인</div>
+          </div>
+          <div class="lp-card-meta">박이사 · 4/24</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content (AI 채팅) -->
+    <main class="main-content">
+      <!-- Welcome (메시지 없음) -->
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 홍길동님</div>
+        <div class="welcome-subtitle">무엇을 도와드릴까요?</div>
+        <div class="quick-actions">
+          <button class="quick-btn">📋 결재 현황</button>
+          <button class="quick-btn">📝 주간보고</button>
+          <button class="quick-btn">📌 공지 확인</button>
+        </div>
+      </div>
+
+      <!-- Messages (메시지 진행) -->
+      <div class="messages">
+        <div class="msg user">내일 휴가 써줘</div>
+        <div class="msg ai">내일(4/28, 화) 연차 신청을 도와드릴게요. 우측 패널에서 결재 화면으로 바로 이동하실 수 있습니다.</div>
+      </div>
+
+      <!-- 입력창 -->
+      <div class="chat-input-wrap">
+        <div class="chat-input">
+          <input type="text" placeholder="AI에게 물어보거나 작업을 요청하세요..." />
+          <button class="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- RightPanel -->
+    <aside class="right-panel">
+      <!-- 탭 헤더 (segmented icon-only) -->
+      <div class="rp-tabs">
+        <button class="rp-tab active" data-tab="home" title="홈">
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+        </button>
+        <div class="rp-tab-divider"></div>
+        <button class="rp-tab" data-tab="ai" title="AI">AI</button>
+      </div>
+
+      <div class="rp-content">
+        <!-- 홈 탭 -->
+        <div class="rp-home">
+          <div class="briefing-greet">
+            👋 좋은 아침입니다, 홍길동님.<br>
+            오늘 챙기실 항목 3가지를 정리했어요.
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon icon-amber">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+              </div>
+              <div class="card-title">결재 대기</div>
+              <div class="card-count">2</div>
+            </div>
+            <div class="card-body"><strong>휴가 신청 (김철수)</strong> 등 2건. 그 중 1건은 오늘 안 처리.</div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon icon-blue">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+              </div>
+              <div class="card-title">오늘 일정</div>
+              <div class="card-count">3</div>
+            </div>
+            <div class="card-body">10:00 팀 스탠드업 · 14:00 클라이언트 · 16:30 1on1</div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon icon-red">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              </div>
+              <div class="card-title">마감 임박</div>
+            </div>
+            <div class="card-body"><strong>주간보고서</strong>가 내일 마감입니다.</div>
+          </div>
+
+          <div class="section-label">빠른 액션</div>
+          <div class="qa-grid">
+            <div class="qa-card"><span class="qa-icon">🏖️</span>휴가 신청</div>
+            <div class="qa-card"><span class="qa-icon">📝</span>보고서 작성</div>
+            <div class="qa-card"><span class="qa-icon">🚗</span>차량 예약</div>
+            <div class="qa-card"><span class="qa-icon">🏢</span>회의실 예약</div>
+          </div>
+        </div>
+
+        <!-- AI 탭 -->
+        <div class="rp-ai">
+          <!-- 대화 없을 때 -->
+          <div class="ai-empty">
+            <div class="ai-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="ai-empty-title">AI에게 물어보세요</div>
+            <div class="ai-empty-sub">대화하면 관련 문서와 업무를<br>여기에 정리해드립니다.</div>
+            <div class="ai-suggestion">예시</div>
+            <div class="suggestion-chips">
+              <button class="chip">출장 규정 알려줘</button>
+              <button class="chip">이번 주 결재 현황</button>
+              <button class="chip">휴가 신청 방법</button>
+            </div>
+          </div>
+
+          <!-- 대화 진행 시 (chat-active) -->
+          <div class="ai-active">
+            <div class="ai-card">
+              <div class="ai-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="#0A2463"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                연차 신청 준비 완료
+              </div>
+              <div class="ai-card-body">
+                <strong>2026년 4월 28일 (화)</strong> 연차 신청서가 작성되었습니다.<br>
+                결재선: 김부장 → 박이사
+              </div>
+              <button class="action-btn">휴가결재 화면으로 이동</button>
+            </div>
+
+            <div>
+              <div class="ai-section-title">관련 문서</div>
+              <div class="related-link">
+                <div class="related-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                </div>
+                <div class="related-info">
+                  <div class="related-title">연차 사용 규정</div>
+                  <div class="related-sub">사규 · 인사팀</div>
+                </div>
+                <svg class="related-arrow" width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+
+            <div>
+              <div class="ai-section-title">관련 업무 바로가기</div>
+              <div class="related-link">
+                <div class="related-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+                </div>
+                <div class="related-info">
+                  <div class="related-title">캘린더에서 확인</div>
+                  <div class="related-sub">4월 28일 일정</div>
+                </div>
+                <svg class="related-arrow" width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+              <div class="related-link">
+                <div class="related-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                </div>
+                <div class="related-info">
+                  <div class="related-title">잔여 연차 확인</div>
+                  <div class="related-sub">올해 7일 남음</div>
+                </div>
+                <svg class="related-arrow" width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- ===== 데모 컨트롤 ===== -->
+  <div class="demo-controls">
+    <span>📌</span>
+    <button id="d-lp">LeftPanel 열기</button>
+    <div class="demo-divider"></div>
+    <button id="d-rp-home" class="active">RP·홈</button>
+    <button id="d-rp-ai">RP·AI</button>
+    <button id="d-rp-toggle">RP 닫기</button>
+    <div class="demo-divider"></div>
+    <button id="d-chat">채팅 시작</button>
+    <button id="d-admin">관리자 토글</button>
+  </div>
+
+</div>
+
+<script>
+const app = document.getElementById('app');
+
+// LeftPanel 토글
+document.getElementById('d-lp').addEventListener('click', (e) => {
+  app.classList.toggle('lp-open');
+  e.target.textContent = app.classList.contains('lp-open') ? 'LeftPanel 닫기' : 'LeftPanel 열기';
+});
+document.getElementById('lp-close').addEventListener('click', () => {
+  app.classList.remove('lp-open');
+  document.getElementById('d-lp').textContent = 'LeftPanel 열기';
+});
+
+// NavRail 메뉴 클릭 — 토글 동작 + 페이드 애니메이션
+const titleMap = {
+  board: '게시판', approval: '전자결재', report: '주간보고',
+  calendar: '캘린더', meeting: '회의실', vehicle: '차량',
+  'admin-users': '사용자 관리', 'admin-roles': '권한 관리',
+  'admin-categories': '게시판 카테고리', 'admin-approval-line': '결재선 템플릿',
+  'admin-system': '시스템 설정',
+};
+let lastPanel = null;
+
+document.querySelectorAll('.nav-item').forEach((item) => {
+  item.addEventListener('click', () => {
+    const panel = item.dataset.panel;
+    const isHome = panel === 'home' || panel === 'admin-home';
+    const wasActive = item.classList.contains('active');
+    const lpOpen = app.classList.contains('lp-open');
+
+    // 같은 메뉴 다시 클릭 = LP 닫기 (토글)
+    if (wasActive && lpOpen && !isHome) {
+      app.classList.remove('lp-open');
+      document.getElementById('d-lp').textContent = 'LeftPanel 열기';
+      // 홈 active 처리
+      document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+      const home = document.querySelector(`.nav-item[data-panel="${app.classList.contains('admin-on') ? 'admin-home' : 'home'}"]`);
+      if (home) home.classList.add('active');
+      lastPanel = null;
+      return;
+    }
+
+    // 활성 표시 변경
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+    item.classList.add('active');
+
+    if (isHome) {
+      app.classList.remove('lp-open');
+      document.getElementById('d-lp').textContent = 'LeftPanel 열기';
+      lastPanel = null;
+    } else {
+      app.classList.add('lp-open');
+      document.getElementById('d-lp').textContent = 'LeftPanel 닫기';
+      document.getElementById('lp-title').textContent = titleMap[panel] || '메뉴';
+
+      // 콘텐츠 전환 페이드 (다른 메뉴로 이동할 때만)
+      if (lastPanel && lastPanel !== panel) {
+        const lpc = document.getElementById('lp-content');
+        lpc.classList.remove('switching');
+        void lpc.offsetWidth; // reflow
+        lpc.classList.add('switching');
+      }
+      lastPanel = panel;
+    }
+  });
+});
+
+// RightPanel 탭
+const dHome = document.getElementById('d-rp-home');
+const dAi = document.getElementById('d-rp-ai');
+function setRpTab(t) {
+  app.classList.remove('rp-tab-home', 'rp-tab-ai');
+  app.classList.add('rp-tab-' + t);
+  document.querySelectorAll('.rp-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === t);
+  });
+  dHome.classList.toggle('active', t === 'home');
+  dAi.classList.toggle('active', t === 'ai');
+}
+dHome.addEventListener('click', () => setRpTab('home'));
+dAi.addEventListener('click', () => setRpTab('ai'));
+document.querySelectorAll('.rp-tab').forEach((tab) => {
+  tab.addEventListener('click', () => setRpTab(tab.dataset.tab));
+});
+
+// RightPanel 토글 (열기/닫기)
+const dRpToggle = document.getElementById('d-rp-toggle');
+const rpToggle = document.getElementById('rp-toggle');
+function toggleRp() {
+  app.classList.toggle('rp-closed');
+  const closed = app.classList.contains('rp-closed');
+  dRpToggle.textContent = closed ? 'RP 열기' : 'RP 닫기';
+  rpToggle.classList.toggle('active', !closed);
+}
+rpToggle.classList.add('active');
+dRpToggle.addEventListener('click', toggleRp);
+rpToggle.addEventListener('click', toggleRp);
+
+// 채팅 시작 / 비우기
+const dChat = document.getElementById('d-chat');
+dChat.addEventListener('click', () => {
+  app.classList.toggle('chat-active');
+  dChat.textContent = app.classList.contains('chat-active') ? '채팅 비우기' : '채팅 시작';
+  if (app.classList.contains('chat-active')) {
+    setRpTab('ai');
+  }
+});
+
+// 관리자 토글
+const adminToggle = document.getElementById('admin-toggle');
+const dAdmin = document.getElementById('d-admin');
+function toggleAdmin() {
+  app.classList.toggle('admin-on');
+  const on = app.classList.contains('admin-on');
+  dAdmin.textContent = on ? '관리자 OFF' : '관리자 토글';
+}
+adminToggle.addEventListener('click', toggleAdmin);
+dAdmin.addEventListener('click', toggleAdmin);
+
+// 아바타 드롭다운
+const avatarWrap = document.getElementById('avatar-wrap');
+avatarWrap.addEventListener('click', (e) => {
+  e.stopPropagation();
+  avatarWrap.classList.toggle('open');
+});
+document.addEventListener('click', () => avatarWrap.classList.remove('open'));
+</script>
+
+</body>
+</html>

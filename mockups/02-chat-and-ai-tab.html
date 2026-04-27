@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 2단계: AI 채팅 + AI 탭 연동</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font-family: inherit; }
+svg { stroke: currentColor; fill: none; }
+
+/* ===== Layout ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+.body {
+  display: flex;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ===== TopHeader (간략) ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+}
+.brand { font-size: 18px; font-weight: 300; letter-spacing: 0.12em; flex-shrink: 0; }
+.search-bar {
+  flex: 1; max-width: 480px; margin: 0 auto;
+  height: 32px; border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px; background: #F0F0F0;
+  display: flex; align-items: center; padding: 0 16px;
+  font-size: 12px; color: rgba(0,0,0,0.4);
+  opacity: 0.5;
+}
+.top-right { display: flex; align-items: center; gap: 8px; }
+.icon-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: rgba(0,0,0,0.6); cursor: pointer; }
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.icon-btn.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #0A2463; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+/* ===== NavRail (간략) ===== */
+.nav-rail {
+  width: 64px; background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0; display: flex; flex-direction: column;
+  gap: 4px; align-items: center;
+  flex-shrink: 0;
+}
+.nav-item {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; cursor: pointer;
+  color: rgba(0,0,0,0.55);
+}
+.nav-item.active { background: rgba(10,36,99,0.08); color: #0A2463; }
+.nav-divider { width: 32px; height: 1px; background: rgba(0,0,0,0.08); margin: 4px 0; }
+
+/* ===== Main Content (AI 채팅) ===== */
+.main {
+  flex: 1; display: flex; flex-direction: column;
+  background: #fff; min-width: 0;
+  overflow: hidden;
+}
+
+/* === 환영 화면 === */
+.welcome {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px; gap: 8px;
+}
+.welcome-icon {
+  width: 64px; height: 64px; border-radius: 20px;
+  background: rgba(10,36,99,0.08);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px; color: #0A2463;
+}
+.welcome-title { font-size: 22px; font-weight: 500; color: #000; }
+.welcome-subtitle { font-size: 14px; color: rgba(0,0,0,0.55); margin-bottom: 20px; }
+
+/* 추천 질문 칩 (옵션 1) */
+.suggestion-chips { display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.suggestion-label { font-size: 11px; color: rgba(0,0,0,0.4); margin-bottom: 4px; letter-spacing: 0.04em; text-transform: uppercase; }
+.chip {
+  background: transparent; border: 1px solid rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.7); padding: 10px 18px;
+  border-radius: 20px; font-size: 13px;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; gap: 8px;
+}
+.chip:hover { border-color: rgba(10,36,99,0.4); color: #0A2463; background: rgba(10,36,99,0.03); }
+.chip svg { color: rgba(10,36,99,0.5); }
+
+/* 옵션 토글 */
+.app.no-chips .suggestion-chips { display: none; }
+.app.chat-active .welcome { display: none; }
+
+/* === 메시지 영역 === */
+.messages {
+  flex: 1; overflow-y: auto;
+  padding: 24px 32px;
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+}
+.app.chat-active .messages { display: flex; }
+
+.msg-row { display: flex; }
+.msg-row.user { justify-content: flex-end; }
+.msg-row.ai { justify-content: flex-start; }
+
+.msg {
+  max-width: 70%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+.msg.user { background: #0A2463; color: #fff; border-bottom-right-radius: 4px; }
+.msg.ai { background: #F5F5F5; color: #000; border-bottom-left-radius: 4px; }
+
+/* 점 3개 thinking */
+.thinking {
+  display: inline-flex;
+  gap: 4px;
+  padding: 14px 18px;
+  background: #F5F5F5;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+}
+.thinking span {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.35);
+  animation: dot 1.4s infinite ease-in-out;
+}
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* 스트리밍 커서 */
+.streaming::after {
+  content: '▎';
+  color: #0A2463;
+  margin-left: 2px;
+  animation: blink 1s infinite;
+}
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
+/* === 입력창 === */
+.input-area {
+  padding: 16px 32px 24px;
+  flex-shrink: 0;
+}
+.input-wrap {
+  display: flex; align-items: flex-end;
+  background: #F5F5F5;
+  border-radius: 18px;
+  padding: 8px 8px 8px 18px;
+  border: 1.5px solid transparent;
+  transition: all 0.15s;
+}
+.input-wrap:focus-within {
+  background: #fff;
+  border-color: rgba(10,36,99,0.5);
+  box-shadow: 0 2px 12px rgba(10,36,99,0.08);
+}
+.input-wrap textarea {
+  flex: 1; border: none; outline: none;
+  background: transparent; font-size: 14px;
+  font-family: inherit;
+  resize: none;
+  min-height: 28px; max-height: 120px;
+  padding: 6px 0; line-height: 1.5;
+  color: #000;
+}
+.input-wrap textarea::placeholder { color: rgba(0,0,0,0.35); }
+
+.input-actions { display: flex; align-items: center; gap: 4px; }
+.attach-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: transparent;
+  color: rgba(0,0,0,0.4);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.attach-btn:hover { background: rgba(0,0,0,0.05); color: rgba(0,0,0,0.7); }
+.send-btn {
+  width: 32px; height: 32px; border-radius: 50%;
+  border: none; background: #0A2463; color: #fff;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.send-btn:hover { background: #082052; }
+.send-btn:disabled { background: rgba(0,0,0,0.15); cursor: not-allowed; }
+
+.input-hint {
+  font-size: 11px;
+  color: rgba(0,0,0,0.35);
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ===== RightPanel ===== */
+.right-panel {
+  width: 360px; background: #FAFAFA;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  display: flex; flex-direction: column;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+.rp-tabs {
+  display: flex; padding: 12px 16px 8px;
+  gap: 4px; align-items: center;
+  flex-shrink: 0;
+}
+.rp-tab {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: rgba(0,0,0,0.4);
+  background: transparent; border: none;
+  border-radius: 8px; cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+}
+.rp-tab:hover { color: rgba(0,0,0,0.7); background: rgba(0,0,0,0.03); }
+.rp-tab.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.rp-tab.active::before {
+  content: ''; position: absolute;
+  bottom: -8px; left: 50%; transform: translateX(-50%);
+  width: 16px; height: 2px;
+  background: #0A2463;
+  border-radius: 1px;
+}
+.rp-tab-divider {
+  width: 1px; height: 16px;
+  background: rgba(0,0,0,0.1);
+  margin: 0 4px;
+}
+.rp-tab .red-dot {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #EF4444;
+  display: none;
+  border: 2px solid #FAFAFA;
+  box-sizing: content-box;
+  animation: dotPulse 1.5s infinite;
+}
+.app.has-new-ai .rp-tab[data-tab="ai"] .red-dot { display: block; }
+@keyframes dotPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.rp-content {
+  flex: 1; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column;
+  gap: 12px;
+}
+
+/* RP 홈 탭 — .rp-content 직계 자식에만 적용 (.app과의 클래스 충돌 회피) */
+.rp-content > .rp-home,
+.rp-content > .rp-ai { display: none; flex-direction: column; gap: 12px; animation: fadeIn 0.2s; }
+.app.rp-home .rp-content > .rp-home { display: flex; }
+.app.rp-ai .rp-content > .rp-ai { display: flex; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+.briefing-greet {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(10,36,99,0.08), rgba(10,36,99,0.02));
+  border-radius: 12px;
+  font-size: 13px; line-height: 1.5; color: #0A2463;
+}
+.card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.card:hover { border-color: rgba(10,36,99,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.card-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.icon-blue { background: rgba(10,36,99,0.1); color: #0A2463; }
+.icon-amber { background: rgba(245,158,11,0.12); color: #F59E0B; }
+.icon-red { background: rgba(239,68,68,0.12); color: #EF4444; }
+.card-title { font-size: 13px; font-weight: 500; flex: 1; }
+.card-count { font-size: 18px; font-weight: 600; }
+.card-body { font-size: 12px; color: rgba(0,0,0,0.6); line-height: 1.5; }
+.card-body strong { color: #000; font-weight: 500; }
+
+/* RP AI 탭 */
+.ai-empty {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 16px; text-align: center; flex: 1;
+}
+.app.has-ai-content .ai-empty { display: none; }
+.ai-empty-icon {
+  width: 56px; height: 56px; border-radius: 16px;
+  background: rgba(10,36,99,0.06);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 16px; color: rgba(10,36,99,0.6);
+}
+.ai-empty-title { font-size: 14px; color: rgba(0,0,0,0.7); margin-bottom: 8px; }
+.ai-empty-sub { font-size: 12px; color: rgba(0,0,0,0.45); margin-bottom: 20px; line-height: 1.5; }
+.ai-suggestion-label { font-size: 11px; color: rgba(0,0,0,0.4); margin-bottom: 8px; }
+.suggestion-chips-rp { display: flex; flex-direction: column; gap: 6px; width: 100%; max-width: 240px; }
+.chip-rp {
+  padding: 8px 12px; background: rgba(10,36,99,0.05);
+  color: #0A2463; border-radius: 16px; font-size: 12px;
+  border: none; cursor: pointer;
+}
+.chip-rp:hover { background: rgba(10,36,99,0.1); }
+
+.ai-active {
+  display: none; flex-direction: column; gap: 16px;
+  animation: fadeIn 0.3s;
+}
+.app.has-ai-content .ai-active { display: flex; }
+
+.ai-card {
+  background: #fff;
+  border: 1px solid rgba(10,36,99,0.2);
+  padding: 16px; border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(10,36,99,0.04);
+  position: relative;
+}
+.ai-card-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 10px; font-size: 13px;
+  font-weight: 600; color: #0A2463;
+}
+.ai-card-body { font-size: 13px; line-height: 1.6; color: rgba(0,0,0,0.85); margin-bottom: 12px; }
+.ai-card-body strong { color: #000; font-weight: 500; }
+.action-btn {
+  width: 100%; padding: 10px 16px;
+  background: #0A2463; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 500; cursor: pointer;
+}
+
+.ai-section-title { font-size: 12px; font-weight: 500; color: #000; margin-bottom: 8px; }
+.related-link {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px; background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 8px; cursor: pointer;
+  margin-bottom: 6px;
+}
+.related-link:hover { border-color: rgba(10,36,99,0.2); }
+.related-icon {
+  width: 28px; height: 28px;
+  background: rgba(10,36,99,0.06);
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: #0A2463; flex-shrink: 0;
+}
+.related-info { flex: 1; min-width: 0; }
+.related-title { font-size: 12px; color: #000; }
+.related-sub { font-size: 11px; color: rgba(0,0,0,0.45); }
+
+/* ===== 데모 컨트롤 ===== */
+.demo-controls {
+  position: fixed;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000; color: #fff;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 11px;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  flex-wrap: wrap; max-width: 92vw;
+}
+.demo-controls span { padding: 0 4px; opacity: 0.7; }
+.demo-controls button {
+  background: rgba(255,255,255,0.12); color: #fff;
+  border: none; padding: 5px 11px;
+  border-radius: 8px; font-size: 11px;
+  cursor: pointer; font-family: inherit;
+}
+.demo-controls button.active { background: #fff; color: #000; }
+.demo-controls button:hover:not(.active) { background: rgba(255,255,255,0.2); }
+.demo-controls button.primary {
+  background: #0A2463;
+  color: #fff;
+}
+.demo-controls button.primary:hover { background: #082052; }
+.demo-divider {
+  width: 1px; height: 16px;
+  background: rgba(255,255,255,0.2);
+  margin: 0 4px;
+}
+</style>
+</head>
+<body>
+
+<div class="app rp-home" id="app">
+
+  <!-- TopHeader (간략) -->
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+    <div class="search-bar">🔍 통합검색 준비 중...</div>
+    <div class="top-right">
+      <div class="icon-btn">🔔</div>
+      <div class="icon-btn active">⊟</div>
+      <div class="avatar">홍</div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <div class="nav-item active" title="홈">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+    </nav>
+
+    <!-- Main (AI 채팅) -->
+    <main class="main">
+      <!-- 환영 화면 -->
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 홍길동님</div>
+        <div class="welcome-subtitle">무엇을 도와드릴까요?</div>
+
+        <!-- 추천 질문 칩 -->
+        <div class="suggestion-chips">
+          <div class="suggestion-label">예시 질문</div>
+          <button class="chip">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            출장 규정 알려줘
+          </button>
+          <button class="chip">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M9 15l2 2 4-4"/></svg>
+            이번 주 결재 현황은?
+          </button>
+          <button class="chip">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            남은 연차 며칠?
+          </button>
+        </div>
+      </div>
+
+      <!-- 메시지 -->
+      <div class="messages" id="messages"></div>
+
+      <!-- 입력창 -->
+      <div class="input-area">
+        <div class="input-wrap">
+          <textarea id="input-text" rows="1" placeholder="AI에게 물어보거나 작업을 요청하세요..."></textarea>
+          <div class="input-actions">
+            <button class="attach-btn" title="파일 첨부 (Phase 2)">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <button class="send-btn" id="send-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="input-hint">Shift+Enter로 줄바꿈 · Enter로 전송</div>
+      </div>
+    </main>
+
+    <!-- RightPanel -->
+    <aside class="right-panel">
+      <div class="rp-tabs">
+        <button class="rp-tab active" data-tab="home" title="홈">
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+        </button>
+        <div class="rp-tab-divider"></div>
+        <button class="rp-tab" data-tab="ai" title="AI">
+          AI
+          <span class="red-dot"></span>
+        </button>
+      </div>
+
+      <div class="rp-content">
+        <!-- 홈 탭 -->
+        <div class="rp-home">
+          <div class="briefing-greet">
+            👋 좋은 아침입니다, 홍길동님.<br>
+            오늘 챙기실 항목 3가지를 정리했어요.
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon icon-amber">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+              </div>
+              <div class="card-title">결재 대기</div>
+              <div class="card-count">2</div>
+            </div>
+            <div class="card-body"><strong>휴가 신청 (김철수)</strong> 등 2건. 그 중 1건은 오늘 안 처리.</div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div class="card-icon icon-blue">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+              </div>
+              <div class="card-title">오늘 일정</div>
+              <div class="card-count">3</div>
+            </div>
+            <div class="card-body">10:00 팀 스탠드업 · 14:00 클라이언트 · 16:30 1on1</div>
+          </div>
+        </div>
+
+        <!-- AI 탭 -->
+        <div class="rp-ai">
+          <!-- 빈 상태 -->
+          <div class="ai-empty">
+            <div class="ai-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            </div>
+            <div class="ai-empty-title">AI에게 물어보세요</div>
+            <div class="ai-empty-sub">대화하면 관련 문서와 업무를<br>여기에 정리해드립니다.</div>
+            <div class="ai-suggestion-label">예시</div>
+            <div class="suggestion-chips-rp">
+              <button class="chip-rp">출장 규정 알려줘</button>
+              <button class="chip-rp">이번 주 결재 현황</button>
+              <button class="chip-rp">휴가 신청 방법</button>
+            </div>
+          </div>
+
+          <!-- 응답 콘텐츠 -->
+          <div class="ai-active" id="ai-active">
+            <div class="ai-card">
+              <div class="ai-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="#0A2463"><path d="M9 11l3 3 8-8"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                연차 신청 준비 완료
+              </div>
+              <div class="ai-card-body">
+                <strong>2026년 4월 28일 (화)</strong> 연차 신청서가 작성되었습니다.<br>
+                결재선: 김부장 → 박이사
+              </div>
+              <button class="action-btn">휴가결재 화면으로 이동</button>
+            </div>
+
+            <div>
+              <div class="ai-section-title">관련 문서</div>
+              <div class="related-link">
+                <div class="related-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+                </div>
+                <div class="related-info">
+                  <div class="related-title">연차 사용 규정</div>
+                  <div class="related-sub">사규 · 인사팀</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div class="ai-section-title">바로가기</div>
+              <div class="related-link">
+                <div class="related-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+                </div>
+                <div class="related-info">
+                  <div class="related-title">캘린더에서 확인</div>
+                  <div class="related-sub">4월 28일 일정</div>
+                </div>
+              </div>
+              <div class="related-link">
+                <div class="related-icon">
+                  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </div>
+                <div class="related-info">
+                  <div class="related-title">잔여 연차 확인</div>
+                  <div class="related-sub">올해 7일 남음</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- 데모 컨트롤 -->
+  <div class="demo-controls">
+    <span>📌</span>
+    <button class="primary" id="d-simulate">대화 시뮬레이션 ▶</button>
+    <button id="d-reset">초기화</button>
+    <div class="demo-divider"></div>
+    <button id="d-chips" class="active">칩 표시</button>
+    <button id="d-no-chips">칩 숨김</button>
+    <div class="demo-divider"></div>
+    <button id="d-rp-home" class="active">RP·홈</button>
+    <button id="d-rp-ai">RP·AI</button>
+  </div>
+
+</div>
+
+<script>
+const app = document.getElementById('app');
+const messages = document.getElementById('messages');
+const inputText = document.getElementById('input-text');
+const sendBtn = document.getElementById('send-btn');
+
+// RP 탭 전환
+function setRpTab(tab) {
+  app.classList.remove('rp-home', 'rp-ai');
+  app.classList.add('rp-' + tab);
+  document.querySelectorAll('.rp-tab').forEach((t) => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.getElementById('d-rp-home').classList.toggle('active', tab === 'home');
+  document.getElementById('d-rp-ai').classList.toggle('active', tab === 'ai');
+
+  // AI 탭 클릭 시 빨간점 제거
+  if (tab === 'ai') app.classList.remove('has-new-ai');
+}
+
+document.querySelectorAll('.rp-tab').forEach((t) => {
+  t.addEventListener('click', () => setRpTab(t.dataset.tab));
+});
+document.getElementById('d-rp-home').addEventListener('click', () => setRpTab('home'));
+document.getElementById('d-rp-ai').addEventListener('click', () => setRpTab('ai'));
+
+// 칩 토글
+document.getElementById('d-chips').addEventListener('click', () => {
+  app.classList.remove('no-chips');
+  document.getElementById('d-chips').classList.add('active');
+  document.getElementById('d-no-chips').classList.remove('active');
+});
+document.getElementById('d-no-chips').addEventListener('click', () => {
+  app.classList.add('no-chips');
+  document.getElementById('d-no-chips').classList.add('active');
+  document.getElementById('d-chips').classList.remove('active');
+});
+
+// 초기화
+document.getElementById('d-reset').addEventListener('click', () => {
+  app.classList.remove('chat-active', 'has-ai-content', 'has-new-ai');
+  messages.innerHTML = '';
+  setRpTab('home');
+});
+
+// 시뮬레이션
+function addUser(text) {
+  const row = document.createElement('div');
+  row.className = 'msg-row user';
+  row.innerHTML = `<div class="msg user">${text}</div>`;
+  messages.appendChild(row);
+  messages.scrollTop = messages.scrollHeight;
+}
+function addThinking() {
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.id = 'thinking-row';
+  row.innerHTML = `<div class="thinking"><span></span><span></span><span></span></div>`;
+  messages.appendChild(row);
+  messages.scrollTop = messages.scrollHeight;
+}
+function replaceWithStreaming() {
+  const row = document.getElementById('thinking-row');
+  if (!row) return null;
+  row.id = '';
+  row.innerHTML = `<div class="msg ai streaming" id="streaming-msg"></div>`;
+  return document.getElementById('streaming-msg');
+}
+function streamText(el, text, done) {
+  let i = 0;
+  const tick = () => {
+    if (i >= text.length) {
+      el.classList.remove('streaming');
+      done();
+      return;
+    }
+    el.textContent += text[i++];
+    messages.scrollTop = messages.scrollHeight;
+    setTimeout(tick, 20 + Math.random() * 30);
+  };
+  tick();
+}
+
+document.getElementById('d-simulate').addEventListener('click', () => {
+  // 1. 채팅 시작
+  app.classList.add('chat-active');
+  messages.innerHTML = '';
+
+  // 2. 사용자 메시지
+  addUser('내일 휴가 써줘');
+
+  // 3. 0.4초 후 thinking
+  setTimeout(() => {
+    addThinking();
+
+    // 4. 1.5초 후 스트리밍 시작
+    setTimeout(() => {
+      const el = replaceWithStreaming();
+      if (!el) return;
+      streamText(el, '내일(4/28, 화) 연차 신청을 도와드릴게요. 우측 패널에서 결재 화면으로 바로 이동하실 수 있습니다.', () => {
+        // 5. 스트리밍 완료 후 → AI 탭에 콘텐츠 등장
+        setTimeout(() => {
+          app.classList.add('has-ai-content');
+          // 사용자가 홈 탭에 있으면 AI 탭에 빨간점
+          if (app.classList.contains('rp-home')) {
+            app.classList.add('has-new-ai');
+          }
+        }, 200);
+      });
+    }, 1500);
+  }, 400);
+});
+
+// textarea 자동 높이
+inputText.addEventListener('input', () => {
+  inputText.style.height = 'auto';
+  inputText.style.height = Math.min(inputText.scrollHeight, 120) + 'px';
+});
+</script>
+
+</body>
+</html>
