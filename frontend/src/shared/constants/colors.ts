@@ -1,0 +1,47 @@
+export const colors = {
+  brand: {
+    primary: '#0A2463',
+    primaryDark: '#082052',
+    primaryTint: 'rgba(10,36,99,0.08)',
+    primaryTintSoft: 'rgba(10,36,99,0.05)',
+    primaryTintMid: 'rgba(10,36,99,0.14)',
+    primaryBorder: 'rgba(10,36,99,0.5)',
+  },
+  background: {
+    app: '#F9F9F9',
+    surface: '#FFFFFF',
+    surfaceAlt: '#FAFAFA',
+    surfaceMute: '#F5F5F5',
+    surfaceMuteAlt: '#F0F0F0',
+  },
+  border: {
+    light: 'rgba(0,0,0,0.06)',
+    medium: 'rgba(0,0,0,0.08)',
+    strong: 'rgba(0,0,0,0.12)',
+    subtle: 'rgba(0,0,0,0.04)',
+  },
+  text: {
+    primary: '#000000',
+    onBrand: '#FFFFFF',
+    secondary: 'rgba(0,0,0,0.85)',
+    body: 'rgba(0,0,0,0.7)',
+    muted: 'rgba(0,0,0,0.55)',
+    soft: 'rgba(0,0,0,0.45)',
+    faint: 'rgba(0,0,0,0.35)',
+    subtle: 'rgba(0,0,0,0.3)',
+  },
+  semantic: {
+    warning: '#F59E0B',
+    success: '#10B981',
+    danger: '#EF4444',
+    info: '#0A2463',
+  },
+  semanticTint: {
+    warning: 'rgba(245,158,11,0.12)',
+    success: 'rgba(16,185,129,0.12)',
+    danger: 'rgba(239,68,68,0.12)',
+    info: 'rgba(10,36,99,0.10)',
+  },
+  black: '#000000',
+  white: '#FFFFFF',
+};

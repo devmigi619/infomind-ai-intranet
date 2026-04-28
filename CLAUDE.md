@@ -27,6 +27,16 @@
 - 화이트보드(WHITEBOARD.md)를 사용하지 않는다.
 - 기능 구현 완료 시 [PLAN.md](docs/PLAN.md)의 해당 체크리스트 항목을 `[x]`로 업데이트한다.
 
+## 에이전트 모델 라우팅
+
+| 작업 유형 | 모델 | 근거 |
+|---|---|---|
+| 단순 조회, 파일 탐색, 짧은 리뷰 | `haiku` | 빠른 응답, 저비용 |
+| 기능 구현, 코드 수정, 문서 작성 | `sonnet` | 기본 실행 모델 |
+| 아키텍처 설계, 복잡한 디버깅, 보안 리뷰 | `opus` | 깊은 분석 필요 시 |
+
+> Executor 에이전트(코드 구현)는 기본 `sonnet`. 복잡한 멀티파일 변경은 `opus` 사용 가능.
+
 ## 아키텍처 핵심 제약
 
 - **FastAPI 인증**: JWT를 Spring Boot에 검증 요청하지 않는다. `JWT_SECRET`으로 자체 검증한다. (`ai/app/core/auth.py` 참조)
@@ -149,17 +159,62 @@ data: [DONE]\n\n
 
 ### Frontend (Expo)
 
-**디렉토리 구조**
+**디렉토리 구조** (features-based)
 
 ```
-frontend/app/
-├── (tabs)/       # 탭 네비게이션 화면
-├── components/   # 공통 UI 컴포넌트
-├── hooks/        # 커스텀 훅
-├── services/     # API 클라이언트
-├── store/        # 상태 관리
-└── types/        # TypeScript 타입
+frontend/src/
+├── features/        # 모듈별 (협업 단위)
+│   ├── auth/
+│   │   ├── api.ts          # HTTP 함수 + React Query 훅 통합
+│   │   └── screens/
+│   ├── chat/
+│   ├── board/
+│   ├── approval/
+│   ├── report/
+│   ├── users/
+│   └── placeholder/
+│
+├── shared/          # 공통
+│   ├── api/         # axios client, interceptors
+│   ├── components/  # 재사용 가능한 원자 컴포넌트
+│   ├── hooks/
+│   └── constants/   # 디자인 토큰 (colors, spacing, radius, typography, shadows, duration, zIndex)
+│
+├── layout/          # 앱 레이아웃 (TopHeader, NavRail, LeftPanel, RightPanel, AvatarMenu 등)
+│
+├── store/           # Zustand 글로벌 상태 (uiStore 등)
+│
+└── types/           # 공통 타입
 ```
+
+**상태 관리**
+
+| 종류 | 라이브러리 | 용도 |
+|---|---|---|
+| 클라이언트 상태 | Zustand | 글로벌 UI 상태 (관리자 모드, 활성 패널, RP 토글 등) |
+| 서버 상태 | React Query (`@tanstack/react-query`) | API 데이터 캐싱/동기화/invalidation |
+
+**API + 훅 통합 규칙**
+
+각 `features/{모듈}/api.ts` 파일 안에:
+- HTTP 함수 (`postsApi.getList(...)`)
+- React Query 훅 (`useBoardList(...)`, `useCreatePost()` 등)
+- 모듈 타입 (`Post` 등)
+
+모두 한 파일에 통합. 파일이 비대해지면 분리.
+
+**Mutation 시 캐시 무효화**
+
+```typescript
+useMutation({
+  mutationFn: postsApi.create,
+  onSuccess: () => qc.invalidateQueries({ queryKey: ['posts'] }),
+});
+```
+
+**디자인 토큰 사용**
+
+새로 작성하는 코드는 `shared/constants/`의 토큰(colors/spacing/radius/typography 등)을 사용. 기존 컴포넌트의 하드코딩된 값은 점진적으로 마이그레이션.
 
 **네이밍**
 
@@ -167,7 +222,8 @@ frontend/app/
 |---|---|
 | 컴포넌트 파일 | `PascalCase.tsx` |
 | 그 외 파일 | `camelCase.ts` |
-| 훅 | `use` 접두사 — `useApprovals` |
+| 훅 | `use` 접두사 — `useBoardList`, `useCurrentUser` |
+| Zustand store | `use{도메인}Store` — `useUiStore` |
 
 ### 환경변수
 

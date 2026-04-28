@@ -2,20 +2,39 @@ import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { TopHeader } from './src/components/TopHeader';
-import { NavRail } from './src/components/NavRail';
-import { LeftPanel } from './src/components/LeftPanel';
-import { RightPanel } from './src/components/RightPanel';
-import { usePanel } from './src/hooks/usePanel';
-import { useAuth } from './src/hooks/useAuth';
-import { usePushNotifications } from './src/hooks/usePushNotifications';
-import { LoginScreen } from './src/screens/LoginScreen';
-import { MainScreen } from './src/screens/MainScreen';
-import { BoardScreen } from './src/screens/BoardScreen';
-import { ApprovalScreen } from './src/screens/ApprovalScreen';
-import { WeeklyReportScreen } from './src/screens/WeeklyReportScreen';
-import { PlaceholderScreen } from './src/screens/PlaceholderScreen';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { TopHeader } from './src/layout/TopHeader';
+import { NavRail } from './src/layout/NavRail';
+import { LeftPanel } from './src/layout/LeftPanel';
+import { RightPanel } from './src/layout/RightPanel';
+import { useUiStore } from './src/store/uiStore';
+import { useCurrentUser, useLogin, useLogout } from './src/features/auth/api';
+import { usePushNotifications } from './src/shared/hooks/usePushNotifications';
+import { LoginScreen } from './src/features/auth/screens/LoginScreen';
+import { MainScreen } from './src/features/chat/screens/MainScreen';
+import { BoardScreen } from './src/features/board/screens/BoardScreen';
+import { ApprovalScreen } from './src/features/approval/screens/ApprovalScreen';
+import { WeeklyReportScreen } from './src/features/report/screens/WeeklyReportScreen';
+import { PlaceholderScreen } from './src/features/placeholder/screens/PlaceholderScreen';
 import type { PanelId } from './src/types';
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: true,
+      staleTime: 1000 * 60, // 1분
+    },
+  },
+});
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppContent />
+    </QueryClientProvider>
+  );
+}
 
 const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   board: '게시판',
@@ -32,7 +51,7 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   'admin-system': '시스템 설정',
 };
 
-export default function App() {
+function AppContent() {
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const link = document.createElement('link');
@@ -52,8 +71,13 @@ export default function App() {
     document.head.appendChild(style);
   }, []);
 
-  const { user, isLoggedIn, isLoading, login, logout } = useAuth();
+  const { data: user, isLoading } = useCurrentUser();
+  const isLoggedIn = !!user;
+  const loginMutation = useLogin();
+  const logoutMutation = useLogout();
+
   usePushNotifications(isLoggedIn);
+
   const {
     activePanel,
     activeFullScreen,
@@ -69,10 +93,17 @@ export default function App() {
     toggleRightPanel,
     toggleAdminMode,
     markAiUnread,
-  } = usePanel();
+  } = useUiStore();
+
+  const handleLogin = async (username: string, password: string) => {
+    await loginMutation.mutateAsync({ username, password });
+  };
+
+  const handleLogout = async () => {
+    await logoutMutation.mutateAsync();
+  };
 
   const handleNavigate = (target: string) => {
-    // Quick action navigation from MainScreen — promote to fullscreen if known
     const knownPanels: PanelId[] = [
       'board',
       'approval',
@@ -82,14 +113,11 @@ export default function App() {
       'vehicle',
     ];
     if ((knownPanels as string[]).includes(target)) {
-      // Open the panel preview in LeftPanel
       handleNavClick(target as PanelId);
     }
   };
 
   const handleAiResponseComplete = () => {
-    // Per UX rule: never auto-open RP / auto-switch to AI tab.
-    // Only mark unread when the user is not already viewing the AI tab.
     if (!isRightPanelOpen || rpTab !== 'ai') {
       markAiUnread();
     }
@@ -99,7 +127,7 @@ export default function App() {
     if (!activeFullScreen) {
       return (
         <MainScreen
-          user={user}
+          user={user ?? null}
           onNavigate={handleNavigate}
           onAiResponseComplete={handleAiResponseComplete}
         />
@@ -135,7 +163,7 @@ export default function App() {
     return (
       <SafeAreaProvider>
         <StatusBar style="dark" />
-        <LoginScreen onLogin={login} />
+        <LoginScreen onLogin={handleLogin} />
       </SafeAreaProvider>
     );
   }
@@ -147,9 +175,9 @@ export default function App() {
 
         {/* Top Header */}
         <TopHeader
-          user={user}
+          user={user ?? null}
           onBrandClick={goHome}
-          onLogout={logout}
+          onLogout={handleLogout}
           onToggleRightPanel={toggleRightPanel}
           isRightPanelOpen={isRightPanelOpen}
           isAdminMode={isAdminMode}

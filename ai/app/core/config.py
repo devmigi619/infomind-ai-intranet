@@ -10,6 +10,6 @@ class Settings(BaseSettings):
     allowed_origins: list[str] = ["http://localhost:8081"]
 
     class Config:
-        env_file = ".env"
+        env_file = ".env.local"
 
 settings = Settings()
