@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { TopHeader } from './src/layout/TopHeader';
 import { NavRail } from './src/layout/NavRail';
+import { NavRailMorePopover } from './src/layout/NavRailMorePopover';
+import { NavRailCustomizationModal } from './src/layout/NavRailCustomizationModal';
 import { LeftPanel } from './src/layout/LeftPanel';
 import { RightPanel } from './src/layout/RightPanel';
 import { useUiStore } from './src/store/uiStore';
@@ -43,6 +45,9 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   calendar: '캘린더',
   meeting: '회의실',
   vehicle: '차량 예약',
+  contacts: '주소록',
+  documents: '자료실',
+  certificate: '증명서',
   'admin-home': '관리자 홈',
   'admin-users': '사용자 관리',
   'admin-roles': '권한 관리',
@@ -52,6 +57,10 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
 };
 
 function AppContent() {
+  const [morePopoverOpen, setMorePopoverOpen] = useState(false);
+  const [customizationOpen, setCustomizationOpen] = useState(false);
+  const [moreAnchorTop, setMoreAnchorTop] = useState(0);
+
   useEffect(() => {
     if (Platform.OS !== 'web') return;
     const link = document.createElement('link');
@@ -85,6 +94,7 @@ function AppContent() {
     rpTab,
     isAdminMode,
     hasUnreadAi,
+    pinnedMenus,
     setRpTab,
     handleNavClick,
     openFullScreen,
@@ -111,6 +121,9 @@ function AppContent() {
       'calendar',
       'meeting',
       'vehicle',
+      'contacts',
+      'documents',
+      'certificate',
     ];
     if ((knownPanels as string[]).includes(target)) {
       handleNavClick(target as PanelId);
@@ -191,7 +204,32 @@ function AppContent() {
             activePanel={activePanel}
             activeFullScreen={activeFullScreen}
             isAdminMode={isAdminMode}
+            pinnedMenus={pinnedMenus}
             onPanelClick={handleNavClick}
+            onMoreClick={(top) => {
+              setMoreAnchorTop(top);
+              setMorePopoverOpen(true);
+            }}
+          />
+
+          <NavRailMorePopover
+            isOpen={morePopoverOpen}
+            onClose={() => setMorePopoverOpen(false)}
+            anchorTop={moreAnchorTop}
+            pinnedMenus={pinnedMenus}
+            onMenuClick={(panel) => {
+              handleNavClick(panel);
+              setMorePopoverOpen(false);
+            }}
+            onCustomize={() => {
+              setMorePopoverOpen(false);
+              setCustomizationOpen(true);
+            }}
+          />
+
+          <NavRailCustomizationModal
+            isOpen={customizationOpen}
+            onClose={() => setCustomizationOpen(false)}
           />
 
           <LeftPanel

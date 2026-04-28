@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 3단계: NavRail 맞춤설정</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font-family: inherit; }
+svg { stroke: currentColor; fill: none; }
+
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+
+/* TopHeader 간략 */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+}
+.brand { font-size: 18px; font-weight: 300; letter-spacing: 0.12em; }
+.search-bar {
+  flex: 1; max-width: 480px; margin: 0 auto;
+  height: 32px; border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px; background: #F0F0F0;
+  display: flex; align-items: center; padding: 0 16px;
+  font-size: 12px; color: rgba(0,0,0,0.4);
+  opacity: 0.5;
+}
+.top-right { display: flex; align-items: center; gap: 8px; }
+.icon-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: rgba(0,0,0,0.6); cursor: pointer; }
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.icon-btn.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.avatar { width: 28px; height: 28px; border-radius: 50%; background: #0A2463; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+
+.body {
+  display: flex;
+  height: calc(100vh - 48px);
+  position: relative;
+}
+
+/* ===== NavRail ===== */
+.nav-rail {
+  width: 64px; background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0; display: flex; flex-direction: column;
+  gap: 4px; align-items: center;
+  flex-shrink: 0;
+  position: relative;
+}
+.nav-item {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; cursor: pointer;
+  color: rgba(0,0,0,0.55);
+  position: relative;
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: #0A2463; }
+.nav-item.active { background: rgba(10,36,99,0.08); color: #0A2463; }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px; top: 12px; bottom: 12px;
+  width: 2px;
+  background: #0A2463;
+  border-radius: 0 2px 2px 0;
+}
+.nav-divider { width: 32px; height: 1px; background: rgba(0,0,0,0.08); margin: 4px 0; }
+
+/* [⋯] 버튼 - 다른 nav-item과 동일한 스타일 (마지막 메뉴 바로 아래에 위치) */
+.nav-more {
+  color: rgba(0,0,0,0.45);
+}
+.nav-more:hover {
+  background: rgba(10,36,99,0.06);
+  color: #0A2463;
+}
+
+/* Popover (NavRail [⋯]) */
+.popover {
+  position: absolute;
+  left: 72px;
+  bottom: 12px;
+  width: 280px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  z-index: 100;
+  display: none;
+  overflow: hidden;
+  animation: popIn 0.2s ease;
+}
+.app.popover-open .popover { display: block; }
+@keyframes popIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.popover-header {
+  padding: 12px 16px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.popover-list {
+  padding: 4px 0;
+}
+.popover-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #000;
+  transition: background 0.15s;
+}
+.popover-item:hover { background: rgba(10,36,99,0.05); color: #0A2463; }
+.popover-item svg { color: rgba(0,0,0,0.5); flex-shrink: 0; }
+.popover-item:hover svg { color: #0A2463; }
+
+.popover-divider { height: 1px; background: rgba(0,0,0,0.06); margin: 4px 0; }
+
+.popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  font-size: 12px;
+  color: #0A2463;
+  cursor: pointer;
+  background: #FAFAFA;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.popover-footer:hover { background: rgba(10,36,99,0.06); }
+
+/* ===== Main Content ===== */
+.main {
+  flex: 1;
+  background: #fff;
+  overflow-y: auto;
+  position: relative;
+}
+.welcome {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+}
+.welcome-icon {
+  width: 64px; height: 64px; border-radius: 20px;
+  background: rgba(10,36,99,0.08);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 8px; color: #0A2463;
+}
+.welcome-title { font-size: 22px; font-weight: 500; }
+.welcome-subtitle { font-size: 14px; color: rgba(0,0,0,0.55); }
+
+/* ===== 모달 (NavRail 맞춤설정) ===== */
+.modal-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  animation: fadeIn 0.2s;
+}
+.app.settings-mode .modal-backdrop { display: block; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-height: 85vh;
+  background: #fff;
+  border-radius: 16px;
+  z-index: 201;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.2s ease;
+}
+.app.settings-mode .modal { display: flex; }
+@keyframes modalIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+.modal-header {
+  padding: 20px 24px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.modal-title-area {
+  flex: 1;
+}
+.modal-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 4px;
+}
+.modal-desc {
+  font-size: 12px;
+  color: rgba(0,0,0,0.55);
+  line-height: 1.5;
+}
+.modal-close {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.45);
+}
+.modal-close:hover { background: rgba(0,0,0,0.05); color: #000; }
+
+.modal-meta {
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.settings-counter {
+  font-size: 11px;
+  padding: 3px 10px;
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+}
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 24px;
+  background: #fff;
+  transition: background 0.15s;
+  position: relative;
+}
+.menu-row:hover:not(.fixed) { background: rgba(10,36,99,0.03); }
+.menu-row.dragging { opacity: 0.4; }
+.menu-row.drop-above::before,
+.menu-row.drop-below::after {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  height: 2px;
+  background: #0A2463;
+  border-radius: 2px;
+}
+.menu-row.drop-above::before { top: -1px; }
+.menu-row.drop-below::after { bottom: -1px; }
+.menu-row.draggable { cursor: grab; }
+.menu-row.draggable:active { cursor: grabbing; }
+.menu-row.dragging {
+  opacity: 0.5;
+  background: rgba(10,36,99,0.05);
+}
+.menu-row.fixed {
+  background: rgba(0,0,0,0.02);
+  cursor: default;
+}
+.menu-row.unchecked {
+  background: #fff;
+  cursor: pointer;
+}
+.menu-row.unchecked:hover {
+  background: rgba(10,36,99,0.03);
+}
+
+.drag-handle {
+  width: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: rgba(0,0,0,0.25);
+  flex-shrink: 0;
+}
+.drag-handle.disabled { visibility: hidden; }
+.drag-handle svg { display: block; }
+
+.checkbox {
+  width: 18px; height: 18px;
+  border: 1.5px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.checkbox.checked {
+  background: #0A2463;
+  border-color: #0A2463;
+}
+.checkbox.checked svg { display: block; color: #fff; }
+.checkbox svg { display: none; }
+.checkbox.disabled {
+  background: rgba(0,0,0,0.15);
+  border-color: rgba(0,0,0,0.15);
+  cursor: not-allowed;
+}
+.checkbox.disabled svg { display: block; }
+
+.menu-icon {
+  width: 32px; height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: rgba(0,0,0,0.55);
+  background: rgba(10,36,99,0.04);
+  flex-shrink: 0;
+}
+.menu-row.checked .menu-icon { color: #0A2463; }
+
+.menu-name {
+  flex: 1;
+  font-size: 14px;
+  color: #000;
+}
+.menu-row.fixed .menu-name {
+  color: rgba(0,0,0,0.55);
+  font-style: italic;
+}
+.menu-row.unchecked .menu-name {
+  color: rgba(0,0,0,0.7);
+}
+
+.menu-tag {
+  font-size: 10px;
+  color: rgba(0,0,0,0.4);
+  padding: 2px 8px;
+  background: rgba(0,0,0,0.05);
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px 8px;
+  background: #F5F5F5;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  font-size: 11px;
+  color: rgba(0,0,0,0.5);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* 데모 컨트롤 */
+.demo-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #000; color: #fff;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 11px;
+  display: flex; align-items: center; gap: 8px;
+  z-index: 9999;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  flex-wrap: wrap;
+}
+.demo-controls span { padding: 0 4px; opacity: 0.7; }
+.demo-controls button {
+  background: rgba(255,255,255,0.12); color: #fff;
+  border: none; padding: 5px 11px;
+  border-radius: 8px; font-size: 11px;
+  cursor: pointer; font-family: inherit;
+}
+.demo-controls button.active { background: #fff; color: #000; }
+.demo-controls button:hover:not(.active) { background: rgba(255,255,255,0.2); }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+    <div class="search-bar">🔍 통합검색 준비 중...</div>
+    <div class="top-right">
+      <div class="icon-btn">🔔</div>
+      <div class="icon-btn active">⊟</div>
+      <div class="avatar">홍</div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- NavRail (핀 한 메뉴 + [⋯]) -->
+    <nav class="nav-rail">
+      <!-- 홈 -->
+      <div class="nav-item active" title="홈">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <!-- 핀 한 메뉴들 (디폴트) -->
+      <div class="nav-item" title="게시판">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+      </div>
+      <div class="nav-item" title="전자결재">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+      </div>
+      <div class="nav-item" title="주간보고">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      </div>
+      <div class="nav-item" title="캘린더">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+
+      <!-- [⋯] 더보기 (마지막 핀 메뉴 바로 아래) -->
+      <div class="nav-item nav-more" id="more-btn" title="전체 메뉴">
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2.5"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>
+      </div>
+
+      <!-- Popover -->
+      <div class="popover" id="popover">
+        <div class="popover-header">전체 메뉴</div>
+        <div class="popover-list">
+          <div class="popover-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+            회의실
+          </div>
+          <div class="popover-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 17h2l1.5-7h11L19 17h2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>
+            차량
+          </div>
+          <div class="popover-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            주소록
+          </div>
+          <div class="popover-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            자료실
+          </div>
+          <div class="popover-item">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            증명서
+          </div>
+        </div>
+        <div class="popover-divider"></div>
+        <div class="popover-footer" id="manage-link">
+          <span>⚙ 맞춤설정</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- 환영 화면 -->
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 홍길동님</div>
+        <div class="welcome-subtitle">무엇을 도와드릴까요?</div>
+      </div>
+
+    </main>
+
+  </div>
+
+  <!-- ============ 맞춤설정 모달 ============ -->
+  <div class="modal-backdrop" id="modal-backdrop"></div>
+  <div class="modal" role="dialog" aria-labelledby="modal-title">
+    <div class="modal-header">
+      <div class="modal-title-area">
+        <div class="modal-title" id="modal-title">맞춤설정</div>
+        <div class="modal-desc">
+          NavRail에 노출할 메뉴를 체크하세요. 핸들로 드래그하여 순서를 변경할 수 있습니다.
+        </div>
+      </div>
+      <button class="modal-close" id="back-btn" aria-label="닫기">
+        <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="menu-list" id="menu-list">
+          <!-- 홈 (필수) -->
+          <div class="menu-row fixed">
+            <div class="drag-handle disabled"></div>
+            <div class="checkbox checked disabled" title="홈은 필수">
+              <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+            </div>
+            <div class="menu-name">홈</div>
+            <div class="menu-tag">필수</div>
+          </div>
+
+          <!-- 게시판 -->
+          <div class="menu-row checked draggable" data-checked="1">
+            <div class="drag-handle">
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+            </div>
+            <div class="checkbox checked">
+              <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+            </div>
+            <div class="menu-name">게시판</div>
+          </div>
+
+          <!-- 결재 -->
+          <div class="menu-row checked draggable" data-checked="1">
+            <div class="drag-handle">
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+            </div>
+            <div class="checkbox checked">
+              <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+            </div>
+            <div class="menu-name">전자결재</div>
+          </div>
+
+          <!-- 주간보고 -->
+          <div class="menu-row checked draggable" data-checked="1">
+            <div class="drag-handle">
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+            </div>
+            <div class="checkbox checked">
+              <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+            </div>
+            <div class="menu-name">주간보고</div>
+          </div>
+
+          <!-- 캘린더 -->
+          <div class="menu-row checked draggable" data-checked="1">
+            <div class="drag-handle">
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+              <svg width="14" height="4" viewBox="0 0 14 4"><circle cx="3" cy="2" r="1.2" fill="currentColor"/><circle cx="11" cy="2" r="1.2" fill="currentColor"/></svg>
+            </div>
+            <div class="checkbox checked">
+              <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="3"><path d="M5 12l5 5L20 7"/></svg>
+            </div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            </div>
+            <div class="menu-name">캘린더</div>
+          </div>
+
+          <!-- 회의실 -->
+          <div class="menu-row unchecked" data-checked="0">
+            <div class="drag-handle disabled"></div>
+            <div class="checkbox"></div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+            </div>
+            <div class="menu-name">회의실</div>
+          </div>
+
+          <!-- 차량 -->
+          <div class="menu-row unchecked" data-checked="0">
+            <div class="drag-handle disabled"></div>
+            <div class="checkbox"></div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M3 17h2l1.5-7h11L19 17h2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>
+            </div>
+            <div class="menu-name">차량</div>
+          </div>
+
+          <!-- 주소록 -->
+          <div class="menu-row unchecked" data-checked="0">
+            <div class="drag-handle disabled"></div>
+            <div class="checkbox"></div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            </div>
+            <div class="menu-name">주소록</div>
+          </div>
+
+          <!-- 자료실 -->
+          <div class="menu-row unchecked" data-checked="0">
+            <div class="drag-handle disabled"></div>
+            <div class="checkbox"></div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div class="menu-name">자료실</div>
+          </div>
+
+          <!-- 증명서 -->
+          <div class="menu-row unchecked" data-checked="0">
+            <div class="drag-handle disabled"></div>
+            <div class="checkbox"></div>
+            <div class="menu-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            </div>
+            <div class="menu-name">증명서</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  <!-- ============ /맞춤설정 모달 ============ -->
+
+  <!-- 데모 컨트롤 -->
+  <div class="demo-controls">
+    <span>📌</span>
+    <button id="d-default" class="active">기본 (NavRail)</button>
+    <button id="d-popover">[⋯] popover 열기</button>
+    <button id="d-settings">⚙ 맞춤설정 모달</button>
+  </div>
+
+</div>
+
+<script>
+const app = document.getElementById('app');
+const moreBtn = document.getElementById('more-btn');
+const popover = document.getElementById('popover');
+const manageLink = document.getElementById('manage-link');
+const backBtn = document.getElementById('back-btn');
+
+const dDefault = document.getElementById('d-default');
+const dPopover = document.getElementById('d-popover');
+const dSettings = document.getElementById('d-settings');
+
+function setMode(mode) {
+  app.classList.remove('popover-open', 'settings-mode');
+  if (mode === 'popover') app.classList.add('popover-open');
+  if (mode === 'settings') app.classList.add('settings-mode');
+  dDefault.classList.toggle('active', mode === 'default');
+  dPopover.classList.toggle('active', mode === 'popover');
+  dSettings.classList.toggle('active', mode === 'settings');
+}
+
+dDefault.addEventListener('click', () => setMode('default'));
+dPopover.addEventListener('click', () => setMode('popover'));
+dSettings.addEventListener('click', () => setMode('settings'));
+
+moreBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  // popover 위치를 [⋯] 버튼 옆에 동적 정렬
+  popover.style.top = moreBtn.offsetTop + 'px';
+  popover.style.bottom = 'auto';
+  setMode('popover');
+});
+
+manageLink.addEventListener('click', () => setMode('settings'));
+backBtn.addEventListener('click', () => setMode('default'));
+
+// 모달 backdrop 클릭으로도 닫기
+document.getElementById('modal-backdrop').addEventListener('click', () => setMode('default'));
+
+// ESC 키로 모달/popover 닫기
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (app.classList.contains('settings-mode') || app.classList.contains('popover-open')) {
+      setMode('default');
+    }
+  }
+});
+
+// popover 외부 클릭 시 닫기
+document.addEventListener('click', (e) => {
+  if (!popover.contains(e.target) && e.target !== moreBtn && !moreBtn.contains(e.target)) {
+    if (app.classList.contains('popover-open')) setMode('default');
+  }
+});
+
+// =========================================================================
+// 모달 — 체크박스 토글 + 드래그앤드롭 (실제 동작)
+// =========================================================================
+const menuList = document.getElementById('menu-list');
+
+// (1) 체크박스 토글 — 이벤트 위임
+function toggleRow(row) {
+  if (row.classList.contains('fixed')) return; // 홈은 토글 불가
+  const cb = row.querySelector('.checkbox');
+  const isChecked = row.classList.contains('checked');
+  if (isChecked) {
+    row.classList.remove('checked', 'draggable');
+    row.classList.add('unchecked');
+    cb.classList.remove('checked');
+    row.querySelector('.drag-handle').classList.add('disabled');
+    row.draggable = false;
+  } else {
+    const checkedCount = menuList.querySelectorAll('.menu-row.checked').length;
+    if (checkedCount >= 8) return; // 최대 8개
+    row.classList.remove('unchecked');
+    row.classList.add('checked', 'draggable');
+    cb.classList.add('checked');
+    row.querySelector('.drag-handle').classList.remove('disabled');
+    row.draggable = true;
+  }
+}
+
+menuList.addEventListener('click', (e) => {
+  const row = e.target.closest('.menu-row');
+  if (!row) return;
+  if (row.classList.contains('fixed')) return;
+
+  // 체크박스 자체를 클릭했거나, 체크 안 한 행이면 토글
+  if (e.target.closest('.checkbox') || row.classList.contains('unchecked')) {
+    toggleRow(row);
+  }
+});
+
+// 초기 draggable 속성 부여 (체크된 메뉴만)
+menuList.querySelectorAll('.menu-row.draggable').forEach((row) => {
+  row.draggable = true;
+});
+
+// (2) 드래그앤드롭
+let dragSrc = null;
+
+function clearDropIndicators() {
+  menuList.querySelectorAll('.menu-row.drop-above, .menu-row.drop-below').forEach((row) => {
+    row.classList.remove('drop-above', 'drop-below');
+  });
+}
+
+menuList.addEventListener('dragstart', (e) => {
+  const row = e.target.closest('.menu-row');
+  if (!row || !row.classList.contains('draggable')) return;
+  dragSrc = row;
+  row.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+  // 일부 브라우저에서 dataTransfer 데이터 필요
+  try { e.dataTransfer.setData('text/plain', ''); } catch (_) {}
+});
+
+menuList.addEventListener('dragend', (e) => {
+  const row = e.target.closest('.menu-row');
+  if (row) row.classList.remove('dragging');
+  clearDropIndicators();
+  dragSrc = null;
+});
+
+menuList.addEventListener('dragover', (e) => {
+  if (!dragSrc) return;
+  const row = e.target.closest('.menu-row');
+  if (!row || row === dragSrc) return;
+  // 체크된 행끼리만 순서 변경 가능 (홈 위로는 못 감)
+  if (!row.classList.contains('checked') || row.classList.contains('fixed')) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+
+  clearDropIndicators();
+  const rect = row.getBoundingClientRect();
+  const mid = rect.top + rect.height / 2;
+  if (e.clientY < mid) {
+    row.classList.add('drop-above');
+  } else {
+    row.classList.add('drop-below');
+  }
+});
+
+menuList.addEventListener('dragleave', (e) => {
+  // 메뉴 리스트 외부로 빠지면 인디케이터 정리
+  if (!menuList.contains(e.relatedTarget)) {
+    clearDropIndicators();
+  }
+});
+
+menuList.addEventListener('drop', (e) => {
+  if (!dragSrc) return;
+  const row = e.target.closest('.menu-row');
+  if (!row || row === dragSrc) return;
+  if (!row.classList.contains('checked') || row.classList.contains('fixed')) return;
+  e.preventDefault();
+
+  const rect = row.getBoundingClientRect();
+  const mid = rect.top + rect.height / 2;
+  if (e.clientY < mid) {
+    menuList.insertBefore(dragSrc, row);
+  } else {
+    menuList.insertBefore(dragSrc, row.nextSibling);
+  }
+  clearDropIndicators();
+});
+</script>
+
+</body>
+</html>

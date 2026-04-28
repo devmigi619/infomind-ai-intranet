@@ -13,40 +13,46 @@ import {
   Calendar,
   Building2,
   Car,
-  LayoutGrid,
   Users,
+  BookOpen,
+  LayoutGrid,
   Shield,
   Tag,
   Settings,
+  MoreHorizontal,
 } from 'lucide-react-native';
 import type { PanelId } from '../types';
+import { ALL_MENUS } from '../shared/constants/menus';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ICON_MAP: Record<string, React.ComponentType<any>> = {
+  LayoutList,
+  FileCheck,
+  FileText,
+  Calendar,
+  Building2,
+  Car,
+  Users,
+  BookOpen,
+};
 
 interface NavRailProps {
   activePanel: PanelId | null;
   activeFullScreen: PanelId | null;
   isAdminMode: boolean;
+  pinnedMenus: PanelId[];
   onPanelClick: (panel: PanelId | 'home') => void;
+  onMoreClick: (anchorTop: number) => void;
 }
 
-type NavModule = {
+type AdminNavModule = {
   id: PanelId | 'home';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: React.ComponentType<any>;
   label: string;
-  unread?: number;
 };
 
-const userModules: NavModule[] = [
-  { id: 'home', icon: Home, label: '홈' },
-  { id: 'board', icon: LayoutList, label: '게시판' },
-  { id: 'approval', icon: FileCheck, label: '전자결재', unread: 2 },
-  { id: 'report', icon: FileText, label: '주간보고' },
-  { id: 'calendar', icon: Calendar, label: '캘린더' },
-  { id: 'meeting', icon: Building2, label: '회의실' },
-  { id: 'vehicle', icon: Car, label: '차량' },
-];
-
-const adminModules: NavModule[] = [
+const adminModules: AdminNavModule[] = [
   { id: 'admin-home', icon: LayoutGrid, label: '관리자 홈' },
   { id: 'admin-users', icon: Users, label: '사용자 관리' },
   { id: 'admin-roles', icon: Shield, label: '권한 관리' },
@@ -59,44 +65,101 @@ export function NavRail({
   activePanel,
   activeFullScreen,
   isAdminMode,
+  pinnedMenus,
   onPanelClick,
+  onMoreClick,
 }: NavRailProps) {
-  const modules = isAdminMode ? adminModules : userModules;
-  const homeId: PanelId | 'home' = isAdminMode ? 'admin-home' : 'home';
-
   const isHomeActive = activePanel === null && activeFullScreen === null;
+  const moreButtonRef = React.useRef<View>(null);
 
+  const handleMorePress = () => {
+    moreButtonRef.current?.measure((_x, _y, _w, _h, _pageX, pageY) => {
+      onMoreClick(pageY);
+    });
+  };
+
+  if (isAdminMode) {
+    return (
+      <View style={styles.container}>
+        {adminModules.map((mod, idx) => {
+          const Icon = mod.icon;
+          const isHomeButton = mod.id === 'admin-home';
+          const isActive = isHomeButton
+            ? isHomeActive
+            : activePanel === mod.id || activeFullScreen === mod.id;
+
+          return (
+            <React.Fragment key={mod.id}>
+              <TouchableOpacity
+                onPress={() => onPanelClick(isHomeButton ? 'home' : mod.id)}
+                style={[styles.iconButton, isActive && styles.iconButtonActive]}
+                activeOpacity={0.7}
+              >
+                {isActive && <View style={styles.activeIndicator} />}
+                <Icon
+                  size={22}
+                  color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'}
+                />
+              </TouchableOpacity>
+              {idx === 0 && <View style={styles.divider} />}
+            </React.Fragment>
+          );
+        })}
+      </View>
+    );
+  }
+
+  // User mode: home + pinnedMenus + more button
   return (
     <View style={styles.container}>
-      {modules.map((mod, idx) => {
-        const Icon = mod.icon;
-        const isHomeButton = mod.id === 'home' || mod.id === 'admin-home';
-        const isActive = isHomeButton
-          ? isHomeActive
-          : activePanel === mod.id || activeFullScreen === mod.id;
+      {/* 홈 (항상 고정) */}
+      <TouchableOpacity
+        onPress={() => onPanelClick('home')}
+        style={[styles.iconButton, isHomeActive && styles.iconButtonActive]}
+        activeOpacity={0.7}
+      >
+        {isHomeActive && <View style={styles.activeIndicator} />}
+        <Home size={22} color={isHomeActive ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+      </TouchableOpacity>
+
+      <View style={styles.divider} />
+
+      {/* 핀 된 메뉴들 */}
+      {pinnedMenus.map((panelId) => {
+        const meta = ALL_MENUS.find((m) => m.panel === panelId);
+        if (!meta) return null;
+        const Icon = ICON_MAP[meta.iconName] ?? FileText;
+        const isActive = activePanel === panelId || activeFullScreen === panelId;
+        const unread = panelId === 'approval' ? 2 : 0; // 기존 하드코딩 유지
 
         return (
-          <React.Fragment key={mod.id}>
-            <TouchableOpacity
-              onPress={() => onPanelClick(mod.id === homeId ? 'home' : mod.id)}
-              style={[styles.iconButton, isActive && styles.iconButtonActive]}
-              activeOpacity={0.7}
-            >
-              {isActive && <View style={styles.activeIndicator} />}
-              <Icon
-                size={22}
-                color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'}
-              />
-              {mod.unread && mod.unread > 0 ? (
-                <View style={styles.badge}>
-                  <Text style={styles.badgeText}>{mod.unread}</Text>
-                </View>
-              ) : null}
-            </TouchableOpacity>
-            {idx === 0 && <View style={styles.divider} />}
-          </React.Fragment>
+          <TouchableOpacity
+            key={panelId}
+            onPress={() => onPanelClick(panelId)}
+            style={[styles.iconButton, isActive && styles.iconButtonActive]}
+            activeOpacity={0.7}
+          >
+            {isActive && <View style={styles.activeIndicator} />}
+            <Icon size={22} color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+            {unread > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unread}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
         );
       })}
+
+      {/* [⋯] 더보기 버튼 */}
+      <View ref={moreButtonRef}>
+        <TouchableOpacity
+          onPress={handleMorePress}
+          style={styles.iconButton}
+          activeOpacity={0.7}
+        >
+          <MoreHorizontal size={20} color="rgba(0,0,0,0.45)" />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
