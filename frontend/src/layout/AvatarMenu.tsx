@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
 import { Settings, LogOut } from 'lucide-react-native';
 
 interface AvatarMenuProps {
@@ -22,25 +15,12 @@ export function AvatarMenu({ name, department, position, onLogout }: AvatarMenuP
 
   return (
     <View>
-      <TouchableOpacity
-        onPress={() => setOpen(true)}
-        activeOpacity={0.7}
-        style={styles.avatar}
-      >
+      <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.7} style={styles.avatar}>
         <Text style={styles.avatarText}>{initial}</Text>
       </TouchableOpacity>
 
-      <Modal
-        visible={open}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setOpen(false)}
-      >
-        <TouchableOpacity
-          style={styles.overlay}
-          activeOpacity={1}
-          onPress={() => setOpen(false)}
-        >
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
           <View style={styles.dropdown}>
             <View style={styles.userBlock}>
               <Text style={styles.userName}>{name}</Text>

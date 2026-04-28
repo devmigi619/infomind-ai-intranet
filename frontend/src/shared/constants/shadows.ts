@@ -1,7 +1,6 @@
 import { Platform, ViewStyle } from 'react-native';
 
-const webShadow = (val: string): ViewStyle =>
-  ({ boxShadow: val } as any);
+const webShadow = (val: string): ViewStyle => ({ boxShadow: val }) as any;
 
 const nativeShadow = (
   offsetY: number,
@@ -31,6 +30,6 @@ export const shadows = {
   }) as ViewStyle,
   dropdown: Platform.select({
     web: webShadow('0 8px 24px rgba(0,0,0,0.10)'),
-    default: nativeShadow(8, 24, 0.10),
+    default: nativeShadow(8, 24, 0.1),
   }) as ViewStyle,
 };

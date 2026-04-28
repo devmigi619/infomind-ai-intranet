@@ -1,12 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  Pressable,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Pressable } from 'react-native';
 import {
   LayoutList,
   FileCheck,
@@ -95,11 +88,7 @@ export function NavRailMorePopover({
 
         <View style={styles.divider} />
 
-        <TouchableOpacity
-          style={styles.footer}
-          onPress={onCustomize}
-          activeOpacity={0.8}
-        >
+        <TouchableOpacity style={styles.footer} onPress={onCustomize} activeOpacity={0.8}>
           <View style={styles.footerLeft}>
             <Settings size={13} color="#0A2463" />
             <Text style={styles.footerText}>맞춤설정</Text>

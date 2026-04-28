@@ -1,11 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
 import { Sparkles } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatMessage } from '../../../shared/components/ChatMessage';
@@ -31,11 +25,7 @@ interface MainScreenProps {
   onAiResponseComplete?: () => void;
 }
 
-export function MainScreen({
-  user,
-  onNavigate,
-  onAiResponseComplete,
-}: MainScreenProps) {
+export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScreenProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
@@ -91,7 +81,7 @@ export function MainScreen({
         let firstTokenReceived = false;
         const streamingId = 'streaming';
 
-        while (true) {
+        for (;;) {
           const { done, value } = await reader.read();
           if (done) break;
           const chunk = decoder.decode(value);
@@ -119,9 +109,7 @@ export function MainScreen({
                 } else {
                   setMessages((prev) =>
                     prev.map((m) =>
-                      m.id === streamingId
-                        ? { ...m, content: m.content + data.content }
-                        : m,
+                      m.id === streamingId ? { ...m, content: m.content + data.content } : m,
                     ),
                   );
                 }
@@ -147,9 +135,7 @@ export function MainScreen({
 
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === streamingId
-              ? { ...m, id: `a-${Date.now()}`, isStreaming: false }
-              : m,
+            m.id === streamingId ? { ...m, id: `a-${Date.now()}`, isStreaming: false } : m,
           ),
         );
       } catch {
@@ -159,8 +145,7 @@ export function MainScreen({
               ? {
                   id: `a-${Date.now()}`,
                   role: 'assistant',
-                  content:
-                    'AI 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.',
+                  content: 'AI 서버에 연결하지 못했습니다. 잠시 후 다시 시도해주세요.',
                   isStreaming: false,
                   isThinking: false,
                 }
@@ -169,10 +154,7 @@ export function MainScreen({
         );
       } finally {
         setIsStreaming(false);
-        setTimeout(
-          () => scrollRef.current?.scrollToEnd({ animated: true }),
-          100,
-        );
+        setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
         onAiResponseComplete?.();
       }
     },
@@ -192,9 +174,7 @@ export function MainScreen({
           <View style={styles.iconWrap}>
             <Sparkles size={32} color="#0A2463" />
           </View>
-          <Text style={styles.welcomeTitle}>
-            안녕하세요, {user?.name ?? ''}님
-          </Text>
+          <Text style={styles.welcomeTitle}>안녕하세요, {user?.name ?? ''}님</Text>
           <Text style={styles.welcomeSubtitle}>무엇을 도와드릴까요?</Text>
         </View>
       ) : (
@@ -202,9 +182,7 @@ export function MainScreen({
           ref={scrollRef}
           style={styles.messageList}
           contentContainerStyle={styles.messageListContent}
-          onContentSizeChange={() =>
-            scrollRef.current?.scrollToEnd({ animated: false })
-          }
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {messages.map((msg) => (
             <ChatMessage

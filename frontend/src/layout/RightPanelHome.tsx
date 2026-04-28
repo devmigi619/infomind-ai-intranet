@@ -1,16 +1,6 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-} from 'react-native';
-import {
-  FileCheck,
-  Calendar,
-  AlertCircle,
-} from 'lucide-react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { FileCheck, Calendar, AlertCircle } from 'lucide-react-native';
 
 interface RightPanelHomeProps {
   userName: string;
@@ -42,8 +32,8 @@ export function RightPanelHome({ userName }: RightPanelHomeProps) {
           <Text style={styles.cardCount}>2</Text>
         </View>
         <Text style={styles.cardBody}>
-          <Text style={styles.cardBodyStrong}>휴가 신청 (김철수)</Text> 등 2건. 그
-          중 1건은 오늘 안 처리.
+          <Text style={styles.cardBodyStrong}>휴가 신청 (김철수)</Text> 등 2건. 그 중 1건은 오늘 안
+          처리.
         </Text>
       </TouchableOpacity>
 
@@ -55,9 +45,7 @@ export function RightPanelHome({ userName }: RightPanelHomeProps) {
           <Text style={styles.cardTitle}>오늘 일정</Text>
           <Text style={styles.cardCount}>3</Text>
         </View>
-        <Text style={styles.cardBody}>
-          10:00 팀 스탠드업 · 14:00 클라이언트 · 16:30 1on1
-        </Text>
+        <Text style={styles.cardBody}>10:00 팀 스탠드업 · 14:00 클라이언트 · 16:30 1on1</Text>
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.card} activeOpacity={0.8}>
@@ -75,11 +63,7 @@ export function RightPanelHome({ userName }: RightPanelHomeProps) {
       <Text style={styles.sectionLabel}>빠른 액션</Text>
       <View style={styles.qaGrid}>
         {QUICK_ACTIONS.map((action) => (
-          <TouchableOpacity
-            key={action.id}
-            style={styles.qaCard}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity key={action.id} style={styles.qaCard} activeOpacity={0.7}>
             <Text style={styles.qaIcon}>{action.emoji}</Text>
             <Text style={styles.qaLabel}>{action.label}</Text>
           </TouchableOpacity>

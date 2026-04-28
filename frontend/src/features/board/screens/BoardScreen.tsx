@@ -47,7 +47,11 @@ export function BoardScreen() {
       return;
     }
     try {
-      await createPost.mutateAsync({ title: writeTitle, content: writeContent, category: writeCategory });
+      await createPost.mutateAsync({
+        title: writeTitle,
+        content: writeContent,
+        category: writeCategory,
+      });
       setWriteTitle('');
       setWriteContent('');
       setWriteCategory('FREE');
@@ -60,12 +64,21 @@ export function BoardScreen() {
   if (selectedPost) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setSelectedPost(null)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setSelectedPost(null)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.backText}>← 목록으로</Text>
         </TouchableOpacity>
         <ScrollView style={styles.detail} contentContainerStyle={styles.detailContent}>
           <View style={styles.detailHeader}>
-            <View style={[styles.badge, { backgroundColor: CATEGORY_COLORS[selectedPost.category] ?? '#666' }]}>
+            <View
+              style={[
+                styles.badge,
+                { backgroundColor: CATEGORY_COLORS[selectedPost.category] ?? '#666' },
+              ]}
+            >
               <Text style={styles.badgeText}>{selectedPost.category}</Text>
             </View>
             <Text style={styles.detailTitle}>{selectedPost.title}</Text>
@@ -82,7 +95,11 @@ export function BoardScreen() {
   if (isWriting) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setIsWriting(false)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setIsWriting(false)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.backText}>← 목록으로</Text>
         </TouchableOpacity>
         <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
@@ -110,7 +127,12 @@ export function BoardScreen() {
                   onPress={() => setWriteCategory(cat)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.categoryText, writeCategory === cat && styles.categoryTextActive]}>
+                  <Text
+                    style={[
+                      styles.categoryText,
+                      writeCategory === cat && styles.categoryTextActive,
+                    ]}
+                  >
                     {cat}
                   </Text>
                 </TouchableOpacity>
@@ -176,15 +198,23 @@ export function BoardScreen() {
             </TouchableOpacity>
           ))}
         </View>
-        <TouchableOpacity onPress={() => setIsWriting(true)} activeOpacity={0.7} style={styles.writeButton}>
+        <TouchableOpacity
+          onPress={() => setIsWriting(true)}
+          activeOpacity={0.7}
+          style={styles.writeButton}
+        >
           <Text style={styles.writeButtonText}>작성</Text>
         </TouchableOpacity>
       </View>
 
       {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color="#0A2463" /></View>
+        <View style={styles.center}>
+          <ActivityIndicator color="#0A2463" />
+        </View>
       ) : error ? (
-        <View style={styles.center}><Text style={styles.errorText}>게시글을 불러오지 못했습니다.</Text></View>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>게시글을 불러오지 못했습니다.</Text>
+        </View>
       ) : (
         <FlatList
           data={posts}
@@ -196,13 +226,22 @@ export function BoardScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.itemTop}>
-                <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
-                <View style={[styles.badge, { backgroundColor: CATEGORY_COLORS[item.category] ?? '#666' }]}>
+                <Text style={styles.itemTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
+                <View
+                  style={[
+                    styles.badge,
+                    { backgroundColor: CATEGORY_COLORS[item.category] ?? '#666' },
+                  ]}
+                >
                   <Text style={styles.badgeText}>{item.category}</Text>
                 </View>
               </View>
               <View style={styles.itemBottom}>
-                <Text style={styles.itemMeta}>{item.authorName} · {item.createdAt}</Text>
+                <Text style={styles.itemMeta}>
+                  {item.authorName} · {item.createdAt}
+                </Text>
                 <Text style={styles.itemViews}>👁 {item.viewCount}</Text>
               </View>
             </TouchableOpacity>

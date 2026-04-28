@@ -23,13 +23,7 @@ interface RightPanelProps {
   hasUnreadAi: boolean;
 }
 
-export function RightPanel({
-  isOpen,
-  rpTab,
-  onTabChange,
-  userName,
-  hasUnreadAi,
-}: RightPanelProps) {
+export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }: RightPanelProps) {
   const widthAnim = useRef(new Animated.Value(isOpen ? 360 : 0)).current;
 
   useEffect(() => {
@@ -51,10 +45,7 @@ export function RightPanel({
             style={[styles.tab, rpTab === 'home' && styles.tabActive]}
             activeOpacity={0.7}
           >
-            <Home
-              size={16}
-              color={rpTab === 'home' ? '#0A2463' : 'rgba(0,0,0,0.4)'}
-            />
+            <Home size={16} color={rpTab === 'home' ? '#0A2463' : 'rgba(0,0,0,0.4)'} />
             {rpTab === 'home' && <View style={styles.tabIndicator} />}
           </TouchableOpacity>
 
@@ -65,18 +56,9 @@ export function RightPanel({
             style={[styles.tab, rpTab === 'ai' && styles.tabActive]}
             activeOpacity={0.7}
           >
-            <Text
-              style={[
-                styles.aiTabLabel,
-                rpTab === 'ai' && styles.aiTabLabelActive,
-              ]}
-            >
-              AI
-            </Text>
+            <Text style={[styles.aiTabLabel, rpTab === 'ai' && styles.aiTabLabelActive]}>AI</Text>
             {rpTab === 'ai' && <View style={styles.tabIndicator} />}
-            {hasUnreadAi && rpTab !== 'ai' && (
-              <PulseDot ringColor="#FAFAFA" top={6} right={6} />
-            )}
+            {hasUnreadAi && rpTab !== 'ai' && <PulseDot ringColor="#FAFAFA" top={6} right={6} />}
           </TouchableOpacity>
         </View>
 
@@ -86,11 +68,7 @@ export function RightPanel({
           contentContainerStyle={styles.contentInner}
           showsVerticalScrollIndicator={false}
         >
-          {rpTab === 'home' ? (
-            <RightPanelHome userName={userName} />
-          ) : (
-            <RightPanelAI />
-          )}
+          {rpTab === 'home' ? <RightPanelHome userName={userName} /> : <RightPanelAI />}
         </ScrollView>
       </View>
     </Animated.View>

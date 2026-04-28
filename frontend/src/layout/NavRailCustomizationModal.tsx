@@ -50,10 +50,7 @@ interface DragState {
   dropTarget: { index: number; position: 'above' | 'below' } | null;
 }
 
-export function NavRailCustomizationModal({
-  isOpen,
-  onClose,
-}: NavRailCustomizationModalProps) {
+export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizationModalProps) {
   const { pinnedMenus, togglePinnedMenu, reorderPinnedMenus } = useUiStore();
   const [dragState, setDragState] = useState<DragState>({
     draggingIndex: null,
@@ -99,23 +96,23 @@ export function NavRailCustomizationModal({
     let draggingIdx: number | null = null;
 
     const onDragStart = (e: DragEvent) => {
-      const t = (e.target as HTMLElement).closest('[data-drag-index]') as
-        | HTMLElement
-        | null;
+      const t = (e.target as HTMLElement).closest('[data-drag-index]') as HTMLElement | null;
       if (!t) return;
       draggingIdx = parseInt(t.dataset.dragIndex || '0', 10);
       if (e.dataTransfer) {
         e.dataTransfer.effectAllowed = 'move';
-        try { e.dataTransfer.setData('text/plain', ''); } catch (_) {}
+        try {
+          e.dataTransfer.setData('text/plain', '');
+        } catch (_) {
+          // setData may throw in some browsers — safe to ignore
+        }
       }
       setDragState({ draggingIndex: draggingIdx, dropTarget: null });
     };
 
     const onDragOver = (e: DragEvent) => {
       if (draggingIdx === null) return;
-      const t = (e.target as HTMLElement).closest('[data-drag-index]') as
-        | HTMLElement
-        | null;
+      const t = (e.target as HTMLElement).closest('[data-drag-index]') as HTMLElement | null;
       if (!t) return;
       const idx = parseInt(t.dataset.dragIndex || '0', 10);
       if (idx === draggingIdx) return;
@@ -125,10 +122,7 @@ export function NavRailCustomizationModal({
       const mid = rect.top + rect.height / 2;
       const pos: 'above' | 'below' = e.clientY < mid ? 'above' : 'below';
       setDragState((s) => {
-        if (
-          s.dropTarget?.index === idx &&
-          s.dropTarget?.position === pos
-        ) return s;
+        if (s.dropTarget?.index === idx && s.dropTarget?.position === pos) return s;
         return { ...s, dropTarget: { index: idx, position: pos } };
       });
     };
@@ -139,9 +133,7 @@ export function NavRailCustomizationModal({
         setDragState({ draggingIndex: null, dropTarget: null });
         return;
       }
-      const t = (e.target as HTMLElement).closest('[data-drag-index]') as
-        | HTMLElement
-        | null;
+      const t = (e.target as HTMLElement).closest('[data-drag-index]') as HTMLElement | null;
       if (!t) {
         draggingIdx = null;
         setDragState({ draggingIndex: null, dropTarget: null });
@@ -196,20 +188,14 @@ export function NavRailCustomizationModal({
     const Icon = ICON_MAP[meta.iconName] ?? FileText;
     const isDragging = dragState.draggingIndex === index;
     const dropAbove =
-      dragState.dropTarget?.index === index &&
-      dragState.dropTarget?.position === 'above';
+      dragState.dropTarget?.index === index && dragState.dropTarget?.position === 'above';
     const dropBelow =
-      dragState.dropTarget?.index === index &&
-      dragState.dropTarget?.position === 'below';
+      dragState.dropTarget?.index === index && dragState.dropTarget?.position === 'below';
 
     return (
       <View
         key={panelId}
-        style={[
-          styles.menuRow,
-          styles.menuRowChecked,
-          isDragging && styles.menuRowDragging,
-        ]}
+        style={[styles.menuRow, styles.menuRowChecked, isDragging && styles.menuRowDragging]}
       >
         {/* Drop indicator above */}
         {dropAbove && <View style={styles.dropIndicatorAbove} />}
@@ -268,12 +254,7 @@ export function NavRailCustomizationModal({
         <View style={styles.dragHandlePlaceholder} />
 
         {/* Checkbox */}
-        <View
-          style={[
-            styles.checkbox,
-            disabled && styles.checkboxDisabled,
-          ]}
-        />
+        <View style={[styles.checkbox, disabled && styles.checkboxDisabled]} />
 
         {/* Icon */}
         <View style={[styles.menuIcon, disabled && styles.menuIconDisabled]}>
@@ -281,9 +262,7 @@ export function NavRailCustomizationModal({
         </View>
 
         {/* Label */}
-        <Text style={[styles.menuName, disabled && styles.menuNameDisabled]}>
-          {meta.label}
-        </Text>
+        <Text style={[styles.menuName, disabled && styles.menuNameDisabled]}>{meta.label}</Text>
       </TouchableOpacity>
     );
   };
@@ -291,12 +270,7 @@ export function NavRailCustomizationModal({
   const unpinnedMenus = ALL_MENUS.filter((m) => !pinnedMenus.includes(m.panel));
 
   return (
-    <Modal
-      visible={isOpen}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
+    <Modal visible={isOpen} transparent animationType="fade" onRequestClose={onClose}>
       {/* Backdrop */}
       <Pressable style={styles.backdrop} onPress={onClose}>
         {/* 모달 본체 — 클릭이 backdrop으로 전파되지 않도록 onPress no-op */}
@@ -309,11 +283,7 @@ export function NavRailCustomizationModal({
                 NavRail에 노출할 메뉴를 체크하세요. 핸들로 드래그하여 순서를 변경할 수 있습니다.
               </Text>
             </View>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onClose}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
               <X size={16} color="rgba(0,0,0,0.45)" />
             </TouchableOpacity>
           </View>

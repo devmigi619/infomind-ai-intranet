@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import {
   Home,
   LayoutList,
@@ -96,10 +91,7 @@ export function NavRail({
                 activeOpacity={0.7}
               >
                 {isActive && <View style={styles.activeIndicator} />}
-                <Icon
-                  size={22}
-                  color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'}
-                />
+                <Icon size={22} color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
               </TouchableOpacity>
               {idx === 0 && <View style={styles.divider} />}
             </React.Fragment>
@@ -152,11 +144,7 @@ export function NavRail({
 
       {/* [⋯] 더보기 버튼 */}
       <View ref={moreButtonRef}>
-        <TouchableOpacity
-          onPress={handleMorePress}
-          style={styles.iconButton}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity onPress={handleMorePress} style={styles.iconButton} activeOpacity={0.7}>
           <MoreHorizontal size={20} color="rgba(0,0,0,0.45)" />
         </TouchableOpacity>
       </View>

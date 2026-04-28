@@ -51,7 +51,11 @@ export function WeeklyReportScreen() {
   if (selectedReport) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setSelectedReport(null)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setSelectedReport(null)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.backText}>← 목록으로</Text>
         </TouchableOpacity>
         <ScrollView style={styles.detail} contentContainerStyle={styles.detailContent}>
@@ -98,9 +102,13 @@ export function WeeklyReportScreen() {
 
       {activeTab === 'list' ? (
         isLoading ? (
-          <View style={styles.center}><ActivityIndicator color="#0A2463" /></View>
+          <View style={styles.center}>
+            <ActivityIndicator color="#0A2463" />
+          </View>
         ) : error ? (
-          <View style={styles.center}><Text style={styles.errorText}>주간보고를 불러오지 못했습니다.</Text></View>
+          <View style={styles.center}>
+            <Text style={styles.errorText}>주간보고를 불러오지 못했습니다.</Text>
+          </View>
         ) : (
           <FlatList
             data={reports}
@@ -112,7 +120,9 @@ export function WeeklyReportScreen() {
                 activeOpacity={0.7}
               >
                 <Text style={styles.itemTitle}>{item.weekStart} 주간보고</Text>
-                <Text style={styles.itemMeta} numberOfLines={1}>{item.thisWeek.split('\n')[0]}</Text>
+                <Text style={styles.itemMeta} numberOfLines={1}>
+                  {item.thisWeek.split('\n')[0]}
+                </Text>
                 <Text style={styles.itemDate}>{item.createdAt}</Text>
               </TouchableOpacity>
             )}

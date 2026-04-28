@@ -68,7 +68,7 @@ export function ApprovalScreen() {
     try {
       await approveApproval.mutateAsync({ id });
       if (selectedItem?.id === id) {
-        setSelectedItem((prev) => prev ? { ...prev, status: 'APPROVED' } : null);
+        setSelectedItem((prev) => (prev ? { ...prev, status: 'APPROVED' } : null));
       }
     } catch {
       Alert.alert('오류', '승인 처리 중 오류가 발생했습니다.');
@@ -79,7 +79,7 @@ export function ApprovalScreen() {
     try {
       await rejectApproval.mutateAsync({ id });
       if (selectedItem?.id === id) {
-        setSelectedItem((prev) => prev ? { ...prev, status: 'REJECTED' } : null);
+        setSelectedItem((prev) => (prev ? { ...prev, status: 'REJECTED' } : null));
       }
     } catch {
       Alert.alert('오류', '반려 처리 중 오류가 발생했습니다.');
@@ -114,7 +114,7 @@ export function ApprovalScreen() {
 
   const toggleApprover = (userId: number) => {
     setApproverIds((prev) =>
-      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId],
     );
   };
 
@@ -125,14 +125,20 @@ export function ApprovalScreen() {
   if (selectedItem) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setSelectedItem(null)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setSelectedItem(null)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.backText}>← 목록으로</Text>
         </TouchableOpacity>
         <ScrollView style={styles.detail} contentContainerStyle={styles.detailContent}>
           <View style={styles.detailHeader}>
             <View style={styles.detailTitleRow}>
               <Text style={styles.detailTitle}>{selectedItem.title}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[selectedItem.status] }]}>
+              <View
+                style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[selectedItem.status] }]}
+              >
                 <Text style={styles.statusText}>{STATUS_LABEL[selectedItem.status]}</Text>
               </View>
             </View>
@@ -187,7 +193,11 @@ export function ApprovalScreen() {
   if (isSubmitting) {
     return (
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backButton} onPress={() => setIsSubmitting(false)} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => setIsSubmitting(false)}
+          activeOpacity={0.7}
+        >
           <Text style={styles.backText}>← 목록으로</Text>
         </TouchableOpacity>
         <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
@@ -249,8 +259,12 @@ export function ApprovalScreen() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.userItemLeft}>
-                      <Text style={[styles.userName, selected && styles.userNameSelected]}>{u.name}</Text>
-                      <Text style={[styles.userDept, selected && styles.userDeptSelected]}>{u.department}</Text>
+                      <Text style={[styles.userName, selected && styles.userNameSelected]}>
+                        {u.name}
+                      </Text>
+                      <Text style={[styles.userDept, selected && styles.userDeptSelected]}>
+                        {u.department}
+                      </Text>
                     </View>
                     {selected && <Text style={styles.checkmark}>✓</Text>}
                   </TouchableOpacity>
@@ -308,9 +322,13 @@ export function ApprovalScreen() {
       </View>
 
       {isLoading ? (
-        <View style={styles.center}><ActivityIndicator color="#0A2463" /></View>
+        <View style={styles.center}>
+          <ActivityIndicator color="#0A2463" />
+        </View>
       ) : error ? (
-        <View style={styles.center}><Text style={styles.errorText}>결재 목록을 불러오지 못했습니다.</Text></View>
+        <View style={styles.center}>
+          <Text style={styles.errorText}>결재 목록을 불러오지 못했습니다.</Text>
+        </View>
       ) : (
         <FlatList
           data={approvals}
@@ -322,12 +340,16 @@ export function ApprovalScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.itemTop}>
-                <Text style={styles.itemTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.itemTitle} numberOfLines={1}>
+                  {item.title}
+                </Text>
                 <View style={[styles.statusBadge, { backgroundColor: STATUS_COLOR[item.status] }]}>
                   <Text style={styles.statusText}>{STATUS_LABEL[item.status]}</Text>
                 </View>
               </View>
-              <Text style={styles.itemMeta}>{item.requesterName} · {item.createdAt}</Text>
+              <Text style={styles.itemMeta}>
+                {item.requesterName} · {item.createdAt}
+              </Text>
             </TouchableOpacity>
           )}
           ItemSeparatorComponent={() => <View style={styles.separator} />}

@@ -1,13 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-  Animated,
-  Easing,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
 
 interface ActionLink {
   label: string;
@@ -105,9 +97,7 @@ function StreamingCursor() {
     return () => anim.stop();
   }, [opacity]);
 
-  return (
-    <Animated.Text style={[styles.cursor, { opacity }]}>▎</Animated.Text>
-  );
+  return <Animated.Text style={[styles.cursor, { opacity }]}>▎</Animated.Text>;
 }
 
 export function ChatMessage({
@@ -131,18 +121,8 @@ export function ChatMessage({
 
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowAssistant]}>
-      <View
-        style={[
-          styles.bubble,
-          isUser ? styles.bubbleUser : styles.bubbleAssistant,
-        ]}
-      >
-        <Text
-          style={[
-            styles.text,
-            isUser ? styles.textUser : styles.textAssistant,
-          ]}
-        >
+      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
+        <Text style={[styles.text, isUser ? styles.textUser : styles.textAssistant]}>
           {content}
           {isStreaming && !isUser && <StreamingCursor />}
         </Text>

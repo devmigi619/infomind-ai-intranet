@@ -22,9 +22,7 @@ export interface Approval {
 
 const approvalsApi = {
   getList: (type: 'my' | 'pending' = 'my'): Promise<Approval[]> =>
-    apiClient
-      .get(`/api/approvals?type=${type}`)
-      .then((r) => r.data?.data?.content ?? []),
+    apiClient.get(`/api/approvals?type=${type}`).then((r) => r.data?.data?.content ?? []),
   getDetail: (id: number): Promise<Approval> =>
     apiClient.get(`/api/approvals/${id}`).then((r) => r.data?.data ?? null),
   create: (data: { title: string; content: string; type: string; approverIds: number[] }) =>

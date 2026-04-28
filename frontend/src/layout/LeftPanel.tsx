@@ -147,11 +147,7 @@ const PLACEHOLDER_SECTIONS: PreviewSection[] = [
   },
 ];
 
-export function LeftPanel({
-  activePanel,
-  onClose,
-  onOpenFullScreen,
-}: LeftPanelProps) {
+export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelProps) {
   const widthAnim = useRef(new Animated.Value(activePanel ? 360 : 0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(0)).current;
@@ -191,9 +187,7 @@ export function LeftPanel({
   }, [activePanel, fadeAnim, translateAnim]);
 
   const title = activePanel ? PANEL_TITLES[activePanel] : '';
-  const sections = activePanel
-    ? PANEL_PREVIEW[activePanel] ?? PLACEHOLDER_SECTIONS
-    : [];
+  const sections = activePanel ? (PANEL_PREVIEW[activePanel] ?? PLACEHOLDER_SECTIONS) : [];
 
   return (
     <Animated.View style={[styles.container, { width: widthAnim }]}>
@@ -209,11 +203,7 @@ export function LeftPanel({
               <Text style={styles.openButtonText}>열기</Text>
               <ArrowRight size={12} color="#0A2463" />
             </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onClose}
-              style={styles.closeButton}
-              activeOpacity={0.7}
-            >
+            <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
               <X size={14} color="rgba(0,0,0,0.5)" />
             </TouchableOpacity>
           </View>
@@ -247,15 +237,8 @@ export function LeftPanel({
                         {card.title}
                       </Text>
                       {card.status && (
-                        <View
-                          style={[
-                            styles.statusBadge,
-                            { backgroundColor: card.status.color },
-                          ]}
-                        >
-                          <Text style={styles.statusText}>
-                            {card.status.label}
-                          </Text>
+                        <View style={[styles.statusBadge, { backgroundColor: card.status.color }]}>
+                          <Text style={styles.statusText}>{card.status.label}</Text>
                         </View>
                       )}
                     </View>

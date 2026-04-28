@@ -11,10 +11,8 @@ export interface UserInfo {
 }
 
 const usersApi = {
-  getAll: (): Promise<UserInfo[]> =>
-    apiClient.get('/api/users').then((r) => r.data?.data ?? []),
-  updateFcmToken: (fcmToken: string) =>
-    apiClient.put('/api/users/me/fcm-token', { fcmToken }),
+  getAll: (): Promise<UserInfo[]> => apiClient.get('/api/users').then((r) => r.data?.data ?? []),
+  updateFcmToken: (fcmToken: string) => apiClient.put('/api/users/me/fcm-token', { fcmToken }),
 };
 
 export const useUsers = () =>

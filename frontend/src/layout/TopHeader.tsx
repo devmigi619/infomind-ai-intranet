@@ -1,11 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Bell, PanelRight, Search } from 'lucide-react-native';
 import { AvatarMenu } from './AvatarMenu';
 import { PulseDot } from '../shared/components/PulseDot';
@@ -63,18 +57,11 @@ export function TopHeader({
             activeOpacity={0.7}
             style={styles.adminToggle}
           >
-            <Text
-              style={[styles.adminLabel, isAdminMode && styles.adminLabelActive]}
-            >
+            <Text style={[styles.adminLabel, isAdminMode && styles.adminLabelActive]}>
               관리자 모드
             </Text>
             <View style={[styles.switch, isAdminMode && styles.switchActive]}>
-              <View
-                style={[
-                  styles.switchKnob,
-                  isAdminMode && styles.switchKnobActive,
-                ]}
-              />
+              <View style={[styles.switchKnob, isAdminMode && styles.switchKnobActive]} />
             </View>
           </TouchableOpacity>
         )}
@@ -88,19 +75,11 @@ export function TopHeader({
         {/* RightPanel toggle */}
         <TouchableOpacity
           onPress={onToggleRightPanel}
-          style={[
-            styles.iconButton,
-            isRightPanelOpen && styles.iconButtonActive,
-          ]}
+          style={[styles.iconButton, isRightPanelOpen && styles.iconButtonActive]}
           activeOpacity={0.7}
         >
-          <PanelRight
-            size={18}
-            color={isRightPanelOpen ? '#0A2463' : 'rgba(0,0,0,0.55)'}
-          />
-          {hasUnreadAi && !isRightPanelOpen && (
-            <PulseDot ringColor="#ffffff" top={6} right={6} />
-          )}
+          <PanelRight size={18} color={isRightPanelOpen ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+          {hasUnreadAi && !isRightPanelOpen && <PulseDot ringColor="#ffffff" top={6} right={6} />}
         </TouchableOpacity>
 
         {/* Avatar dropdown */}

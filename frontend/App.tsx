@@ -155,9 +155,7 @@ function AppContent() {
         return <WeeklyReportScreen />;
       default:
         return (
-          <PlaceholderScreen
-            title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen}
-          />
+          <PlaceholderScreen title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen} />
         );
     }
   };

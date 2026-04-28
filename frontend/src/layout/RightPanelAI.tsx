@@ -9,9 +9,7 @@ export function RightPanelAI() {
         <MessageSquare size={28} color="rgba(10,36,99,0.6)" />
       </View>
       <Text style={styles.title}>AI에게 물어보세요</Text>
-      <Text style={styles.subtitle}>
-        대화하면 관련 문서와 업무를{'\n'}여기에 정리해드립니다.
-      </Text>
+      <Text style={styles.subtitle}>대화하면 관련 문서와 업무를{'\n'}여기에 정리해드립니다.</Text>
     </View>
   );
 }

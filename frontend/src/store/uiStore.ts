@@ -119,11 +119,10 @@ let prevPinnedMenus = useUiStore.getState().pinnedMenus;
 useUiStore.subscribe((state) => {
   if (state.pinnedMenus !== prevPinnedMenus) {
     prevPinnedMenus = state.pinnedMenus;
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ pinnedMenus: state.pinnedMenus }),
-    ).catch(() => {
-      // 저장 실패는 조용히 무시
-    });
+    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ pinnedMenus: state.pinnedMenus })).catch(
+      () => {
+        // 저장 실패는 조용히 무시
+      },
+    );
   }
 });

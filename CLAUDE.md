@@ -230,3 +230,8 @@ useMutation({
 - `.env.*` 파일은 커밋 금지 (`.gitignore` 등록됨)
 - 모든 변수는 `.env.example`에 주석과 함께 선언
 - 민감 값(비밀번호, 시크릿)은 `.env.example`에 기본값 없음
+
+## 협업 가이드
+
+- 모듈별 README는 `features/{module}/README.md`에 위치
+- 새 모듈 추가 시 [features/README.md](frontend/src/features/README.md) 참고

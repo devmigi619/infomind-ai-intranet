@@ -38,10 +38,7 @@ export function PulseDot({ ringColor = '#FAFAFA', top = 6, right = 6 }: PulseDot
 
   return (
     <Animated.View
-      style={[
-        styles.outer,
-        { top, right, borderColor: ringColor, transform: [{ scale }] },
-      ]}
+      style={[styles.outer, { top, right, borderColor: ringColor, transform: [{ scale }] }]}
       pointerEvents="none"
     >
       <View style={styles.inner} />

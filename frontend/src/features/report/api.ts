@@ -17,8 +17,7 @@ const reportsApi = {
       .then((r) => r.data?.data?.content ?? []),
   getDetail: (id: number): Promise<Report> =>
     apiClient.get(`/api/weekly-reports/${id}`).then((r) => r.data.data),
-  create: (data: unknown) =>
-    apiClient.post('/api/weekly-reports', data).then((r) => r.data.data),
+  create: (data: unknown) => apiClient.post('/api/weekly-reports', data).then((r) => r.data.data),
   update: (id: number, data: unknown) =>
     apiClient.put(`/api/weekly-reports/${id}`, data).then((r) => r.data.data),
 };
@@ -47,8 +46,7 @@ export const useCreateReport = () => {
 export const useUpdateReport = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: unknown }) =>
-      reportsApi.update(id, data),
+    mutationFn: ({ id, data }: { id: number; data: unknown }) => reportsApi.update(id, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['reports'] }),
   });
 };

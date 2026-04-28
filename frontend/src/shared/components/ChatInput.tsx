@@ -23,12 +23,7 @@ interface ChatInputProps {
 const MIN_HEIGHT = 33;
 const MAX_HEIGHT = 117;
 
-export function ChatInput({
-  value,
-  onChangeText,
-  onSend,
-  disabled,
-}: ChatInputProps) {
+export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [inputHeight, setInputHeight] = useState(MIN_HEIGHT);
   const inputRef = useRef<TextInput>(null);
@@ -57,10 +52,7 @@ export function ChatInput({
         const el = inputRef.current as any;
         if (!el) return;
         el.style.height = 'auto';
-        const newHeight = Math.min(
-          Math.max(el.scrollHeight, MIN_HEIGHT),
-          MAX_HEIGHT,
-        );
+        const newHeight = Math.min(Math.max(el.scrollHeight, MIN_HEIGHT), MAX_HEIGHT);
         setInputHeight(newHeight);
       });
     }
@@ -87,12 +79,7 @@ export function ChatInput({
 
   return (
     <View style={styles.container}>
-      <View
-        style={[
-          styles.inputWrap,
-          isFocused && styles.inputWrapFocused,
-        ]}
-      >
+      <View style={[styles.inputWrap, isFocused && styles.inputWrapFocused]}>
         <TextInput
           ref={inputRef}
           style={[styles.input, { height: inputHeight }]}
@@ -121,10 +108,7 @@ export function ChatInput({
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleSend}
-            style={[
-              styles.sendButton,
-              !canSend && styles.sendButtonDisabled,
-            ]}
+            style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
             activeOpacity={0.8}
             disabled={!canSend}
           >
@@ -180,9 +164,7 @@ const styles = StyleSheet.create({
       web: "'Noto Sans KR', sans-serif",
       default: undefined,
     }),
-    ...(Platform.OS === 'web'
-      ? ({ outlineStyle: 'none', resize: 'none' } as any)
-      : {}),
+    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', resize: 'none' } as any) : {}),
   },
   actions: {
     flexDirection: 'row',
