@@ -6,6 +6,8 @@ import type { PanelId, RpTab } from '../types';
 // Expo Web의 Hermes 엔진이 import.meta를 지원하지 않아 별도 구현.
 const STORAGE_KEY = 'infomind-ui';
 
+export type SettingsCategory = 'account' | 'notification' | 'customize' | 'display';
+
 interface UiState {
   // State
   activePanel: PanelId | null;
@@ -15,10 +17,12 @@ interface UiState {
   isAdminMode: boolean;
   hasUnreadAi: boolean;
   pinnedMenus: PanelId[];
+  settingsCategory: SettingsCategory;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
   openFullScreen: () => void;
+  openSettingsScreen: () => void;
   goHome: () => void;
   closeLeftPanel: () => void;
   toggleRightPanel: () => void;
@@ -28,6 +32,7 @@ interface UiState {
   markAiRead: () => void;
   togglePinnedMenu: (panel: PanelId) => void;
   reorderPinnedMenus: (from: number, to: number) => void;
+  setSettingsCategory: (category: SettingsCategory) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -38,6 +43,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   isAdminMode: false,
   hasUnreadAi: false,
   pinnedMenus: ['board', 'approval', 'report', 'calendar'],
+  settingsCategory: 'account',
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -54,6 +60,10 @@ export const useUiStore = create<UiState>((set, get) => ({
     if (activePanel) {
       set({ activeFullScreen: activePanel });
     }
+  },
+
+  openSettingsScreen: () => {
+    set({ activePanel: null, activeFullScreen: 'settings' });
   },
 
   goHome: () => set({ activePanel: null, activeFullScreen: null }),
@@ -95,6 +105,8 @@ export const useUiStore = create<UiState>((set, get) => ({
       arr.splice(to, 0, moved);
       return { pinnedMenus: arr };
     }),
+
+  setSettingsCategory: (category) => set({ settingsCategory: category }),
 }));
 
 // 비동기 hydrate (앱 시작 시 LocalStorage/AsyncStorage에서 pinnedMenus 복원)

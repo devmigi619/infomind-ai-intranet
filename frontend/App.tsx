@@ -18,6 +18,7 @@ import { BoardScreen } from './src/features/board/screens/BoardScreen';
 import { ApprovalScreen } from './src/features/approval/screens/ApprovalScreen';
 import { WeeklyReportScreen } from './src/features/report/screens/WeeklyReportScreen';
 import { PlaceholderScreen } from './src/features/placeholder/screens/PlaceholderScreen';
+import { SettingsScreen } from './src/features/settings/screens/SettingsScreen';
 import type { PanelId } from './src/types';
 
 const queryClient = new QueryClient({
@@ -54,6 +55,7 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   'admin-categories': '게시판 카테고리',
   'admin-approval-line': '결재선 템플릿',
   'admin-system': '시스템 설정',
+  settings: '설정',
 };
 
 function AppContent() {
@@ -98,12 +100,15 @@ function AppContent() {
     setRpTab,
     handleNavClick,
     openFullScreen,
+    openSettingsScreen,
     goHome,
     closeLeftPanel,
     toggleRightPanel,
     toggleAdminMode,
     markAiUnread,
   } = useUiStore();
+
+  const handleSettingsClick = () => openSettingsScreen();
 
   const handleLogin = async (username: string, password: string) => {
     await loginMutation.mutateAsync({ username, password });
@@ -153,6 +158,8 @@ function AppContent() {
         return <ApprovalScreen />;
       case 'report':
         return <WeeklyReportScreen />;
+      case 'settings':
+        return <SettingsScreen />;
       default:
         return (
           <PlaceholderScreen title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen} />
@@ -189,6 +196,7 @@ function AppContent() {
           user={user ?? null}
           onBrandClick={goHome}
           onLogout={handleLogout}
+          onSettingsClick={handleSettingsClick}
           onToggleRightPanel={toggleRightPanel}
           isRightPanelOpen={isRightPanelOpen}
           isAdminMode={isAdminMode}

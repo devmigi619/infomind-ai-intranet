@@ -13,6 +13,7 @@ interface TopHeaderProps {
   } | null;
   onBrandClick: () => void;
   onLogout: () => void;
+  onSettingsClick: () => void;
   onToggleRightPanel: () => void;
   isRightPanelOpen: boolean;
   isAdminMode: boolean;
@@ -24,6 +25,7 @@ export function TopHeader({
   user,
   onBrandClick,
   onLogout,
+  onSettingsClick,
   onToggleRightPanel,
   isRightPanelOpen,
   isAdminMode,
@@ -89,6 +91,7 @@ export function TopHeader({
             department={user.department}
             position={user.position}
             onLogout={onLogout}
+            onSettingsClick={onSettingsClick}
           />
         )}
       </View>

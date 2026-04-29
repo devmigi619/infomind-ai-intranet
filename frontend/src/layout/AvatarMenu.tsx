@@ -1,22 +1,27 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
-import { Settings, LogOut } from 'lucide-react-native';
+import { Settings, LogOut, User } from 'lucide-react-native';
 
 interface AvatarMenuProps {
   name: string;
   department?: string;
   position?: string;
   onLogout: () => void;
+  onSettingsClick: () => void;
 }
 
-export function AvatarMenu({ name, department, position, onLogout }: AvatarMenuProps) {
+export function AvatarMenu({ name, department, position, onLogout, onSettingsClick }: AvatarMenuProps) {
   const [open, setOpen] = useState(false);
-  const initial = name?.[0] ?? '?';
 
   return (
     <View>
-      <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.7} style={styles.avatar}>
-        <Text style={styles.avatarText}>{initial}</Text>
+      <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.7} style={styles.trigger}>
+        <View style={styles.avatar}>
+          <User size={16} color="rgba(0,0,0,0.55)" />
+        </View>
+        <Text style={styles.nameText}>
+          {name}{position ? ` ${position}` : ''}
+        </Text>
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -34,7 +39,10 @@ export function AvatarMenu({ name, department, position, onLogout }: AvatarMenuP
             <TouchableOpacity
               style={styles.item}
               activeOpacity={0.7}
-              onPress={() => setOpen(false)}
+              onPress={() => {
+                setOpen(false);
+                onSettingsClick();
+              }}
             >
               <Settings size={16} color="#000000" />
               <Text style={styles.itemText}>설정</Text>
@@ -61,19 +69,24 @@ export function AvatarMenu({ name, department, position, onLogout }: AvatarMenuP
 }
 
 const styles = StyleSheet.create({
+  trigger: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 4,
+  },
   avatar: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#0A2463',
+    backgroundColor: 'rgba(0,0,0,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 4,
   },
-  avatarText: {
-    color: '#ffffff',
-    fontSize: 12,
+  nameText: {
+    marginLeft: 8,
+    fontSize: 13,
     fontWeight: '500',
+    color: '#000000',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   overlay: {

@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 4b. 설정 (모달)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  min-width: 1280px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font-family: inherit; }
+svg { stroke: currentColor; fill: none; }
+
+/* ===== Layout ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+.body {
+  display: grid;
+  grid-template-columns: 64px 0px 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: #000;
+  user-select: none;
+  flex-shrink: 0;
+}
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.5;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 16px 0 40px;
+  background: #F0F0F0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
+  cursor: not-allowed;
+  font-family: inherit;
+}
+.search-bar svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: rgba(0,0,0,0.3);
+}
+.search-bar .preparing-tag {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.04em;
+}
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: rgba(0,0,0,0.6);
+}
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.icon-btn.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+.avatar-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-left: 4px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+}
+.avatar-trigger:hover { background: rgba(0,0,0,0.04); }
+.avatar-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.55);
+  flex-shrink: 0;
+}
+.avatar-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: #000;
+}
+
+/* ===== NavRail ===== */
+.nav-rail {
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  overflow: hidden;
+}
+.nav-item {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  color: rgba(0,0,0,0.55);
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: #0A2463; }
+.nav-item.active { background: rgba(10,36,99,0.08); color: #0A2463; }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: #0A2463;
+  border-radius: 0 2px 2px 0;
+}
+.nav-divider {
+  width: 32px;
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 4px 0;
+}
+
+/* ===== Main Content (뒤에 흐릿하게) ===== */
+.main-content {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+}
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(10,36,99,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #0A2463;
+}
+.welcome-title { font-size: 22px; font-weight: 500; color: #000; }
+.welcome-subtitle { font-size: 14px; color: rgba(0,0,0,0.55); }
+.chat-input-wrap { padding: 12px 20px 20px; }
+.chat-input {
+  display: flex;
+  align-items: center;
+  background: #F5F5F5;
+  border-radius: 24px;
+  padding: 4px 4px 4px 20px;
+  border: 1px solid transparent;
+}
+.chat-input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  height: 40px;
+  color: rgba(0,0,0,0.3);
+  font-family: inherit;
+}
+.send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.08);
+  color: rgba(0,0,0,0.3);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== RightPanel ===== */
+.right-panel {
+  background: #FAFAFA;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.rp-tabs {
+  display: flex;
+  padding: 12px 16px 8px;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.rp-tab {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(0,0,0,0.4);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+}
+.rp-tab.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.rp-tab-divider { width: 1px; height: 16px; background: rgba(0,0,0,0.1); margin: 0 4px; }
+.rp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.briefing-greet {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(10,36,99,0.08), rgba(10,36,99,0.02));
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #0A2463;
+}
+.card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.card-icon {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center; font-size: 12px;
+}
+.icon-amber { background: rgba(245,158,11,0.12); color: #F59E0B; }
+.icon-blue { background: rgba(10,36,99,0.1); color: #0A2463; }
+.card-title { font-size: 13px; font-weight: 500; color: rgba(0,0,0,0.85); flex: 1; }
+.card-count { font-size: 18px; font-weight: 600; color: #000; }
+.card-body { font-size: 12px; color: rgba(0,0,0,0.6); line-height: 1.5; }
+.card-body strong { color: #000; font-weight: 500; }
+
+/* ===== Modal Overlay ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+  animation: backdropIn 0.2s ease;
+}
+@keyframes backdropIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ===== Modal ===== */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 880px;
+  height: 600px;
+  background: #fff;
+  border-radius: 16px;
+  z-index: 201;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modalIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+/* Modal Header */
+.modal-header {
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.modal-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #000;
+  letter-spacing: -0.01em;
+}
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.45);
+  transition: all 0.15s;
+}
+.modal-close:hover { background: rgba(0,0,0,0.06); color: #000; }
+
+/* Modal Body */
+.modal-body {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* Modal Sidebar */
+.modal-sidebar {
+  width: 200px;
+  flex-shrink: 0;
+  background: #FAFAFA;
+  border-right: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  flex-direction: column;
+  padding: 16px 0 12px;
+}
+.sidebar-category {
+  display: flex;
+  align-items: center;
+  padding: 9px 20px;
+  font-size: 14px;
+  color: rgba(0,0,0,0.7);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.12s;
+  border: none;
+  background: transparent;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  font-weight: 300;
+}
+.sidebar-category:hover { background: rgba(0,0,0,0.04); color: #000; }
+.sidebar-category.active {
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+  font-weight: 500;
+}
+.sidebar-category.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  background: #0A2463;
+  border-radius: 0 2px 2px 0;
+}
+.sidebar-footer {
+  margin-top: auto;
+  padding: 10px 20px;
+  font-size: 11px;
+  color: rgba(0,0,0,0.3);
+}
+
+/* Modal Content */
+.modal-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px;
+}
+.settings-section-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+
+/* Profile Row */
+.profile-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.35);
+  flex-shrink: 0;
+}
+.profile-avatar-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #000;
+  margin-bottom: 4px;
+}
+.btn-text {
+  font-size: 13px;
+  color: #0A2463;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  font-weight: 400;
+}
+.btn-text:hover { text-decoration: underline; }
+
+/* Form Fields */
+.field-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+.field-row {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+}
+.field-row:last-child { border-bottom: none; }
+.field-label {
+  width: 108px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.55);
+  font-weight: 400;
+}
+.field-value {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(0,0,0,0.85);
+}
+.field-hint {
+  font-size: 11px;
+  color: rgba(0,0,0,0.3);
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+.field-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13px;
+  color: #000;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field-input:focus { border-color: #0A2463; box-shadow: 0 0 0 3px rgba(10,36,99,0.08); }
+.field-input::placeholder { color: rgba(0,0,0,0.3); }
+
+/* Divider */
+.form-divider {
+  height: 1px;
+  background: rgba(0,0,0,0.06);
+  margin: 20px 0;
+}
+
+/* Password Row */
+.password-row {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+}
+.password-dots {
+  flex: 1;
+  font-size: 20px;
+  color: rgba(0,0,0,0.55);
+  letter-spacing: 3px;
+  line-height: 1;
+}
+
+/* Buttons */
+.btn-primary {
+  height: 32px;
+  padding: 0 14px;
+  background: #0A2463;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #082052; }
+.btn-secondary {
+  height: 32px;
+  padding: 0 14px;
+  background: #fff;
+  color: #000;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-secondary:hover { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.2); }
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 20px;
+  gap: 8px;
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 앱 배경 (뒤에 보임) ============ -->
+<div class="app">
+
+  <!-- TopHeader -->
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="통합검색 준비 중..." disabled />
+      <span class="preparing-tag">준비 중</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <button class="icon-btn active">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M15 3v18"/></svg>
+      </button>
+      <button class="avatar-trigger">
+        <div class="avatar-circle">
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span class="avatar-name">관리자</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="body">
+
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <div class="nav-item active">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      </div>
+      <div class="nav-item">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+    </nav>
+
+    <!-- Main Content (배경) -->
+    <main class="main-content">
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 관리자님</div>
+        <div class="welcome-subtitle">무엇을 도와드릴까요?</div>
+      </div>
+      <div class="chat-input-wrap">
+        <div class="chat-input">
+          <input type="text" placeholder="AI에게 물어보거나 작업을 요청하세요..." disabled />
+          <div class="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RightPanel (배경) -->
+    <aside class="right-panel">
+      <div class="rp-tabs">
+        <button class="rp-tab active">
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+        </button>
+        <div class="rp-tab-divider"></div>
+        <button class="rp-tab">AI</button>
+      </div>
+      <div class="rp-content">
+        <div class="briefing-greet">
+          좋은 아침입니다, 관리자님.<br>오늘 챙기실 항목 2가지를 정리했어요.
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-amber">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            </div>
+            <div class="card-title">결재 대기</div>
+            <div class="card-count">2</div>
+          </div>
+          <div class="card-body"><strong>휴가 신청 (김철수)</strong> 등 2건.</div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-blue">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+            </div>
+            <div class="card-title">오늘 일정</div>
+            <div class="card-count">3</div>
+          </div>
+          <div class="card-body">10:00 팀 스탠드업 · 14:00 클라이언트</div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<!-- ============ 모달 오버레이 ============ -->
+<div class="modal-backdrop" id="modal-backdrop"></div>
+
+<!-- ============ 설정 모달 ============ -->
+<div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
+  <!-- 모달 헤더 -->
+  <div class="modal-header">
+    <div class="modal-title" id="modal-title">설정</div>
+    <button class="modal-close" id="close-btn" aria-label="닫기">
+      <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+
+  <!-- 모달 본문 -->
+  <div class="modal-body">
+
+    <!-- 사이드바 (200px) -->
+    <aside class="modal-sidebar">
+      <button class="sidebar-category active">계정</button>
+      <button class="sidebar-category">알림</button>
+      <button class="sidebar-category">맞춤설정</button>
+      <button class="sidebar-category">화면</button>
+      <div class="sidebar-footer">v0.0.1</div>
+    </aside>
+
+    <!-- 콘텐츠 (680px) -->
+    <div class="modal-content">
+      <div class="settings-section-title">계정</div>
+
+      <!-- 프로필 사진 -->
+      <div class="profile-row">
+        <div class="profile-avatar">
+          <svg width="32" height="32" viewBox="0 0 24 24" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <div class="profile-avatar-name">관리자</div>
+          <button class="btn-text">사진 변경</button>
+        </div>
+      </div>
+
+      <!-- Read-only 항목 -->
+      <div class="field-group">
+        <div class="field-row">
+          <div class="field-label">이름</div>
+          <div class="field-value">관리자</div>
+          <div class="field-hint">관리자에게 문의</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">부서</div>
+          <div class="field-value">IT</div>
+          <div class="field-hint">관리자에게 문의</div>
+        </div>
+        <div class="field-row">
+          <div class="field-label">직급</div>
+          <div class="field-value">관리자</div>
+          <div class="field-hint">관리자에게 문의</div>
+        </div>
+      </div>
+
+      <!-- 편집 가능 항목 -->
+      <div class="field-group" style="margin-top: 14px;">
+        <div class="field-row" style="gap: 12px;">
+          <div class="field-label">이메일</div>
+          <input class="field-input" type="email" value="admin@infomind.com" />
+        </div>
+        <div class="field-row" style="gap: 12px;">
+          <div class="field-label">연락처</div>
+          <input class="field-input" type="tel" placeholder="010-0000-0000" />
+        </div>
+      </div>
+
+      <div class="form-divider"></div>
+
+      <!-- 비밀번호 -->
+      <div class="password-row">
+        <div class="field-label">비밀번호</div>
+        <div class="password-dots">••••••••</div>
+        <button class="btn-secondary">변경하기</button>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn-secondary" id="cancel-btn">취소</button>
+        <button class="btn-primary">저장</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// 닫기 버튼 — 모달 + 오버레이 숨기기
+function closeModal() {
+  document.querySelector('.modal').style.display = 'none';
+  document.getElementById('modal-backdrop').style.display = 'none';
+}
+document.getElementById('close-btn').addEventListener('click', closeModal);
+document.getElementById('cancel-btn').addEventListener('click', closeModal);
+document.getElementById('modal-backdrop').addEventListener('click', closeModal);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+// 사이드바 카테고리 토글
+document.querySelectorAll('.sidebar-category').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sidebar-category').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+</script>
+
+</body>
+</html>
