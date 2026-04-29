@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 05b. 메뉴 활성 (게시판 + 채팅)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+  min-width: 1280px;
+}
+button, input, textarea { font-family: inherit; }
+svg { stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ===== Layout ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+.body {
+  display: grid;
+  /* NavRail 60px | 모듈 영역 가변 | 구분선 1px | 채팅창 360px */
+  grid-template-columns: 60px 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: #000;
+  user-select: none;
+  flex-shrink: 0;
+}
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.45;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 72px 0 40px;
+  background: #F0F0F0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
+  cursor: not-allowed;
+  font-family: inherit;
+  outline: none;
+}
+.search-bar svg {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px; color: rgba(0,0,0,0.3);
+}
+.search-bar .preparing-tag {
+  position: absolute; right: 14px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px; color: rgba(0,0,0,0.35); letter-spacing: 0.04em;
+}
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  width: 32px; height: 32px; border: none; background: transparent;
+  border-radius: 8px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  position: relative; color: rgba(0,0,0,0.6);
+}
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.dot {
+  position: absolute; top: 8px; right: 8px;
+  width: 6px; height: 6px; border-radius: 50%; background: #EF4444;
+}
+.avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #0A2463; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 500; cursor: pointer; margin-left: 4px; flex-shrink: 0;
+}
+
+/* ===== NavRail ===== */
+.nav-rail {
+  width: 60px; background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0; display: flex; flex-direction: column;
+  gap: 4px; align-items: center; flex-shrink: 0;
+}
+.nav-item {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px; cursor: pointer; position: relative;
+  color: rgba(0,0,0,0.55); transition: background 0.15s, color 0.15s;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: #0A2463; }
+.nav-item.active { background: rgba(10,36,99,0.08); color: #0A2463; }
+.nav-item.active::before {
+  content: ''; position: absolute; left: -6px;
+  top: 12px; bottom: 12px; width: 2px;
+  background: #0A2463; border-radius: 0 2px 2px 0;
+}
+.nav-item .badge {
+  position: absolute; top: 6px; right: 6px;
+  background: #EF4444; color: #fff; font-size: 9px; font-weight: 600;
+  padding: 1px 4px; border-radius: 8px; min-width: 14px; text-align: center;
+}
+.nav-divider { width: 32px; height: 1px; background: rgba(0,0,0,0.08); margin: 4px 0; }
+
+/* ===== Module Area (게시판 풀뷰) ===== */
+.module-area {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.06);
+  overflow: hidden;
+  min-width: 0;
+}
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+}
+.module-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: #000;
+  letter-spacing: -0.01em;
+}
+.btn-primary {
+  height: 32px;
+  padding: 0 14px;
+  background: #0A2463;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary:hover { background: #082052; }
+
+/* Category tabs */
+.tabs-row {
+  display: flex;
+  gap: 0;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.tab-btn {
+  padding: 0 16px 12px;
+  font-size: 14px;
+  color: rgba(0,0,0,0.5);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: rgba(0,0,0,0.8); }
+.tab-btn.active { color: #0A2463; font-weight: 500; border-bottom-color: #0A2463; }
+
+/* Search + sort row */
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 24px;
+  flex-shrink: 0;
+}
+.search-input-wrap {
+  flex: 1;
+  position: relative;
+}
+.search-input-wrap svg {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: rgba(0,0,0,0.3); width: 14px; height: 14px;
+}
+.search-input-wrap input {
+  width: 100%;
+  height: 34px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 0 12px 0 36px;
+  font-size: 13px;
+  color: #000;
+  outline: none;
+  background: #FAFAFA;
+  transition: border-color 0.15s;
+}
+.search-input-wrap input:focus { border-color: rgba(10,36,99,0.4); background: #fff; }
+.search-input-wrap input::placeholder { color: rgba(0,0,0,0.3); }
+.sort-select {
+  height: 34px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  padding: 0 10px;
+  font-size: 13px;
+  color: rgba(0,0,0,0.7);
+  background: #FAFAFA;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+/* Post list */
+.post-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 24px;
+}
+.post-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: background 0.12s;
+  border-radius: 0;
+}
+.post-row:last-child { border-bottom: none; }
+.post-row:hover { background: rgba(0,0,0,0.02); margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.category-chip {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.chip-notice { background: rgba(10,36,99,0.08); color: #0A2463; }
+.chip-free { background: rgba(16,185,129,0.1); color: #059669; }
+.chip-qa { background: rgba(245,158,11,0.1); color: #D97706; }
+.post-title {
+  flex: 1;
+  font-size: 14px;
+  color: #000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.post-title.unread { font-weight: 500; }
+.post-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.post-author { font-size: 12px; color: rgba(0,0,0,0.45); white-space: nowrap; }
+.post-date { font-size: 12px; color: rgba(0,0,0,0.35); white-space: nowrap; }
+.post-views { font-size: 12px; color: rgba(0,0,0,0.3); white-space: nowrap; min-width: 40px; text-align: right; }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 14px 24px;
+  flex-shrink: 0;
+  border-top: 1px solid rgba(0,0,0,0.06);
+}
+.page-btn {
+  width: 32px; height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  color: rgba(0,0,0,0.6);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.page-btn:hover { border-color: rgba(10,36,99,0.3); color: #0A2463; }
+.page-btn.active { background: #0A2463; color: #fff; border-color: #0A2463; }
+.page-btn.arrow { color: rgba(0,0,0,0.4); }
+
+/* ===== Chat Panel (360px) ===== */
+.chat-panel {
+  width: 360px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+/* Chat header — subtle, minimal */
+.chat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.chat-panel-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ai-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #10B981;
+  flex-shrink: 0;
+}
+.chat-panel-hint {
+  font-size: 11px;
+  color: rgba(0,0,0,0.3);
+}
+
+/* Messages */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  scroll-behavior: smooth;
+}
+.cmsg-row { display: flex; }
+.cmsg-row.user { justify-content: flex-end; }
+.cmsg-row.ai { justify-content: flex-start; align-items: flex-start; gap: 8px; }
+.ai-avatar-small {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(10,36,99,0.08);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px;
+  color: #0A2463;
+}
+.cmsg {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  word-wrap: break-word;
+}
+.cmsg.user {
+  background: #0A2463;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.cmsg.ai {
+  background: #F5F5F5;
+  color: #000;
+  border-top-left-radius: 4px;
+}
+
+/* Action chip inside AI message */
+.action-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 5px 10px;
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.action-chip:hover { background: rgba(10,36,99,0.14); }
+
+/* Chat input narrow */
+.chat-input-wrap {
+  flex-shrink: 0;
+  padding: 0 12px 16px;
+  position: relative;
+}
+.chat-input-wrap::before {
+  content: '';
+  position: absolute;
+  top: -20px; left: 0; right: 0; height: 20px;
+  background: linear-gradient(to bottom, transparent, #fff);
+  pointer-events: none;
+}
+.chat-input-bar {
+  display: flex;
+  align-items: center;
+  height: 40px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 20px;
+  padding: 0 4px 0 16px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.chat-input-bar:focus-within {
+  border-color: rgba(10,36,99,0.4);
+  box-shadow: 0 0 0 3px rgba(10,36,99,0.08);
+}
+.chat-input-bar input {
+  flex: 1; border: none; outline: none;
+  background: transparent; font-size: 13px; color: #000;
+}
+.chat-input-bar input::placeholder { color: rgba(0,0,0,0.3); }
+.send-btn {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: #0A2463; color: #fff; border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: background 0.15s;
+}
+.send-btn:hover { background: #082052; }
+
+/* ===== Demo label ===== */
+.demo-label {
+  position: fixed; top: 56px; right: 12px;
+  background: rgba(10,36,99,0.9); color: #fff;
+  font-size: 11px; padding: 4px 10px; border-radius: 20px;
+  letter-spacing: 0.04em; z-index: 9999; pointer-events: none;
+}
+.demo-note {
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+  background: #000; color: rgba(255,255,255,0.75);
+  font-size: 11px; padding: 8px 16px; border-radius: 20px;
+  z-index: 9999; pointer-events: none; white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- TopHeader -->
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="통합검색 준비 중..." disabled />
+      <span class="preparing-tag">준비 중</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" title="알림">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="dot"></span>
+      </button>
+      <div class="avatar">관</div>
+    </div>
+  </header>
+
+  <div class="body">
+
+    <!-- NavRail — 게시판 활성 -->
+    <nav class="nav-rail">
+      <div class="nav-item" title="홈">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <!-- 게시판 활성 -->
+      <div class="nav-item active" title="게시판">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+      </div>
+      <div class="nav-item" title="전자결재">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+        <span class="badge">2</span>
+      </div>
+      <div class="nav-item" title="주간보고">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      </div>
+      <div class="nav-item" title="캘린더">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+      <div class="nav-item" title="더보기" style="margin-top: auto; margin-bottom: 4px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+      </div>
+    </nav>
+
+    <!-- Module Area — 게시판 풀뷰 -->
+    <div class="module-area">
+
+      <div class="module-header">
+        <div class="module-title">게시판</div>
+        <button class="btn-primary">
+          <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          글쓰기
+        </button>
+      </div>
+
+      <!-- Category tabs -->
+      <div class="tabs-row">
+        <button class="tab-btn active">전체</button>
+        <button class="tab-btn">공지</button>
+        <button class="tab-btn">자유</button>
+        <button class="tab-btn">Q&amp;A</button>
+      </div>
+
+      <!-- Filter row -->
+      <div class="filter-row">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input type="text" placeholder="게시글 검색..." />
+        </div>
+        <select class="sort-select">
+          <option>최신순</option>
+          <option>조회순</option>
+          <option>댓글순</option>
+        </select>
+      </div>
+
+      <!-- Post list -->
+      <div class="post-list">
+        <div class="post-row">
+          <span class="category-chip chip-notice">공지</span>
+          <div class="post-title unread">2026년 5월 휴가 신청 마감일 변경 안내</div>
+          <div class="post-meta">
+            <span class="post-author">인사팀</span>
+            <span class="post-date">04/28</span>
+            <span class="post-views">조회 142</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-notice">공지</span>
+          <div class="post-title unread">회의실 예약 시스템 점검 안내 (5/3 토요일 02:00~06:00)</div>
+          <div class="post-meta">
+            <span class="post-author">IT팀</span>
+            <span class="post-date">04/27</span>
+            <span class="post-views">조회 98</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-notice">공지</span>
+          <div class="post-title">상반기 워크샵 일정 안내 — 6월 14일(토)</div>
+          <div class="post-meta">
+            <span class="post-author">경영지원팀</span>
+            <span class="post-date">04/25</span>
+            <span class="post-views">조회 201</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-free">자유</span>
+          <div class="post-title">점심 뭐 먹을지 추천해주세요 (강남역 근처)</div>
+          <div class="post-meta">
+            <span class="post-author">박민준</span>
+            <span class="post-date">04/28</span>
+            <span class="post-views">조회 67</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-qa">Q&A</span>
+          <div class="post-title">출장비 정산 신청 어디서 하나요?</div>
+          <div class="post-meta">
+            <span class="post-author">이지현</span>
+            <span class="post-date">04/28</span>
+            <span class="post-views">조회 34</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-free">자유</span>
+          <div class="post-title">신규 입사자 환영합니다! 개발팀 김서준 사원</div>
+          <div class="post-meta">
+            <span class="post-author">개발팀장</span>
+            <span class="post-date">04/26</span>
+            <span class="post-views">조회 183</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-qa">Q&A</span>
+          <div class="post-title">법인 카드 한도 초과 시 처리 방법</div>
+          <div class="post-meta">
+            <span class="post-author">최도현</span>
+            <span class="post-date">04/25</span>
+            <span class="post-views">조회 29</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-free">자유</span>
+          <div class="post-title">이번 주 팀 회식 메뉴 투표 중 — 참여해주세요</div>
+          <div class="post-meta">
+            <span class="post-author">정유진</span>
+            <span class="post-date">04/24</span>
+            <span class="post-views">조회 91</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-notice">공지</span>
+          <div class="post-title">개인정보 보호 서약서 제출 요청 (5/9까지)</div>
+          <div class="post-meta">
+            <span class="post-author">총무팀</span>
+            <span class="post-date">04/22</span>
+            <span class="post-views">조회 156</span>
+          </div>
+        </div>
+        <div class="post-row">
+          <span class="category-chip chip-free">자유</span>
+          <div class="post-title">지난 주 사내 볼링대회 결과 공유합니다 🎳</div>
+          <div class="post-meta">
+            <span class="post-author">동호회</span>
+            <span class="post-date">04/21</span>
+            <span class="post-views">조회 74</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <button class="page-btn arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <button class="page-btn active">1</button>
+        <button class="page-btn">2</button>
+        <button class="page-btn">3</button>
+        <button class="page-btn">4</button>
+        <button class="page-btn">5</button>
+        <button class="page-btn arrow">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
+    </div><!-- /module-area -->
+
+    <!-- Chat Panel (360px) — 핵심 -->
+    <div class="chat-panel">
+
+      <div class="chat-panel-header">
+        <div class="chat-panel-title">
+          <span class="ai-dot"></span>
+          AI 어시스턴트
+        </div>
+        <span class="chat-panel-hint">게시판을 보면서 AI와 대화하세요</span>
+      </div>
+
+      <div class="chat-messages" id="chat-messages">
+
+        <!-- 사용자 메시지 -->
+        <div class="cmsg-row user">
+          <div class="cmsg user">이번 주 공지사항 요약해줘</div>
+        </div>
+
+        <!-- AI 메시지 -->
+        <div class="cmsg-row ai">
+          <div class="ai-avatar-small">
+            <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div>
+            <div class="cmsg ai">
+              이번 주 공지 3건이 있어요.<br><br>
+              ① 휴가 신청 마감일 변경<br>
+              ② 회의실 예약 시스템 점검 (5/3)<br>
+              ③ 워크샵 일정 안내 (6/14)<br><br>
+              자세히 보려면 게시판 [공지] 탭을 확인하세요.
+              <br>
+              <button class="action-chip">
+                공지 탭 열기 →
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Narrow input bar -->
+      <div class="chat-input-wrap">
+        <div class="chat-input-bar">
+          <input type="text" id="narrow-input" placeholder="AI에게 물어보세요..." />
+          <button class="send-btn" id="narrow-send">
+            <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div><!-- /chat-panel -->
+
+  </div><!-- /body -->
+</div><!-- /app -->
+
+<!-- Labels -->
+<div class="demo-label">05b — 게시판 + 채팅 동시 (핵심 화면)</div>
+<div class="demo-note">채팅이 사라지지 않는다 — 게시판을 보면서 AI와 동시에 대화 가능</div>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Narrow chat input
+const narrowInput = document.getElementById('narrow-input');
+const narrowSend = document.getElementById('narrow-send');
+const chatMessages = document.getElementById('chat-messages');
+
+function sendNarrow() {
+  const text = narrowInput.value.trim();
+  if (!text) return;
+  narrowInput.value = '';
+
+  const userRow = document.createElement('div');
+  userRow.className = 'cmsg-row user';
+  userRow.innerHTML = `<div class="cmsg user">${text}</div>`;
+  chatMessages.appendChild(userRow);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+
+  setTimeout(() => {
+    const aiRow = document.createElement('div');
+    aiRow.className = 'cmsg-row ai';
+    aiRow.innerHTML = `
+      <div class="ai-avatar-small">
+        <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="cmsg ai">알겠습니다. 확인해드릴게요.</div>`;
+    chatMessages.appendChild(aiRow);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }, 900);
+}
+
+narrowSend.addEventListener('click', sendNarrow);
+narrowInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); sendNarrow(); }
+});
+</script>
+
+</body>
+</html>

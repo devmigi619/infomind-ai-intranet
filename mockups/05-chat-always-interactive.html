@@ -1,0 +1,1599 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 05. AI 중심 레이아웃 (인터랙티브)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ===== Reset ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  -webkit-font-smoothing: antialiased;
+  min-width: 1280px;
+  overflow: hidden;
+}
+button, input, textarea, select { font-family: inherit; }
+svg { stroke: currentColor; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ===== Layout Shell ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+
+/* body grid: NavRail 60px | module area | chat */
+/* Full mode:  60px 0px 1fr   (module hidden, chat fills) */
+/* Split mode: 60px 1fr 360px (module visible, chat 360px) */
+.body {
+  display: grid;
+  grid-template-columns: 60px 0px 1fr;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+  transition: grid-template-columns 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.body.split {
+  grid-template-columns: 60px 1fr 360px;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+  z-index: 10;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: #000;
+  user-select: none;
+  flex-shrink: 0;
+}
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.45;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 72px 0 40px;
+  background: #F0F0F0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
+  cursor: not-allowed;
+  outline: none;
+}
+.search-bar svg {
+  position: absolute;
+  left: 14px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  color: rgba(0,0,0,0.3);
+}
+.search-bar .preparing-tag {
+  position: absolute;
+  right: 14px; top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.04em;
+}
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  width: 32px; height: 32px;
+  border: none; background: transparent;
+  border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  position: relative; color: rgba(0,0,0,0.6);
+}
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.notif-dot {
+  position: absolute; top: 8px; right: 8px;
+  width: 6px; height: 6px;
+  border-radius: 50%; background: #EF4444;
+}
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%; background: #0A2463; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 500;
+  cursor: pointer; margin-left: 4px; flex-shrink: 0;
+}
+
+/* ===== NavRail ===== */
+.nav-rail {
+  width: 60px;
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  flex-shrink: 0;
+  z-index: 5;
+}
+.nav-item {
+  width: 48px; height: 48px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  color: rgba(0,0,0,0.55);
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: #0A2463; }
+.nav-item.active {
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -6px; top: 12px; bottom: 12px;
+  width: 2px;
+  background: #0A2463;
+  border-radius: 0 2px 2px 0;
+}
+.nav-item .badge {
+  position: absolute; top: 6px; right: 6px;
+  background: #EF4444; color: #fff;
+  font-size: 9px; font-weight: 600;
+  padding: 1px 4px; border-radius: 8px;
+  min-width: 14px; text-align: center;
+}
+.nav-divider {
+  width: 32px; height: 1px;
+  background: rgba(0,0,0,0.08); margin: 4px 0;
+}
+.nav-more {
+  margin-top: auto;
+  margin-bottom: 4px;
+}
+
+/* ===== Module Area ===== */
+.module-area {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.06);
+  overflow: hidden;
+  min-width: 0;
+  /* Hidden in full mode via grid width=0 */
+}
+
+/* Individual content panels — all hidden by default */
+.content-panel {
+  display: none;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+.content-panel.active {
+  display: flex;
+}
+
+/* ===== Shared module header ===== */
+.module-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 0;
+  flex-shrink: 0;
+}
+.module-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: #000;
+  letter-spacing: -0.01em;
+}
+.btn-primary {
+  height: 32px;
+  padding: 0 14px;
+  background: #0A2463; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 6px;
+  transition: background 0.15s;
+}
+.btn-primary:hover { background: #082052; }
+
+/* ===== Board panel (from 05b) ===== */
+.tabs-row {
+  display: flex; gap: 0;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.tab-btn {
+  padding: 0 16px 12px;
+  font-size: 14px;
+  color: rgba(0,0,0,0.5);
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: rgba(0,0,0,0.8); }
+.tab-btn.active { color: #0A2463; font-weight: 500; border-bottom-color: #0A2463; }
+
+.filter-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 24px; flex-shrink: 0;
+}
+.search-input-wrap { flex: 1; position: relative; }
+.search-input-wrap svg {
+  position: absolute; left: 12px; top: 50%;
+  transform: translateY(-50%);
+  color: rgba(0,0,0,0.3); width: 14px; height: 14px;
+}
+.search-input-wrap input {
+  width: 100%; height: 34px;
+  border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
+  padding: 0 12px 0 36px;
+  font-size: 13px; color: #000; outline: none;
+  background: #FAFAFA; transition: border-color 0.15s;
+}
+.search-input-wrap input:focus { border-color: rgba(10,36,99,0.4); background: #fff; }
+.search-input-wrap input::placeholder { color: rgba(0,0,0,0.3); }
+.sort-select {
+  height: 34px;
+  border: 1px solid rgba(0,0,0,0.1); border-radius: 8px;
+  padding: 0 10px; font-size: 13px;
+  color: rgba(0,0,0,0.7); background: #FAFAFA;
+  outline: none; cursor: pointer; flex-shrink: 0;
+}
+
+.post-list { flex: 1; overflow-y: auto; padding: 0 24px; }
+.post-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer; transition: background 0.12s;
+}
+.post-row:last-child { border-bottom: none; }
+.post-row:hover { background: rgba(0,0,0,0.02); margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.category-chip {
+  font-size: 11px; font-weight: 600;
+  padding: 2px 7px; border-radius: 4px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.chip-notice { background: rgba(10,36,99,0.08); color: #0A2463; }
+.chip-free { background: rgba(16,185,129,0.1); color: #059669; }
+.chip-qa { background: rgba(245,158,11,0.1); color: #D97706; }
+.post-title {
+  flex: 1; font-size: 14px; color: #000;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.post-title.unread { font-weight: 500; }
+.post-meta { display: flex; align-items: center; gap: 16px; flex-shrink: 0; }
+.post-author { font-size: 12px; color: rgba(0,0,0,0.45); white-space: nowrap; }
+.post-date { font-size: 12px; color: rgba(0,0,0,0.35); white-space: nowrap; }
+.post-views { font-size: 12px; color: rgba(0,0,0,0.3); white-space: nowrap; min-width: 40px; text-align: right; }
+
+.pagination {
+  display: flex; align-items: center; justify-content: center;
+  gap: 4px; padding: 14px 24px;
+  flex-shrink: 0; border-top: 1px solid rgba(0,0,0,0.06);
+}
+.page-btn {
+  width: 32px; height: 32px;
+  border: 1px solid rgba(0,0,0,0.08); border-radius: 6px;
+  background: #fff; font-size: 13px; color: rgba(0,0,0,0.6);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.page-btn:hover { border-color: rgba(10,36,99,0.3); color: #0A2463; }
+.page-btn.active { background: #0A2463; color: #fff; border-color: #0A2463; }
+
+/* ===== Dashboard panel (from 05c) ===== */
+.dashboard-scroll {
+  flex: 1;
+  overflow-y: auto;
+}
+.dashboard-inner {
+  padding: 28px 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.greet-card {
+  background: linear-gradient(135deg, rgba(10,36,99,0.07), rgba(10,36,99,0.02));
+  border-radius: 16px;
+  padding: 20px 24px;
+}
+.greet-card-title {
+  font-size: 18px; font-weight: 500; color: #000;
+  margin-bottom: 6px; line-height: 1.4;
+}
+.greet-card-sub { font-size: 13px; color: rgba(0,0,0,0.55); line-height: 1.5; }
+
+.widget-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.widget-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.widget-card:hover {
+  border-color: rgba(10,36,99,0.18);
+  box-shadow: 0 3px 12px rgba(0,0,0,0.05);
+}
+.widget-card-head { display: flex; align-items: center; gap: 10px; }
+.widget-icon {
+  width: 32px; height: 32px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.icon-amber { background: rgba(245,158,11,0.12); color: #F59E0B; }
+.icon-blue  { background: rgba(10,36,99,0.1);    color: #0A2463; }
+.icon-red   { background: rgba(239,68,68,0.12);  color: #EF4444; }
+.widget-card-label { font-size: 13px; font-weight: 500; color: rgba(0,0,0,0.7); flex: 1; }
+.widget-card-count { font-size: 28px; font-weight: 600; color: #000; line-height: 1; }
+.widget-card-body { font-size: 12px; color: rgba(0,0,0,0.55); line-height: 1.55; }
+.widget-card-body strong { color: #000; font-weight: 500; }
+
+.schedule-list { display: flex; flex-direction: column; gap: 6px; margin-top: 2px; }
+.schedule-item { display: flex; align-items: center; gap: 8px; }
+.schedule-time { font-size: 11px; color: rgba(0,0,0,0.4); width: 40px; flex-shrink: 0; }
+.schedule-dot { width: 6px; height: 6px; border-radius: 50%; background: #0A2463; flex-shrink: 0; opacity: 0.6; }
+.schedule-name { font-size: 12px; color: rgba(0,0,0,0.75); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.deadline-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(239,68,68,0.04); border-radius: 8px;
+  border: 1px solid rgba(239,68,68,0.12);
+}
+.deadline-name { font-size: 12px; color: rgba(0,0,0,0.75); }
+.deadline-badge {
+  font-size: 10px; font-weight: 600;
+  color: #EF4444; background: rgba(239,68,68,0.1);
+  padding: 2px 7px; border-radius: 10px;
+}
+
+.section-label {
+  font-size: 11px; font-weight: 600;
+  color: rgba(0,0,0,0.35);
+  text-transform: uppercase; letter-spacing: 0.07em;
+}
+.quick-grid {
+  display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px;
+}
+.quick-card {
+  background: #fff; border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px; padding: 16px 12px;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  cursor: pointer; transition: border-color 0.15s, box-shadow 0.12s; text-align: center;
+}
+.quick-card:hover { border-color: rgba(10,36,99,0.18); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.quick-icon { font-size: 22px; line-height: 1; }
+.quick-label { font-size: 12px; color: rgba(0,0,0,0.7); white-space: nowrap; }
+
+/* ===== Approval panel ===== */
+.approval-tabs-row {
+  display: flex; gap: 0;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.approval-list { flex: 1; overflow-y: auto; padding: 0 24px; }
+.approval-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer; transition: background 0.12s;
+}
+.approval-row:last-child { border-bottom: none; }
+.approval-row:hover { background: rgba(0,0,0,0.02); margin: 0 -8px; padding-left: 8px; padding-right: 8px; }
+.status-badge {
+  font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 6px;
+  flex-shrink: 0; white-space: nowrap;
+}
+.status-pending { background: rgba(245,158,11,0.12); color: #D97706; }
+.status-approved { background: rgba(16,185,129,0.12); color: #059669; }
+.status-review { background: rgba(10,36,99,0.08); color: #0A2463; }
+.approval-title {
+  flex: 1; font-size: 14px; color: #000;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.approval-title.unread { font-weight: 500; }
+.approval-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+.approval-from { font-size: 12px; color: rgba(0,0,0,0.45); }
+.approval-date { font-size: 11px; color: rgba(0,0,0,0.3); }
+
+/* ===== Weekly report panel ===== */
+.report-tabs-row {
+  display: flex; gap: 0;
+  padding: 16px 24px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.report-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+.report-form-section { margin-bottom: 20px; }
+.report-form-label {
+  font-size: 12px; font-weight: 500;
+  color: rgba(0,0,0,0.5);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-bottom: 8px; display: block;
+}
+.report-textarea {
+  width: 100%;
+  min-height: 88px;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: rgba(0,0,0,0.75);
+  background: #FAFAFA;
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+.report-textarea:focus { border-color: rgba(10,36,99,0.35); background: #fff; }
+.report-textarea::placeholder { color: rgba(0,0,0,0.3); }
+.report-actions {
+  display: flex; gap: 8px; padding: 0 24px 20px;
+  flex-shrink: 0; border-top: 1px solid rgba(0,0,0,0.06);
+  padding-top: 16px;
+}
+.btn-secondary {
+  height: 32px; padding: 0 14px;
+  background: transparent;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 8px; font-size: 13px;
+  color: rgba(0,0,0,0.7);
+  cursor: pointer; transition: all 0.15s;
+}
+.btn-secondary:hover { border-color: rgba(0,0,0,0.25); background: rgba(0,0,0,0.02); }
+.btn-ai-assist {
+  height: 32px; padding: 0 14px;
+  background: rgba(10,36,99,0.06);
+  border: 1px solid rgba(10,36,99,0.15);
+  border-radius: 8px; font-size: 13px;
+  color: #0A2463; font-weight: 500;
+  cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all 0.15s;
+}
+.btn-ai-assist:hover { background: rgba(10,36,99,0.1); }
+
+/* ===== Placeholder (coming soon) panel ===== */
+.placeholder-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: rgba(0,0,0,0.35);
+}
+.placeholder-icon {
+  width: 64px; height: 64px;
+  border-radius: 18px;
+  background: rgba(0,0,0,0.04);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(0,0,0,0.25);
+  margin-bottom: 4px;
+}
+.placeholder-title { font-size: 18px; font-weight: 500; color: rgba(0,0,0,0.4); }
+.placeholder-sub { font-size: 13px; color: rgba(0,0,0,0.3); }
+
+/* ===== Chat Area ===== */
+/* Full mode: occupies col 3 (spanning 0px module + 1fr) */
+/* Split mode: occupies col 3 (360px) */
+.chat-area {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  overflow: hidden;
+  border-left: 1px solid rgba(0,0,0,0.06);
+}
+
+/* --- FULL MODE chat (05a) --- */
+.chat-full {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Welcome — ChatGPT style centered, max-width 760px */
+.chat-welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 24px;
+  overflow-y: auto;
+}
+.chat-welcome-inner {
+  width: 100%;
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.greet-heading {
+  font-size: 28px; font-weight: 500; color: #000;
+  margin-bottom: 4px; text-align: center;
+}
+.greet-sub {
+  font-size: 14px; color: rgba(0,0,0,0.55);
+  text-align: center; margin-bottom: 32px; line-height: 1.5;
+}
+.prompt-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%;
+}
+.prompt-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px; padding: 16px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left; font-size: 14px;
+  color: rgba(0,0,0,0.85); line-height: 1.4;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.prompt-card:hover { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.14); }
+.prompt-card-icon { font-size: 18px; line-height: 1; }
+.prompt-card-text { font-size: 13px; color: rgba(0,0,0,0.7); }
+
+/* Messages — fullwidth mode (max-width 760px centered) */
+.messages-full {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  scroll-behavior: smooth;
+}
+.messages-full-inner {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.msg-row { display: flex; }
+.msg-row.user { justify-content: flex-end; }
+.msg-row.ai  { justify-content: flex-start; }
+.msg {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 16px;
+  font-size: 14px; line-height: 1.6;
+  word-wrap: break-word;
+}
+.msg.user { background: #0A2463; color: #fff; border-bottom-right-radius: 4px; }
+.msg.ai   { background: #F5F5F5; color: #000; border-top-left-radius: 4px; }
+
+/* Full-width input */
+.chat-input-wrap-full {
+  flex-shrink: 0;
+  padding: 0 24px 24px;
+  position: relative;
+}
+.chat-input-wrap-full::before {
+  content: '';
+  position: absolute;
+  top: -28px; left: 0; right: 0; height: 28px;
+  background: linear-gradient(to bottom, transparent, #fff);
+  pointer-events: none;
+}
+.chat-input-inner {
+  width: 100%; max-width: 760px; margin: 0 auto;
+}
+.chat-input-bar {
+  display: flex; align-items: center;
+  height: 44px;
+  border: 1px solid rgba(0,0,0,0.12); border-radius: 22px;
+  padding: 0 6px 0 20px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.chat-input-bar:focus-within {
+  border-color: rgba(10,36,99,0.4);
+  box-shadow: 0 0 0 3px rgba(10,36,99,0.08);
+}
+.chat-input-bar input {
+  flex: 1; border: none; outline: none;
+  background: transparent; font-size: 14px; color: #000;
+}
+.chat-input-bar input::placeholder { color: rgba(0,0,0,0.3); }
+.send-btn {
+  width: 32px; height: 32px;
+  border-radius: 50%; background: #0A2463; color: #fff;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.15s;
+}
+.send-btn:hover { background: #082052; }
+
+/* --- SPLIT MODE chat (05b/05c) --- */
+.chat-split {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.chat-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.chat-panel-title {
+  font-size: 13px; font-weight: 500;
+  color: rgba(0,0,0,0.6);
+  display: flex; align-items: center; gap: 6px;
+}
+.ai-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #10B981; flex-shrink: 0;
+}
+.chat-panel-hint { font-size: 11px; color: rgba(0,0,0,0.3); }
+
+/* Split welcome */
+.chat-split-welcome {
+  flex: 1;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px 16px; gap: 6px; text-align: center;
+}
+.chat-split-welcome-icon {
+  width: 48px; height: 48px; border-radius: 14px;
+  background: rgba(10,36,99,0.06);
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(10,36,99,0.5); margin-bottom: 8px;
+}
+.chat-split-welcome-title { font-size: 14px; color: rgba(0,0,0,0.7); }
+.chat-split-welcome-sub {
+  font-size: 12px; color: rgba(0,0,0,0.4);
+  line-height: 1.5; margin-bottom: 16px;
+}
+.suggestion-chips-col {
+  display: flex; flex-direction: column; gap: 6px;
+  width: 100%; max-width: 240px;
+}
+.chip-btn {
+  padding: 9px 14px;
+  background: rgba(10,36,99,0.05); color: #0A2463;
+  border-radius: 16px; font-size: 12px;
+  border: none; cursor: pointer;
+  transition: background 0.12s; text-align: left;
+}
+.chip-btn:hover { background: rgba(10,36,99,0.1); }
+
+/* Split messages */
+.chat-messages-split {
+  flex: 1; overflow-y: auto;
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 12px;
+  scroll-behavior: smooth;
+}
+.cmsg-row { display: flex; }
+.cmsg-row.user { justify-content: flex-end; }
+.cmsg-row.ai   { justify-content: flex-start; align-items: flex-start; gap: 8px; }
+.ai-avatar-small {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(10,36,99,0.08);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 2px; color: #0A2463;
+}
+.cmsg {
+  max-width: 80%;
+  padding: 10px 14px; border-radius: 16px;
+  font-size: 13px; line-height: 1.55;
+  word-wrap: break-word;
+}
+.cmsg.user { background: #0A2463; color: #fff; border-bottom-right-radius: 4px; }
+.cmsg.ai   { background: #F5F5F5; color: #000; border-top-left-radius: 4px; }
+.action-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 8px; padding: 5px 10px;
+  background: rgba(10,36,99,0.08); color: #0A2463;
+  border-radius: 12px; font-size: 12px; font-weight: 500;
+  cursor: pointer; border: none; font-family: inherit;
+  transition: background 0.12s;
+}
+.action-chip:hover { background: rgba(10,36,99,0.14); }
+
+/* Narrow input */
+.chat-input-wrap-split {
+  flex-shrink: 0;
+  padding: 0 12px 16px;
+  position: relative;
+}
+.chat-input-wrap-split::before {
+  content: '';
+  position: absolute;
+  top: -20px; left: 0; right: 0; height: 20px;
+  background: linear-gradient(to bottom, transparent, #fff);
+  pointer-events: none;
+}
+.chat-input-bar-narrow {
+  display: flex; align-items: center;
+  height: 40px;
+  border: 1px solid rgba(0,0,0,0.12); border-radius: 20px;
+  padding: 0 4px 0 16px; background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.chat-input-bar-narrow:focus-within {
+  border-color: rgba(10,36,99,0.4);
+  box-shadow: 0 0 0 3px rgba(10,36,99,0.08);
+}
+.chat-input-bar-narrow input {
+  flex: 1; border: none; outline: none;
+  background: transparent; font-size: 13px; color: #000;
+}
+.chat-input-bar-narrow input::placeholder { color: rgba(0,0,0,0.3); }
+.send-btn-narrow {
+  width: 30px; height: 30px;
+  border-radius: 50%; background: #0A2463; color: #fff;
+  border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: background 0.15s;
+}
+.send-btn-narrow:hover { background: #082052; }
+
+/* Thinking dots */
+.thinking {
+  display: inline-flex; gap: 4px;
+  padding: 14px 18px;
+  background: #F5F5F5; border-radius: 16px;
+  border-top-left-radius: 4px;
+}
+.thinking span {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(0,0,0,0.35);
+  animation: dot 1.4s infinite ease-in-out;
+}
+.thinking span:nth-child(2) { animation-delay: 0.2s; }
+.thinking span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot {
+  0%, 80%, 100% { opacity: 0.3; transform: scale(0.85); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* ===== Visibility helpers ===== */
+/* Full chat = shown in full mode (no active menu) */
+/* Split chat = shown in split mode (active menu) */
+.chat-full  { display: flex; } /* default: no menu active */
+.chat-split { display: none; }
+
+.body.split .chat-full  { display: none; }
+.body.split .chat-split { display: flex; }
+
+/* Welcome/messages inside full mode */
+.chat-welcome      { display: flex; }
+.messages-full     { display: none; }
+.body.has-full-msgs .chat-welcome   { display: none; }
+.body.has-full-msgs .messages-full  { display: flex; }
+
+/* Welcome/messages inside split mode */
+.chat-split-welcome        { display: flex; }
+.chat-messages-split       { display: none; }
+.body.has-split-msgs .chat-split-welcome  { display: none; }
+.body.has-split-msgs .chat-messages-split { display: flex; }
+
+/* ===== Tooltip hint for nav items ===== */
+.nav-item[title]::after {
+  content: attr(title);
+  position: absolute;
+  left: 58px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.8);
+  color: #fff;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 100;
+}
+.nav-item[title]:hover::after { opacity: 1; }
+
+/* ===== Hint toast ===== */
+.hint-toast {
+  position: fixed;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10,36,99,0.92);
+  color: #fff;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 4px 12px rgba(10,36,99,0.2);
+  animation: toastIn 0.3s ease;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.hint-toast.fading { animation: toastOut 0.4s ease forwards; }
+@keyframes toastOut {
+  to { opacity: 0; transform: translateX(-50%) translateY(-6px); }
+}
+.hint-close {
+  width: 18px; height: 18px;
+  border-radius: 50%; border: none;
+  background: rgba(255,255,255,0.2);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; line-height: 1; flex-shrink: 0;
+  padding: 0;
+}
+.hint-close:hover { background: rgba(255,255,255,0.3); }
+
+/* ===== ESC badge ===== */
+.esc-badge {
+  position: fixed;
+  bottom: 16px; right: 16px;
+  background: rgba(0,0,0,0.55); color: rgba(255,255,255,0.7);
+  font-size: 11px; padding: 6px 12px;
+  border-radius: 16px; z-index: 9999;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.esc-badge.hidden { opacity: 0; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ===== TopHeader ===== -->
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="통합검색 준비 중..." disabled />
+      <span class="preparing-tag">준비 중</span>
+    </div>
+
+    <div class="top-actions">
+      <button class="icon-btn" title="알림">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        <span class="notif-dot"></span>
+      </button>
+      <div class="avatar">관</div>
+    </div>
+  </header>
+
+  <!-- ===== Body ===== -->
+  <div class="body" id="body">
+
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <div class="nav-item" data-menu="home" title="홈" id="nav-home">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" data-menu="board" title="게시판" id="nav-board">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+      </div>
+      <div class="nav-item" data-menu="approval" title="전자결재" id="nav-approval">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+        <span class="badge">2</span>
+      </div>
+      <div class="nav-item" data-menu="report" title="주간보고" id="nav-report">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      </div>
+      <div class="nav-item" data-menu="calendar" title="캘린더" id="nav-calendar">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+      <div class="nav-item nav-more" data-menu="more" title="더보기" id="nav-more">
+        <svg width="20" height="20" viewBox="0 0 24 24" stroke-width="2"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>
+      </div>
+    </nav>
+
+    <!-- Module Area (hidden in full mode via grid) -->
+    <div class="module-area" id="module-area">
+
+      <!-- HOME panel -->
+      <div class="content-panel" id="panel-home">
+        <div class="dashboard-scroll">
+          <div class="dashboard-inner">
+            <div class="greet-card">
+              <div class="greet-card-title">👋 좋은 아침입니다, 관리자님.</div>
+              <div class="greet-card-sub">오늘 챙기실 항목 3가지를 정리했어요.</div>
+            </div>
+            <div class="widget-grid">
+              <div class="widget-card">
+                <div class="widget-card-head">
+                  <div class="widget-icon icon-amber">
+                    <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+                  </div>
+                  <span class="widget-card-label">결재 대기</span>
+                </div>
+                <div class="widget-card-count">2</div>
+                <div class="widget-card-body">
+                  <strong>휴가 신청 (김철수)</strong> 등 2건.<br>그 중 1건은 오늘 안으로 처리 필요.
+                </div>
+                <div style="margin-top: 4px;">
+                  <button style="font-size: 12px; color: #0A2463; background: rgba(10,36,99,0.06); border: none; border-radius: 8px; padding: 6px 12px; cursor: pointer; font-family: inherit;" onclick="setMenu('approval')">결재 화면 열기 →</button>
+                </div>
+              </div>
+              <div class="widget-card">
+                <div class="widget-card-head">
+                  <div class="widget-icon icon-blue">
+                    <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                  </div>
+                  <span class="widget-card-label">오늘 일정</span>
+                </div>
+                <div class="widget-card-count">3</div>
+                <div class="schedule-list">
+                  <div class="schedule-item">
+                    <span class="schedule-time">10:00</span>
+                    <span class="schedule-dot"></span>
+                    <span class="schedule-name">팀 스탠드업</span>
+                  </div>
+                  <div class="schedule-item">
+                    <span class="schedule-time">14:00</span>
+                    <span class="schedule-dot"></span>
+                    <span class="schedule-name">클라이언트 미팅</span>
+                  </div>
+                  <div class="schedule-item">
+                    <span class="schedule-time">16:30</span>
+                    <span class="schedule-dot"></span>
+                    <span class="schedule-name">1on1 (김부장)</span>
+                  </div>
+                </div>
+              </div>
+              <div class="widget-card">
+                <div class="widget-card-head">
+                  <div class="widget-icon icon-red">
+                    <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                  </div>
+                  <span class="widget-card-label">마감 임박</span>
+                </div>
+                <div class="widget-card-count" style="font-size: 20px; color: #EF4444;">1건</div>
+                <div class="deadline-item">
+                  <span class="deadline-name">주간보고서</span>
+                  <span class="deadline-badge">내일 마감</span>
+                </div>
+                <div class="widget-card-body" style="margin-top: 4px;">4월 29일(수) 오후 6시까지 제출 필요</div>
+              </div>
+            </div>
+            <div class="section-label">빠른 액션</div>
+            <div class="quick-grid">
+              <div class="quick-card"><span class="quick-icon">🏖️</span><span class="quick-label">휴가 신청</span></div>
+              <div class="quick-card"><span class="quick-icon">📝</span><span class="quick-label">보고서 작성</span></div>
+              <div class="quick-card"><span class="quick-icon">🚗</span><span class="quick-label">차량 예약</span></div>
+              <div class="quick-card"><span class="quick-icon">🏢</span><span class="quick-label">회의실 예약</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOARD panel -->
+      <div class="content-panel" id="panel-board">
+        <div class="module-header">
+          <div class="module-title">게시판</div>
+          <button class="btn-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            글쓰기
+          </button>
+        </div>
+        <div class="tabs-row" id="board-tabs">
+          <button class="tab-btn active">전체</button>
+          <button class="tab-btn">공지</button>
+          <button class="tab-btn">자유</button>
+          <button class="tab-btn">Q&amp;A</button>
+        </div>
+        <div class="filter-row">
+          <div class="search-input-wrap">
+            <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" placeholder="게시글 검색..." />
+          </div>
+          <select class="sort-select"><option>최신순</option><option>조회순</option><option>댓글순</option></select>
+        </div>
+        <div class="post-list">
+          <div class="post-row"><span class="category-chip chip-notice">공지</span><div class="post-title unread">2026년 5월 휴가 신청 마감일 변경 안내</div><div class="post-meta"><span class="post-author">인사팀</span><span class="post-date">04/28</span><span class="post-views">조회 142</span></div></div>
+          <div class="post-row"><span class="category-chip chip-notice">공지</span><div class="post-title unread">회의실 예약 시스템 점검 안내 (5/3 토요일 02:00~06:00)</div><div class="post-meta"><span class="post-author">IT팀</span><span class="post-date">04/27</span><span class="post-views">조회 98</span></div></div>
+          <div class="post-row"><span class="category-chip chip-notice">공지</span><div class="post-title">상반기 워크샵 일정 안내 — 6월 14일(토)</div><div class="post-meta"><span class="post-author">경영지원팀</span><span class="post-date">04/25</span><span class="post-views">조회 201</span></div></div>
+          <div class="post-row"><span class="category-chip chip-free">자유</span><div class="post-title">점심 뭐 먹을지 추천해주세요 (강남역 근처)</div><div class="post-meta"><span class="post-author">박민준</span><span class="post-date">04/28</span><span class="post-views">조회 67</span></div></div>
+          <div class="post-row"><span class="category-chip chip-qa">Q&A</span><div class="post-title">출장비 정산 신청 어디서 하나요?</div><div class="post-meta"><span class="post-author">이지현</span><span class="post-date">04/28</span><span class="post-views">조회 34</span></div></div>
+          <div class="post-row"><span class="category-chip chip-free">자유</span><div class="post-title">신규 입사자 환영합니다! 개발팀 김서준 사원</div><div class="post-meta"><span class="post-author">개발팀장</span><span class="post-date">04/26</span><span class="post-views">조회 183</span></div></div>
+          <div class="post-row"><span class="category-chip chip-qa">Q&A</span><div class="post-title">법인 카드 한도 초과 시 처리 방법</div><div class="post-meta"><span class="post-author">최도현</span><span class="post-date">04/25</span><span class="post-views">조회 29</span></div></div>
+          <div class="post-row"><span class="category-chip chip-free">자유</span><div class="post-title">이번 주 팀 회식 메뉴 투표 중 — 참여해주세요</div><div class="post-meta"><span class="post-author">정유진</span><span class="post-date">04/24</span><span class="post-views">조회 91</span></div></div>
+          <div class="post-row"><span class="category-chip chip-notice">공지</span><div class="post-title">개인정보 보호 서약서 제출 요청 (5/9까지)</div><div class="post-meta"><span class="post-author">총무팀</span><span class="post-date">04/22</span><span class="post-views">조회 156</span></div></div>
+          <div class="post-row"><span class="category-chip chip-free">자유</span><div class="post-title">지난 주 사내 볼링대회 결과 공유합니다</div><div class="post-meta"><span class="post-author">동호회</span><span class="post-date">04/21</span><span class="post-views">조회 74</span></div></div>
+        </div>
+        <div class="pagination">
+          <button class="page-btn"><svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <button class="page-btn active">1</button>
+          <button class="page-btn">2</button>
+          <button class="page-btn">3</button>
+          <button class="page-btn">4</button>
+          <button class="page-btn">5</button>
+          <button class="page-btn"><svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+      </div>
+
+      <!-- APPROVAL panel -->
+      <div class="content-panel" id="panel-approval">
+        <div class="module-header">
+          <div class="module-title">전자결재</div>
+          <button class="btn-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            기안하기
+          </button>
+        </div>
+        <div class="approval-tabs-row" id="approval-tabs">
+          <button class="tab-btn active">받은 결재 <span style="color:#EF4444; font-size:12px; font-weight:700; margin-left:4px;">2</span></button>
+          <button class="tab-btn">올린 결재</button>
+          <button class="tab-btn">완료</button>
+        </div>
+        <div class="approval-list">
+          <div class="approval-row">
+            <span class="status-badge status-pending">대기</span>
+            <div class="approval-title unread">휴가 신청서 — 김철수 (연차 1일, 4/30)</div>
+            <div class="approval-meta">
+              <span class="approval-from">김철수</span>
+              <span class="approval-date">오늘 09:15</span>
+            </div>
+          </div>
+          <div class="approval-row">
+            <span class="status-badge status-pending">대기</span>
+            <div class="approval-title unread">출장비 정산 — 박민준 (부산 출장 4/22~23)</div>
+            <div class="approval-meta">
+              <span class="approval-from">박민준</span>
+              <span class="approval-date">어제 17:42</span>
+            </div>
+          </div>
+          <div class="approval-row">
+            <span class="status-badge status-review">검토중</span>
+            <div class="approval-title">법인카드 사용계획서 — 4월 영업팀</div>
+            <div class="approval-meta">
+              <span class="approval-from">이지현</span>
+              <span class="approval-date">04/27</span>
+            </div>
+          </div>
+          <div class="approval-row">
+            <span class="status-badge status-review">검토중</span>
+            <div class="approval-title">구매 요청서 — 개발팀 노트북 2대</div>
+            <div class="approval-meta">
+              <span class="approval-from">최도현</span>
+              <span class="approval-date">04/26</span>
+            </div>
+          </div>
+          <div class="approval-row">
+            <span class="status-badge status-approved">승인</span>
+            <div class="approval-title">교육비 지원 신청 — 외부 세미나 (정유진)</div>
+            <div class="approval-meta">
+              <span class="approval-from">정유진</span>
+              <span class="approval-date">04/24</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- REPORT panel -->
+      <div class="content-panel" id="panel-report">
+        <div class="module-header" style="padding-bottom: 0;">
+          <div class="module-title">주간보고</div>
+          <button class="btn-primary">
+            <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2.5"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            제출
+          </button>
+        </div>
+        <div class="report-tabs-row" id="report-tabs">
+          <button class="tab-btn active">이번 주</button>
+          <button class="tab-btn">지난 주</button>
+        </div>
+        <div class="report-body">
+          <div style="font-size: 12px; color: rgba(0,0,0,0.4); margin-bottom: 16px;">2026년 4월 28일(월) ~ 5월 2일(금) · 마감 <strong style="color: #EF4444;">내일 18:00</strong></div>
+          <div class="report-form-section">
+            <label class="report-form-label">이번 주 주요 업무</label>
+            <textarea class="report-textarea" placeholder="이번 주 진행한 주요 업무를 작성하세요.&#10;예) 프로젝트 A 기획안 작성, 클라이언트 미팅 등"></textarea>
+          </div>
+          <div class="report-form-section">
+            <label class="report-form-label">다음 주 계획</label>
+            <textarea class="report-textarea" placeholder="다음 주에 진행할 업무 계획을 작성하세요."></textarea>
+          </div>
+          <div class="report-form-section">
+            <label class="report-form-label">이슈 / 공유사항</label>
+            <textarea class="report-textarea" style="min-height: 60px;" placeholder="팀에 공유할 이슈나 사항을 작성하세요. (선택)"></textarea>
+          </div>
+        </div>
+        <div class="report-actions">
+          <button class="btn-ai-assist" onclick="splitChatSend('주간보고 초안 작성 도와줘')">
+            <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            AI 초안 작성
+          </button>
+          <button class="btn-secondary">임시저장</button>
+        </div>
+      </div>
+
+      <!-- CALENDAR placeholder -->
+      <div class="content-panel" id="panel-calendar">
+        <div class="module-header" style="padding-bottom: 20px;">
+          <div class="module-title">캘린더</div>
+        </div>
+        <div class="placeholder-panel">
+          <div class="placeholder-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
+          <div class="placeholder-title">준비 중</div>
+          <div class="placeholder-sub">캘린더 기능이 곧 출시됩니다.</div>
+        </div>
+      </div>
+
+      <!-- MORE placeholder -->
+      <div class="content-panel" id="panel-more">
+        <div class="module-header" style="padding-bottom: 20px;">
+          <div class="module-title">더보기</div>
+        </div>
+        <div class="placeholder-panel">
+          <div class="placeholder-icon">
+            <svg width="28" height="28" viewBox="0 0 24 24" stroke-width="1.5"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+          </div>
+          <div class="placeholder-title">준비 중</div>
+          <div class="placeholder-sub">회의실·차량·주소록·자료실·증명서 등이 추가될 예정입니다.</div>
+        </div>
+      </div>
+
+    </div><!-- /module-area -->
+
+    <!-- ===== Chat Area ===== -->
+    <div class="chat-area" id="chat-area">
+
+      <!-- FULL MODE (05a style) -->
+      <div class="chat-full" id="chat-full">
+        <div class="chat-welcome" id="chat-welcome">
+          <div class="chat-welcome-inner">
+            <div class="greet-heading">👋 안녕하세요, 관리자님</div>
+            <div class="greet-sub">결재·게시판·주간보고를 자연어로 처리할 수 있어요</div>
+            <div class="prompt-grid">
+              <button class="prompt-card" data-prompt="이번 주 결재 대기 알려줘">
+                <span class="prompt-card-icon">📋</span>
+                <span class="prompt-card-text">이번 주 결재 대기 알려줘</span>
+              </button>
+              <button class="prompt-card" data-prompt="오늘 일정 확인해줘">
+                <span class="prompt-card-icon">📅</span>
+                <span class="prompt-card-text">오늘 일정 확인해줘</span>
+              </button>
+              <button class="prompt-card" data-prompt="주간보고 초안 채워줘">
+                <span class="prompt-card-icon">📝</span>
+                <span class="prompt-card-text">주간보고 초안 채워줘</span>
+              </button>
+              <button class="prompt-card" data-prompt="최근 공지사항 요약해줘">
+                <span class="prompt-card-icon">📢</span>
+                <span class="prompt-card-text">최근 공지사항 요약해줘</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="messages-full" id="messages-full">
+          <div class="messages-full-inner" id="messages-full-inner"></div>
+        </div>
+
+        <div class="chat-input-wrap-full">
+          <div class="chat-input-inner">
+            <div class="chat-input-bar">
+              <input type="text" id="full-input" placeholder="무엇이든 물어보세요" />
+              <button class="send-btn" id="full-send">
+                <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div><!-- /chat-full -->
+
+      <!-- SPLIT MODE (05b/05c style) -->
+      <div class="chat-split" id="chat-split">
+        <div class="chat-panel-header">
+          <div class="chat-panel-title">
+            <span class="ai-dot"></span>
+            AI 어시스턴트
+          </div>
+          <span class="chat-panel-hint" id="split-hint">항상 여기 있어요</span>
+        </div>
+
+        <div class="chat-split-welcome" id="chat-split-welcome">
+          <div class="chat-split-welcome-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div class="chat-split-welcome-title">AI와 대화하면서</div>
+          <div class="chat-split-welcome-sub" id="split-welcome-sub">업무를 바로 처리할 수 있어요</div>
+          <div class="suggestion-chips-col" id="split-chips">
+            <button class="chip-btn" data-prompt="이번 주 공지사항 요약해줘">이번 주 공지사항 요약해줘</button>
+            <button class="chip-btn" data-prompt="게시판에서 중요한 글 알려줘">게시판에서 중요한 글 알려줘</button>
+            <button class="chip-btn" data-prompt="글 작성 도와줘">글 작성 도와줘</button>
+          </div>
+        </div>
+
+        <div class="chat-messages-split" id="chat-messages-split"></div>
+
+        <div class="chat-input-wrap-split">
+          <div class="chat-input-bar-narrow">
+            <input type="text" id="split-input" placeholder="AI에게 물어보세요..." />
+            <button class="send-btn-narrow" id="split-send">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div><!-- /chat-split -->
+
+    </div><!-- /chat-area -->
+
+  </div><!-- /body -->
+</div><!-- /app -->
+
+<!-- Hint toast -->
+<div class="hint-toast" id="hint-toast">
+  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="#fff" fill="none"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+  NavRail 메뉴를 클릭해 상태 전환을 체험해보세요
+  <button class="hint-close" id="hint-close" aria-label="닫기">✕</button>
+</div>
+
+<!-- ESC badge (shows only in split mode) -->
+<div class="esc-badge hidden" id="esc-badge">ESC — 채팅 풀폭 복귀</div>
+
+<script>
+/* ============================================================
+   State machine
+   ============================================================ */
+const state = { activeMenu: null };
+
+const AI_REPLIES = {
+  full: {
+    default: '알겠습니다. 확인해드릴게요.',
+    '이번 주 결재 대기 알려줘': '결재 대기 2건이 있어요.\n\n① 휴가 신청 (김철수) — 오늘 처리 필요\n② 출장비 정산 (박민준) — 내일 마감\n\n바로 결재 화면으로 이동할까요?',
+    '오늘 일정 확인해줘': '오늘 일정 3건이에요.\n\n• 10:00 팀 스탠드업\n• 14:00 클라이언트 미팅\n• 16:30 1on1 (김부장)\n\n준비할 게 있으면 말씀해주세요.',
+    '주간보고 초안 채워줘': '주간보고 초안을 작성해드릴게요. 이번 주에 진행한 업무를 간단히 알려주시면 정리해드릴게요.',
+    '최근 공지사항 요약해줘': '이번 주 공지 3건이 있어요.\n\n① 5월 휴가 신청 마감일 변경\n② 회의실 예약 시스템 점검 (5/3)\n③ 워크샵 일정 안내 (6/14)',
+  },
+  split: {
+    home: { default: '알겠습니다. 도움을 드릴게요.', greeting: '대시보드를 보면서 궁금한 것을 물어보세요.' },
+    board: { default: '알겠습니다. 확인해드릴게요.', greeting: '게시판을 보면서 AI와 대화하세요.' },
+    approval: { default: '결재 관련해서 도와드릴게요.', greeting: '결재 내용을 확인하면서 AI에게 요청하세요.' },
+    report: { default: '주간보고 작성을 도와드릴게요.', greeting: '보고서 작성 중 막히는 부분을 AI에게 물어보세요.' },
+    calendar: { default: '일정 관련해서 도움을 드릴게요.', greeting: '캘린더를 보면서 AI에게 질문하세요.' },
+    more: { default: '도움을 드릴게요.', greeting: '무엇이든 물어보세요.' },
+  }
+};
+
+const SPLIT_CHIPS = {
+  home: ['결재 2건 요약해줘', '오늘 일정 챙길 것 알려줘', '주간보고 초안 작성 도와줘'],
+  board: ['이번 주 공지사항 요약해줘', '게시판에서 중요한 글 알려줘', '글 작성 도와줘'],
+  approval: ['결재 대기 항목 요약해줘', '결재 기준 알려줘', '반려 사유 작성 도와줘'],
+  report: ['주간보고 초안 작성 도와줘', '지난 주 실적 요약해줘', '이슈 작성 도와줘'],
+  calendar: ['오늘 일정 알려줘', '이번 주 일정 요약해줘', '회의 일정 잡아줘'],
+  more: ['준비 중인 기능 알려줘', '회의실 예약 방법 알려줘'],
+};
+
+const SPLIT_HINTS = {
+  home: '대시보드를 보면서 AI와 대화하세요',
+  board: '게시판을 보면서 AI와 대화하세요',
+  approval: '결재를 처리하면서 AI에게 물어보세요',
+  report: '보고서 작성 중 AI에게 도움을 받으세요',
+  calendar: '일정을 보면서 AI에게 질문하세요',
+  more: '무엇이든 물어보세요',
+};
+
+/* ============================================================
+   DOM refs
+   ============================================================ */
+const bodyEl       = document.getElementById('body');
+const hintToast    = document.getElementById('hint-toast');
+const hintClose    = document.getElementById('hint-close');
+const escBadge     = document.getElementById('esc-badge');
+
+// full chat
+const chatWelcome      = document.getElementById('chat-welcome');
+const messagesFull     = document.getElementById('messages-full');
+const messagesFullInner= document.getElementById('messages-full-inner');
+const fullInput        = document.getElementById('full-input');
+const fullSend         = document.getElementById('full-send');
+
+// split chat
+const splitHint        = document.getElementById('split-hint');
+const splitWelcomeSub  = document.getElementById('split-welcome-sub');
+const splitChipsEl     = document.getElementById('split-chips');
+const chatMessagesSplit= document.getElementById('chat-messages-split');
+const splitInput       = document.getElementById('split-input');
+const splitSend        = document.getElementById('split-send');
+
+/* ============================================================
+   Core render
+   ============================================================ */
+function setMenu(menu) {
+  if (state.activeMenu === menu) {
+    // Toggle off
+    state.activeMenu = null;
+  } else {
+    state.activeMenu = menu;
+  }
+  render();
+}
+
+function render() {
+  const menu = state.activeMenu;
+
+  /* 1. NavRail active states */
+  document.querySelectorAll('.nav-item').forEach((item) => {
+    item.classList.toggle('active', item.dataset.menu === menu);
+  });
+
+  /* 2. Grid mode */
+  if (menu) {
+    bodyEl.classList.add('split');
+  } else {
+    bodyEl.classList.remove('split');
+  }
+
+  /* 3. Content panels */
+  document.querySelectorAll('.content-panel').forEach((p) => {
+    p.classList.remove('active');
+  });
+  if (menu) {
+    const panel = document.getElementById('panel-' + menu);
+    if (panel) panel.classList.add('active');
+  }
+
+  /* 4. ESC badge */
+  if (menu) {
+    escBadge.classList.remove('hidden');
+  } else {
+    escBadge.classList.add('hidden');
+  }
+
+  /* 5. Update split chat contextual text */
+  if (menu) {
+    splitHint.textContent = SPLIT_HINTS[menu] || '항상 여기 있어요';
+    // Update suggestion chips
+    const chips = SPLIT_CHIPS[menu] || SPLIT_CHIPS.board;
+    splitChipsEl.innerHTML = chips.map((c) =>
+      `<button class="chip-btn" data-prompt="${c}">${c}</button>`
+    ).join('');
+    attachChipEvents();
+  }
+}
+
+/* ============================================================
+   Full-mode chat
+   ============================================================ */
+function addFullMsg(type, text) {
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + type;
+  const bubble = document.createElement('div');
+  bubble.className = 'msg ' + type;
+  bubble.style.whiteSpace = 'pre-line';
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  messagesFullInner.appendChild(row);
+  messagesFull.scrollTop = messagesFull.scrollHeight;
+  return bubble;
+}
+
+function addFullThinking() {
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.innerHTML = '<div class="thinking"><span></span><span></span><span></span></div>';
+  messagesFullInner.appendChild(row);
+  messagesFull.scrollTop = messagesFull.scrollHeight;
+  return row;
+}
+
+function sendFull(text) {
+  if (!text) return;
+  bodyEl.classList.add('has-full-msgs');
+  addFullMsg('user', text);
+  const thinkRow = addFullThinking();
+  setTimeout(() => {
+    thinkRow.remove();
+    const reply = AI_REPLIES.full[text] || AI_REPLIES.full.default;
+    addFullMsg('ai', reply);
+  }, 1200);
+}
+
+fullSend.addEventListener('click', () => {
+  const t = fullInput.value.trim();
+  fullInput.value = '';
+  sendFull(t);
+});
+fullInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); const t = fullInput.value.trim(); fullInput.value = ''; sendFull(t); }
+});
+
+// Prompt cards
+document.querySelectorAll('.prompt-card').forEach((card) => {
+  card.addEventListener('click', () => {
+    const t = card.dataset.prompt;
+    sendFull(t);
+  });
+});
+
+/* ============================================================
+   Split-mode chat
+   ============================================================ */
+function addSplitMsg(type, html) {
+  bodyEl.classList.add('has-split-msgs');
+  if (type === 'user') {
+    const row = document.createElement('div');
+    row.className = 'cmsg-row user';
+    row.innerHTML = `<div class="cmsg user">${html}</div>`;
+    chatMessagesSplit.appendChild(row);
+  } else {
+    const row = document.createElement('div');
+    row.className = 'cmsg-row ai';
+    row.innerHTML = `
+      <div class="ai-avatar-small">
+        <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="cmsg ai" style="white-space: pre-line;">${html}</div>`;
+    chatMessagesSplit.appendChild(row);
+  }
+  chatMessagesSplit.scrollTop = chatMessagesSplit.scrollHeight;
+}
+
+function addSplitThinking() {
+  const row = document.createElement('div');
+  row.className = 'cmsg-row ai';
+  row.innerHTML = `
+    <div class="ai-avatar-small">
+      <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div class="thinking"><span></span><span></span><span></span></div>`;
+  chatMessagesSplit.appendChild(row);
+  chatMessagesSplit.scrollTop = chatMessagesSplit.scrollHeight;
+  return row;
+}
+
+function splitChatSend(text) {
+  if (!text) return;
+  addSplitMsg('user', text);
+  const thinkRow = addSplitThinking();
+  setTimeout(() => {
+    thinkRow.remove();
+    const menuReplies = AI_REPLIES.split[state.activeMenu] || AI_REPLIES.split.board;
+    const reply = buildSplitReply(text);
+    addSplitMsg('ai', reply);
+  }, 1000);
+}
+
+function buildSplitReply(text) {
+  const menu = state.activeMenu;
+  if (text.includes('공지') || text.includes('공지사항')) {
+    return '이번 주 공지 3건이 있어요.\n\n① 휴가 신청 마감일 변경\n② 회의실 예약 시스템 점검 (5/3)\n③ 워크샵 일정 안내 (6/14)\n\n<button class="action-chip">공지 탭 열기 →</button>';
+  }
+  if (text.includes('결재')) {
+    return '결재 대기 2건이 있어요.\n\n① <strong>휴가 신청 (김철수)</strong> — 오늘 처리 필요\n② 출장비 정산 (박민준) — 내일 마감\n\n<button class="action-chip">결재 화면 열기 →</button>';
+  }
+  if (text.includes('일정')) {
+    return '오늘 일정 3건이에요.\n\n• 10:00 팀 스탠드업\n• 14:00 클라이언트 미팅\n• 16:30 1on1';
+  }
+  if (text.includes('주간보고') || text.includes('초안')) {
+    return '주간보고 초안을 작성해드릴게요.\n이번 주 진행한 업무를 간단히 알려주시면 정리해드릴게요.';
+  }
+  if (menu === 'board') return '게시판에서 관련 내용을 찾아드릴게요. 잠시만요.';
+  if (menu === 'approval') return '결재 관련해서 도움을 드릴게요.';
+  if (menu === 'report') return '보고서 작성을 도와드릴게요.';
+  return '알겠습니다. 처리해드릴게요.';
+}
+
+splitSend.addEventListener('click', () => {
+  const t = splitInput.value.trim();
+  splitInput.value = '';
+  splitChatSend(t);
+});
+splitInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); const t = splitInput.value.trim(); splitInput.value = ''; splitChatSend(t); }
+});
+
+function attachChipEvents() {
+  document.querySelectorAll('#split-chips .chip-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      splitChatSend(btn.dataset.prompt || btn.textContent);
+    });
+  });
+}
+attachChipEvents();
+
+/* ============================================================
+   NavRail click events
+   ============================================================ */
+document.querySelectorAll('.nav-item').forEach((item) => {
+  item.addEventListener('click', () => {
+    const menu = item.dataset.menu;
+    if (!menu) return;
+    setMenu(menu);
+  });
+});
+
+/* ============================================================
+   Tab switching (board, approval, report)
+   ============================================================ */
+function initTabs(containerId) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.querySelectorAll('.tab-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+initTabs('board-tabs');
+initTabs('approval-tabs');
+initTabs('report-tabs');
+
+/* ============================================================
+   ESC key
+   ============================================================ */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state.activeMenu) {
+    state.activeMenu = null;
+    render();
+  }
+});
+
+/* ============================================================
+   Hint toast auto-dismiss
+   ============================================================ */
+hintClose.addEventListener('click', dismissToast);
+
+let toastTimer = setTimeout(() => {
+  dismissToast();
+}, 5000);
+
+function dismissToast() {
+  clearTimeout(toastTimer);
+  hintToast.classList.add('fading');
+  setTimeout(() => { hintToast.style.display = 'none'; }, 400);
+}
+
+/* ============================================================
+   Initial render
+   ============================================================ */
+render();
+</script>
+
+</body>
+</html>
