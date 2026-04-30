@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Bell, PanelRight, Search } from 'lucide-react-native';
 import { AvatarMenu } from './AvatarMenu';
 import { PulseDot } from '../shared/components/PulseDot';
+import { NotificationDropdown } from '../features/notifications/components/NotificationDropdown';
+import { useUnreadNotificationCount } from '../features/notifications/api';
 
 interface TopHeaderProps {
   user: {
@@ -33,8 +35,11 @@ export function TopHeader({
   hasUnreadAi,
 }: TopHeaderProps) {
   const isAdmin = user?.role === 'ADMIN';
+  const [notifOpen, setNotifOpen] = useState(false);
+  const unreadCount = useUnreadNotificationCount();
 
   return (
+    <>
     <View style={styles.container}>
       {/* Left: Brand */}
       <TouchableOpacity onPress={onBrandClick} activeOpacity={0.6}>
@@ -68,10 +73,14 @@ export function TopHeader({
           </TouchableOpacity>
         )}
 
-        {/* Bell with red dot */}
-        <TouchableOpacity style={styles.iconButton} activeOpacity={0.7}>
-          <Bell size={18} color="rgba(0,0,0,0.55)" />
-          <PulseDot ringColor="#ffffff" top={6} right={6} />
+        {/* Bell with notification dropdown */}
+        <TouchableOpacity
+          style={[styles.iconButton, notifOpen && styles.iconButtonActive]}
+          activeOpacity={0.7}
+          onPress={() => setNotifOpen((v) => !v)}
+        >
+          <Bell size={18} color={notifOpen ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+          {unreadCount > 0 && <PulseDot ringColor="#ffffff" top={6} right={6} />}
         </TouchableOpacity>
 
         {/* RightPanel toggle */}
@@ -96,6 +105,8 @@ export function TopHeader({
         )}
       </View>
     </View>
+    <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+    </>
   );
 }
 

@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 06. 알림 드롭다운</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  min-width: 1280px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font-family: inherit; }
+svg { stroke: currentColor; fill: none; }
+
+/* ===== Layout ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+.body {
+  display: grid;
+  grid-template-columns: 64px 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+  position: relative;
+  z-index: 100;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: #000;
+  user-select: none;
+  flex-shrink: 0;
+}
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.5;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 16px 0 40px;
+  background: #F0F0F0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
+  cursor: not-allowed;
+  font-family: inherit;
+}
+.search-bar svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: rgba(0,0,0,0.3);
+}
+.search-bar .preparing-tag {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.04em;
+}
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: rgba(0,0,0,0.6);
+  transition: background 0.12s;
+}
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.icon-btn.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+
+/* ===== PulseDot (벨 우상단 빨간점) ===== */
+.pulse-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  animation: pulse-scale 1.5s ease-in-out infinite;
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.pulse-dot.hidden {
+  opacity: 0;
+  transform: scale(0);
+  animation: none;
+}
+@keyframes pulse-scale {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+/* avatar */
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #0A2463;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* RightPanel toggle active */
+.icon-btn#rp-toggle { color: #0A2463; background: rgba(10,36,99,0.08); }
+
+/* ===== NavRail ===== */
+.nav-rail {
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  overflow: hidden;
+}
+.nav-item {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  color: rgba(0,0,0,0.55);
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: #0A2463; }
+.nav-item.active { background: rgba(10,36,99,0.08); color: #0A2463; }
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: #0A2463;
+  border-radius: 0 2px 2px 0;
+}
+.nav-divider {
+  width: 32px;
+  height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 4px 0;
+}
+.nav-item .badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* ===== Main Content (chat placeholder) ===== */
+.main-content {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+}
+.welcome-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: rgba(10,36,99,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  color: #0A2463;
+}
+.welcome-title {
+  font-size: 22px;
+  font-weight: 500;
+  color: #000;
+}
+.welcome-subtitle {
+  font-size: 14px;
+  color: rgba(0,0,0,0.55);
+  margin-bottom: 16px;
+}
+.quick-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.quick-btn {
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.quick-btn:hover { background: rgba(10,36,99,0.12); }
+.chat-input-wrap {
+  padding: 12px 20px 20px;
+}
+.chat-input {
+  display: flex;
+  align-items: center;
+  background: #F5F5F5;
+  border-radius: 24px;
+  padding: 4px 4px 4px 20px;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+}
+.chat-input:focus-within {
+  background: #fff;
+  border-color: rgba(10,36,99,0.3);
+  box-shadow: 0 0 0 3px rgba(10,36,99,0.08);
+}
+.chat-input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  height: 40px;
+  color: #000;
+  font-family: inherit;
+}
+.chat-input input::placeholder { color: rgba(0,0,0,0.4); }
+.send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0A2463;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== RightPanel ===== */
+.right-panel {
+  background: #FAFAFA;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.rp-tabs {
+  display: flex;
+  padding: 12px 16px 8px;
+  gap: 4px;
+  flex-shrink: 0;
+  align-items: center;
+}
+.rp-tab {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: rgba(0,0,0,0.4);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+}
+.rp-tab:hover { color: rgba(0,0,0,0.7); background: rgba(0,0,0,0.03); }
+.rp-tab.active { color: #0A2463; background: rgba(10,36,99,0.08); }
+.rp-tab-divider { width: 1px; height: 16px; background: rgba(0,0,0,0.1); margin: 0 4px; }
+.rp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.briefing-greet {
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(10,36,99,0.08), rgba(10,36,99,0.02));
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #0A2463;
+}
+.card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.card:hover { border-color: rgba(10,36,99,0.2); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.card-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.icon-blue { background: rgba(10,36,99,0.1); color: #0A2463; }
+.icon-amber { background: rgba(245,158,11,0.12); color: #F59E0B; }
+.icon-red { background: rgba(239,68,68,0.12); color: #EF4444; }
+.card-title { font-size: 13px; font-weight: 500; color: rgba(0,0,0,0.85); flex: 1; }
+.card-count { font-size: 18px; font-weight: 600; color: #000; }
+.card-body { font-size: 12px; color: rgba(0,0,0,0.6); line-height: 1.5; }
+.card-body strong { color: #000; font-weight: 500; }
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.4);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 8px 4px 4px;
+}
+.qa-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qa-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.06);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 12px;
+  color: rgba(0,0,0,0.7);
+  transition: all 0.15s;
+}
+.qa-card:hover { border-color: rgba(10,36,99,0.2); color: #0A2463; }
+.qa-icon { font-size: 18px; margin-bottom: 4px; display: block; }
+
+/* ===================================================
+   NOTIFICATION DROPDOWN
+   =================================================== */
+
+/* 벨 버튼 래퍼 — relative 포지션닝 기준점 */
+.bell-wrap {
+  position: relative;
+}
+
+/* 드롭다운 컨테이너 */
+.notif-dropdown {
+  position: absolute;
+  top: calc(100% + 8px); /* 벨 버튼 바로 아래 + 8px 간격 */
+  right: 0;
+  width: 380px;
+  max-height: 520px;
+  background: #FFFFFF;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 9999;
+
+  /* 열기/닫기 애니메이션 */
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition: opacity 160ms cubic-bezier(0.16,1,0.3,1),
+              transform 160ms cubic-bezier(0.16,1,0.3,1);
+}
+.notif-dropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* 드롭다운 헤더 */
+.notif-header {
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.notif-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #000;
+}
+.notif-mark-all {
+  font-size: 13px;
+  color: #0A2463;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+  font-weight: 400;
+  transition: all 0.12s;
+}
+.notif-mark-all:hover { text-decoration: underline; }
+.notif-mark-all:disabled {
+  color: rgba(0,0,0,0.3);
+  cursor: default;
+  text-decoration: none;
+}
+
+/* 드롭다운 본문 — 스크롤 가능 */
+.notif-body {
+  flex: 1;
+  overflow-y: auto;
+  /* 스크롤바 스타일 (webkit) */
+}
+.notif-body::-webkit-scrollbar {
+  width: 4px;
+}
+.notif-body::-webkit-scrollbar-track { background: transparent; }
+.notif-body::-webkit-scrollbar-thumb {
+  background: rgba(0,0,0,0.12);
+  border-radius: 2px;
+}
+
+/* 알림 카드 */
+.notif-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+  cursor: pointer;
+  transition: background 0.12s;
+  position: relative;
+}
+.notif-card:last-child {
+  border-bottom: none;
+}
+
+/* 미읽음 카드 */
+.notif-card.unread {
+  background: rgba(10,36,99,0.025);
+}
+.notif-card.unread:hover {
+  background: rgba(10,36,99,0.04);
+}
+
+/* 읽음 카드 */
+.notif-card.read {
+  background: #FFFFFF;
+}
+.notif-card.read:hover {
+  background: rgba(0,0,0,0.02);
+}
+
+/* 미읽음 파란 점 */
+.notif-unread-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #0A2463;
+  flex-shrink: 0;
+  margin-top: 13px;
+  margin-right: 8px;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.notif-card.read .notif-unread-dot {
+  opacity: 0;
+  transform: scale(0);
+}
+
+/* 아이콘 박스 */
+.notif-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 10px;
+}
+
+/* 카드 본문 */
+.notif-content {
+  flex: 1;
+  min-width: 0;
+}
+.notif-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: #000;
+  font-weight: 500;
+  /* 최대 2줄 */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  transition: color 0.2s, font-weight 0.2s;
+}
+.notif-card.read .notif-text {
+  color: rgba(0,0,0,0.55);
+  font-weight: 400;
+}
+.notif-time {
+  font-size: 12px;
+  color: rgba(0,0,0,0.4);
+  margin-top: 3px;
+}
+
+/* 드롭다운 푸터 */
+.notif-footer {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+.notif-view-all {
+  font-size: 13px;
+  color: #0A2463;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-weight: 400;
+  transition: all 0.12s;
+}
+.notif-view-all:hover { text-decoration: underline; }
+
+/* ===================================================
+   HINT TOAST — "벨을 클릭해보세요"
+   =================================================== */
+.hint-toast {
+  position: fixed;
+  top: 64px;
+  right: 20px;
+  background: rgba(0,0,0,0.78);
+  color: #fff;
+  font-size: 12px;
+  padding: 8px 14px 8px 12px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 99999;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transition: opacity 0.4s, transform 0.4s;
+}
+.hint-toast.hidden {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+.hint-toast-close {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.55);
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  font-size: 14px;
+  margin-left: 4px;
+}
+.hint-toast-close:hover { color: #fff; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ============ TopHeader ============ -->
+  <header class="top-header">
+    <div class="brand">Infomind</div>
+
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input type="text" placeholder="통합검색 준비 중..." disabled />
+      <span class="preparing-tag">준비 중</span>
+    </div>
+
+    <div class="top-actions">
+
+      <!-- 알림 벨 (드롭다운 기준점) -->
+      <div class="bell-wrap" id="bell-wrap">
+        <button class="icon-btn" id="bell-btn" title="알림">
+          <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+          </svg>
+          <!-- PulseDot: 7px red, 2px white ring, pulse animation -->
+          <span class="pulse-dot" id="bell-dot"></span>
+        </button>
+
+        <!-- ===== 알림 드롭다운 ===== -->
+        <div class="notif-dropdown" id="notif-dropdown" role="dialog" aria-label="알림">
+
+          <!-- 헤더 -->
+          <div class="notif-header">
+            <span class="notif-title">알림</span>
+            <button class="notif-mark-all" id="mark-all-btn" type="button">모두 읽음</button>
+          </div>
+
+          <!-- 본문: 알림 카드 리스트 -->
+          <div class="notif-body" id="notif-body">
+
+            <!-- 1. 미읽음 — 결재 받음 (amber) -->
+            <div class="notif-card unread" data-id="1" role="button" tabindex="0">
+              <span class="notif-unread-dot"></span>
+              <div class="notif-icon-box" style="background:rgba(245,158,11,0.12);">
+                <!-- FileCheck icon -->
+                <svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2" stroke="#F59E0B" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <path d="M14 2v6h6"/>
+                  <path d="M9 15l2 2 4-4"/>
+                </svg>
+              </div>
+              <div class="notif-content">
+                <div class="notif-text">김철수가 휴가 신청 결재를 요청했습니다</div>
+                <div class="notif-time">3분 전</div>
+              </div>
+            </div>
+
+            <!-- 2. 미읽음 — 결재 결과 (green) -->
+            <div class="notif-card unread" data-id="2" role="button" tabindex="0">
+              <span class="notif-unread-dot"></span>
+              <div class="notif-icon-box" style="background:rgba(16,185,129,0.12);">
+                <!-- CheckCircle icon -->
+                <svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2" stroke="#10B981" fill="none">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="M9 12l2 2 4-4"/>
+                </svg>
+              </div>
+              <div class="notif-content">
+                <div class="notif-text">이영희 부장이 출장 신청을 승인했습니다</div>
+                <div class="notif-time">32분 전</div>
+              </div>
+            </div>
+
+            <!-- 3. 미읽음 — 공지 게시판 (blue) -->
+            <div class="notif-card unread" data-id="3" role="button" tabindex="0">
+              <span class="notif-unread-dot"></span>
+              <div class="notif-icon-box" style="background:rgba(10,36,99,0.10);">
+                <!-- Megaphone icon -->
+                <svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2" stroke="#0A2463" fill="none">
+                  <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                </svg>
+              </div>
+              <div class="notif-content">
+                <div class="notif-text">[공지] 4월 워크샵 일정 안내</div>
+                <div class="notif-time">2시간 전</div>
+              </div>
+            </div>
+
+            <!-- 4. 미읽음 — 주간보고 마감 (red) -->
+            <div class="notif-card unread" data-id="4" role="button" tabindex="0">
+              <span class="notif-unread-dot"></span>
+              <div class="notif-icon-box" style="background:rgba(239,68,68,0.12);">
+                <!-- AlertCircle icon -->
+                <svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2" stroke="#EF4444" fill="none">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              </div>
+              <div class="notif-content">
+                <div class="notif-text">주간보고 마감이 D-1 입니다</div>
+                <div class="notif-time">5시간 전</div>
+              </div>
+            </div>
+
+            <!-- 5. 읽음 — 결재 받음 -->
+            <div class="notif-card read" data-id="5" role="button" tabindex="0">
+              <span class="notif-unread-dot"></span>
+              <div class="notif-icon-box" style="background:rgba(245,158,11,0.12);">
+                <svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2" stroke="#F59E0B" fill="none">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <path d="M14 2v6h6"/>
+                  <path d="M9 15l2 2 4-4"/>
+                </svg>
+              </div>
+              <div class="notif-content">
+                <div class="notif-text">박지민이 차량 예약 결재를 요청했습니다</div>
+                <div class="notif-time">어제</div>
+              </div>
+            </div>
+
+            <!-- 6. 읽음 — 공지 게시판 -->
+            <div class="notif-card read" data-id="6" role="button" tabindex="0">
+              <span class="notif-unread-dot"></span>
+              <div class="notif-icon-box" style="background:rgba(10,36,99,0.10);">
+                <svg width="15" height="15" viewBox="0 0 24 24" stroke-width="2" stroke="#0A2463" fill="none">
+                  <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+                </svg>
+              </div>
+              <div class="notif-content">
+                <div class="notif-text">[공지] 사내 메일 시스템 점검 안내</div>
+                <div class="notif-time">2일 전</div>
+              </div>
+            </div>
+
+          </div><!-- /notif-body -->
+
+          <!-- 푸터 -->
+          <div class="notif-footer">
+            <button class="notif-view-all" type="button">전체 알림 보기 →</button>
+          </div>
+
+        </div><!-- /notif-dropdown -->
+      </div><!-- /bell-wrap -->
+
+      <!-- RP 토글 -->
+      <button class="icon-btn active" id="rp-toggle" title="RightPanel 토글">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M15 3v18"/>
+        </svg>
+      </button>
+
+      <!-- 아바타 -->
+      <div class="avatar" title="홍길동">홍</div>
+
+    </div>
+  </header>
+
+  <!-- ============ Body ============ -->
+  <div class="body">
+
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <div class="nav-item active" title="홈 (AI 채팅)">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" title="게시판">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h10M7 17h6"/></svg>
+      </div>
+      <div class="nav-item" title="전자결재">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>
+        <span class="badge">2</span>
+      </div>
+      <div class="nav-item" title="주간보고">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+      </div>
+      <div class="nav-item" title="캘린더">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      </div>
+      <div class="nav-item" title="회의실">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21V12h6v9"/></svg>
+      </div>
+      <div class="nav-item" title="차량">
+        <svg width="22" height="22" viewBox="0 0 24 24" stroke-width="2"><path d="M3 17h2l1.5-7h11L19 17h2"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="16.5" cy="17.5" r="2.5"/></svg>
+      </div>
+    </nav>
+
+    <!-- Main Content (chat placeholder) -->
+    <main class="main-content">
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" stroke-width="2">
+            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+          </svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 홍길동님</div>
+        <div class="welcome-subtitle">무엇을 도와드릴까요?</div>
+        <div class="quick-actions">
+          <button class="quick-btn">결재 현황</button>
+          <button class="quick-btn">주간보고</button>
+          <button class="quick-btn">공지 확인</button>
+        </div>
+      </div>
+      <div class="chat-input-wrap">
+        <div class="chat-input">
+          <input type="text" placeholder="AI에게 물어보거나 작업을 요청하세요..." />
+          <button class="send-btn">
+            <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- RightPanel -->
+    <aside class="right-panel">
+      <div class="rp-tabs">
+        <button class="rp-tab active" title="홈">
+          <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V21H3z"/><path d="M9 21V12h6v9"/></svg>
+        </button>
+        <div class="rp-tab-divider"></div>
+        <button class="rp-tab" style="font-size:11px;font-weight:700;letter-spacing:0.04em;">AI</button>
+      </div>
+      <div class="rp-content">
+        <div class="briefing-greet">
+          좋은 아침입니다, 홍길동님.<br>
+          오늘 챙기실 항목 3가지를 정리했어요.
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-amber">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+            </div>
+            <div class="card-title">결재 대기</div>
+            <div class="card-count">2</div>
+          </div>
+          <div class="card-body"><strong>휴가 신청 (김철수)</strong> 등 2건.</div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-blue">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+            </div>
+            <div class="card-title">오늘 일정</div>
+            <div class="card-count">3</div>
+          </div>
+          <div class="card-body">10:00 팀 스탠드업 · 14:00 클라이언트</div>
+        </div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-red">
+              <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            </div>
+            <div class="card-title">마감 임박</div>
+          </div>
+          <div class="card-body"><strong>주간보고서</strong>가 내일 마감입니다.</div>
+        </div>
+        <div class="section-label">빠른 액션</div>
+        <div class="qa-grid">
+          <div class="qa-card"><span class="qa-icon">🏖️</span>휴가 신청</div>
+          <div class="qa-card"><span class="qa-icon">📝</span>보고서 작성</div>
+          <div class="qa-card"><span class="qa-icon">🚗</span>차량 예약</div>
+          <div class="qa-card"><span class="qa-icon">🏢</span>회의실 예약</div>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /body -->
+
+</div><!-- /app -->
+
+<!-- ===== 힌트 토스트 ===== -->
+<div class="hint-toast" id="hint-toast">
+  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="2" stroke="rgba(255,255,255,0.8)" fill="none">
+    <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+  </svg>
+  우상단 벨을 클릭해보세요
+  <button class="hint-toast-close" id="hint-close" aria-label="닫기">✕</button>
+</div>
+
+<script>
+/* =====================================================
+   STATE
+   ===================================================== */
+// 각 카드의 읽음 상태. data-id 기준.
+const readState = { '1': false, '2': false, '3': false, '4': false, '5': true, '6': true };
+
+/* =====================================================
+   ELEMENTS
+   ===================================================== */
+const bellBtn      = document.getElementById('bell-btn');
+const bellWrap     = document.getElementById('bell-wrap');
+const bellDot      = document.getElementById('bell-dot');
+const dropdown     = document.getElementById('notif-dropdown');
+const markAllBtn   = document.getElementById('mark-all-btn');
+const notifBody    = document.getElementById('notif-body');
+const hintToast    = document.getElementById('hint-toast');
+const hintClose    = document.getElementById('hint-close');
+
+/* =====================================================
+   HELPERS
+   ===================================================== */
+function getUnreadCount() {
+  return Object.values(readState).filter(v => !v).length;
+}
+
+function syncBellDot() {
+  const count = getUnreadCount();
+  if (count > 0) {
+    bellDot.classList.remove('hidden');
+  } else {
+    bellDot.classList.add('hidden');
+  }
+}
+
+function syncMarkAllBtn() {
+  const count = getUnreadCount();
+  markAllBtn.disabled = count === 0;
+}
+
+function markCardRead(card) {
+  const id = card.dataset.id;
+  if (readState[id] === true) return; // 이미 읽음
+
+  readState[id] = true;
+  card.classList.remove('unread');
+  card.classList.add('read');
+
+  syncBellDot();
+  syncMarkAllBtn();
+}
+
+/* =====================================================
+   DROPDOWN OPEN / CLOSE
+   ===================================================== */
+let isOpen = false;
+
+function openDropdown() {
+  isOpen = true;
+  dropdown.classList.add('open');
+  bellBtn.classList.add('active');
+}
+
+function closeDropdown() {
+  isOpen = false;
+  dropdown.classList.remove('open');
+  bellBtn.classList.remove('active');
+}
+
+function toggleDropdown() {
+  if (isOpen) {
+    closeDropdown();
+  } else {
+    openDropdown();
+  }
+}
+
+/* =====================================================
+   BELL CLICK
+   ===================================================== */
+bellBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleDropdown();
+});
+
+/* =====================================================
+   알림 카드 클릭 — 즉시 읽음 처리
+   ===================================================== */
+notifBody.addEventListener('click', (e) => {
+  const card = e.target.closest('.notif-card');
+  if (!card) return;
+  e.stopPropagation();
+  markCardRead(card);
+  // 드롭다운은 닫지 않음 — 계속 다른 알림 조작 가능
+});
+
+// 키보드 접근성 (Enter / Space)
+notifBody.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const card = e.target.closest('.notif-card');
+    if (!card) return;
+    e.preventDefault();
+    markCardRead(card);
+  }
+});
+
+/* =====================================================
+   모두 읽음 버튼
+   ===================================================== */
+markAllBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  const cards = notifBody.querySelectorAll('.notif-card.unread');
+
+  // 스태거 애니메이션 — 카드마다 20ms 딜레이
+  cards.forEach((card, i) => {
+    setTimeout(() => {
+      markCardRead(card);
+    }, i * 30);
+  });
+});
+
+/* =====================================================
+   외부 클릭 / ESC — 드롭다운 닫기
+   ===================================================== */
+document.addEventListener('click', (e) => {
+  if (isOpen && !bellWrap.contains(e.target)) {
+    closeDropdown();
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isOpen) {
+    closeDropdown();
+    bellBtn.focus();
+  }
+});
+
+/* =====================================================
+   힌트 토스트 — 5초 자동 fade
+   ===================================================== */
+const HINT_DELAY = 5000;
+let hintTimer = setTimeout(() => {
+  hintToast.classList.add('hidden');
+}, HINT_DELAY);
+
+hintClose.addEventListener('click', () => {
+  clearTimeout(hintTimer);
+  hintToast.classList.add('hidden');
+});
+
+// 벨 클릭 시 힌트 즉시 제거
+bellBtn.addEventListener('click', () => {
+  clearTimeout(hintTimer);
+  hintToast.classList.add('hidden');
+}, { once: true });
+
+/* =====================================================
+   INIT
+   ===================================================== */
+syncBellDot();
+syncMarkAllBtn();
+</script>
+
+</body>
+</html>
