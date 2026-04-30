@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://
+    username:
+    password:
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+mybatis:
+  mapper-locations: classpath:mapper/**/*.xml
+  type-aliases-package: com.infomind.backend.domain
+  configuration:
+    map-underscore-to-camel-case: true
+
+jwt:
+  secret:
+  expiry-hours:

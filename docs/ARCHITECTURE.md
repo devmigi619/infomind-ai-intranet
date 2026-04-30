@@ -8,7 +8,7 @@
         ├── /api/* ───► [Spring Boot :8080]
         │                  │
         │                  └── JWT 발급, 업무 API
-        │                       └── H2 (인메모리, local 프로파일)
+        │                       └── PostgreSQL (로컬 설치 또는 원격)
         │
         └── /ai/*  ───► [FastAPI :8000]  ← 선택 (Ollama 설치 시만)
                           │
@@ -54,10 +54,10 @@ Nginx 역할:
 | Frontend (Expo Web) | UI | 8081 |
 | Spring Boot | 업무 API, JWT 발급, FCM | 8080 |
 | FastAPI | AI 채팅, RAG, Ollama 연동 (선택) | 8000 |
-| H2 (인메모리) | 로컬 DB — Spring Boot 안에서 실행 | — |
+| PostgreSQL | 로컬 DB — 직접 설치 또는 원격 접속 | 5432 |
 | Ollama | 로컬 LLM (선택, 직접 설치) | 11434 |
 
-> PostgreSQL / Qdrant / Nginx / Docker Compose 통합은 **GPU 개발기 / 운영기에서 사용**. 로컬에서는 사용하지 않음. 추후 정비 예정.
+> Qdrant / Nginx / Docker Compose 통합은 **GPU 개발기 / 운영기에서 사용**. 추후 정비 예정.
 
 ## 라우팅
 
@@ -84,11 +84,12 @@ Nginx 역할:
 ## 데이터베이스
 
 ### 로컬
-- **H2 인메모리** (`application-local.yml`)
-  - JDBC URL: `jdbc:h2:mem:infomind`
-  - 콘솔: `http://localhost:8080/h2-console` (User: `sa`, Password: 빈칸)
-  - 매 기동 시 스키마 재생성 (`ddl-auto: create-drop`)
-  - `DataInitializer`가 테스트 계정 `admin`/`user1` 자동 생성
+- **PostgreSQL** — 직접 설치 또는 원격 서버 접속
+- 접속 정보는 `backend/src/main/resources/application-local.yml` 에 직접 입력
+- `ddl-auto: none` — 스키마는 직접 관리 (JPA 자동 DDL 미사용)
+- ORM: **JPA + MyBatis 혼합** 사용
+  - JPA: 엔티티 매핑, 기본 CRUD
+  - MyBatis: 복잡한 쿼리, 커스텀 SQL (`resources/mapper/**/*.xml`)
 
 ### 운영기 (추후)
 - PostgreSQL 16 (Docker Compose)
@@ -135,15 +136,19 @@ Nginx 역할:
 
 ### Backend (Spring Boot 표준)
 
-**로컬**: `backend/src/main/resources/application-local.yml` 에 직접 박힌 더미 값 사용.
+**로컬**: `backend/src/main/resources/application-local.yml` 에 접속 정보 직접 입력.
 ```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://{HOST}:{PORT}/{DB_NAME}
+    username: {USER}
+    password: {PASSWORD}
 jwt:
   secret: local-dev-secret-key-must-be-at-least-32-characters
-  expiry-hours: 8
 ```
-git clone 후 바로 실행 가능. `.env.local` 불필요.
+`application-local.yml`은 `.gitignore` 등록 필요 (민감 정보 포함).
 
-**운영기** (추후): `application-prod.yml` 에 placeholder + 환경변수 주입.
+**운영기** (추후): `application.yml` 의 `${ENV_VAR}` placeholder + 환경변수 주입.
 ```yaml
 jwt:
   secret: ${JWT_SECRET}
@@ -202,7 +207,7 @@ Docker `-e JWT_SECRET=...`, K8s Secret, Vault 등으로 주입.
 | 백엔드 분리 | Spring Boot + FastAPI | 결재 워크플로우는 Spring Boot, AI 스트리밍은 FastAPI 적합 | 서비스 2개 운영 |
 | 클라이언트 상태 | Zustand | 가벼움, 학습 곡선 낮음, 작은 팀에 적합 | Redux 대비 표준화 약함 |
 | 서버 상태 | React Query (TanStack Query) | 캐싱/refetch/invalidation 표준 | — |
-| 로컬 DB | H2 (인메모리) | 별도 설치 없이 즉시 실행 | 재시작 시 데이터 초기화 |
+| 로컬 DB | PostgreSQL (직접 설치) | 실 DB와 동일 환경, 데이터 영속 | 별도 설치 필요 |
 | 운영 DB | PostgreSQL 16 | 표준, 풀텍스트 검색, JSON 지원 | — |
 | 벡터 DB | Qdrant | 메타데이터 필터링, LangChain 어댑터 | 별도 서비스 운영 |
 | Redis | 초기 미사용 | 35명 규모에서 불필요 | 즉시 로그아웃 무효화 불가 |

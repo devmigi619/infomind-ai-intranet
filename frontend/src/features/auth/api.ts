@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { apiClient } from '../../shared/api/client';
+import {Platform} from "react-native";
 
 export interface User {
   id: number;
@@ -29,7 +31,12 @@ const authApi = {
     return u ? JSON.parse(u) : null;
   },
   refresh: async () => {
-    const refreshToken = await AsyncStorage.getItem('refreshToken');
+    let refreshToken;
+    if(Platform.OS === "android" || Platform.OS === "ios") {
+        refreshToken = await SecureStore.getItemAsync("refreshToken");
+    }else {
+        refreshToken = await AsyncStorage.getItem('refreshToken');
+    }
     if (!refreshToken) throw new Error('No refresh token');
     const res = await apiClient.post('/api/auth/refresh', { refreshToken });
     const newToken = res.data.data.token;

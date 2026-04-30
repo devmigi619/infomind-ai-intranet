@@ -1,5 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import {Platform} from "react-native";
+import * as SecureStore from "expo-secure-store";
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!BASE_URL) {
@@ -42,7 +44,12 @@ apiClient.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
       try {
-        const refreshToken = await AsyncStorage.getItem('refreshToken');
+          let refreshToken;
+          if(Platform.OS === "android" || Platform.OS === "ios") {
+              refreshToken = await SecureStore.getItemAsync("refreshToken");
+          }else {
+              refreshToken = await AsyncStorage.getItem('refreshToken');
+          }
         if (!refreshToken) throw new Error('No refresh token');
         const res = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
         const newToken: string = res.data.data.token;
