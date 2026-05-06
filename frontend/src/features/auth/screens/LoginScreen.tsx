@@ -8,6 +8,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
+
 interface LoginScreenProps {
   onLogin: (username: string, password: string) => Promise<void>;
 }
@@ -15,6 +17,7 @@ interface LoginScreenProps {
 export function LoginScreen({ onLogin }: LoginScreenProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,17 +53,34 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           autoCorrect={false}
           editable={!isLoading}
         />
-        <TextInput
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-          placeholder="비밀번호"
-          placeholderTextColor="rgba(0,0,0,0.35)"
-          secureTextEntry
-          editable={!isLoading}
-          onSubmitEditing={handleLogin}
-          returnKeyType="done"
-        />
+
+        {/* 비밀번호 입력 + 표시 토글 */}
+        <View style={styles.passwordWrap}>
+          <TextInput
+            style={styles.passwordInput}
+            value={password}
+            onChangeText={setPassword}
+            placeholder="비밀번호"
+            placeholderTextColor="rgba(0,0,0,0.35)"
+            secureTextEntry={!showPassword}
+            editable={!isLoading}
+            onSubmitEditing={handleLogin}
+            returnKeyType="done"
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword((prev) => !prev)}
+            style={styles.eyeButton}
+            activeOpacity={0.6}
+            accessibilityLabel={showPassword ? '비밀번호 숨기기' : '비밀번호 표시'}
+            disabled={isLoading}
+          >
+            {showPassword ? (
+              <EyeOff size={18} color="rgba(0,0,0,0.45)" />
+            ) : (
+              <Eye size={18} color="rgba(0,0,0,0.45)" />
+            )}
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={styles.button}
@@ -75,7 +95,10 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
           )}
         </TouchableOpacity>
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {/* 에러 영역 항상 점유 — layout shift 방지 */}
+        <View style={styles.errorSlot}>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </View>
       </View>
     </View>
   );
@@ -119,6 +142,31 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
+  passwordWrap: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  passwordInput: {
+    height: 48,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.12)',
+    borderRadius: 8,
+    paddingLeft: 16,
+    paddingRight: 44, // 우측 아이콘 공간 확보
+    fontSize: 14,
+    color: '#000000',
+    backgroundColor: '#ffffff',
+    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: 4,
+    top: 0,
+    bottom: 0,
+    width: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   button: {
     height: 48,
     backgroundColor: '#0A2463',
@@ -133,8 +181,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
-  error: {
+  errorSlot: {
+    minHeight: 32, // 에러 메시지 유무와 무관하게 공간 점유 → layout shift 0
+    justifyContent: 'center',
     marginTop: 12,
+  },
+  error: {
     fontSize: 13,
     color: '#EF4444',
     textAlign: 'center',

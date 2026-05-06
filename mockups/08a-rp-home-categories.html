@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 08a. RP 홈 탭 (모델 A: 카테고리형)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #F9F9F9;
+  color: #000;
+  min-width: 1280px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font-family: inherit; }
+svg { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ===== Layout ===== */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+.body {
+  display: grid;
+  grid-template-columns: 64px 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  gap: 16px;
+  position: relative;
+  z-index: 100;
+}
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: #000;
+  user-select: none;
+  flex-shrink: 0;
+}
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.5;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  padding: 0 16px 0 40px;
+  background: #F0F0F0;
+  font-size: 13px;
+  color: rgba(0,0,0,0.45);
+  font-family: inherit;
+}
+.search-bar svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: rgba(0,0,0,0.3);
+}
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.6);
+}
+.icon-btn:hover { background: rgba(0,0,0,0.04); }
+.avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #0A2463;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 4px;
+}
+
+/* ===== NavRail ===== */
+.nav-rail {
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.08);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+.nav-item {
+  width: 48px; height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  cursor: pointer;
+  color: rgba(0,0,0,0.35);
+  transition: all 0.15s;
+}
+.nav-item:hover { background: rgba(10,36,99,0.04); color: rgba(0,0,0,0.6); }
+.nav-divider {
+  width: 32px; height: 1px;
+  background: rgba(0,0,0,0.08);
+  margin: 4px 0;
+}
+.nav-item svg { width: 20px; height: 20px; }
+
+/* ===== Main (Chat) ===== */
+.main {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-right: 1px solid rgba(0,0,0,0.06);
+  overflow: hidden;
+}
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 8px;
+}
+.welcome-icon {
+  width: 64px; height: 64px;
+  border-radius: 20px;
+  background: rgba(10,36,99,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0A2463;
+  margin-bottom: 12px;
+}
+.welcome-icon svg { width: 28px; height: 28px; }
+.welcome-title { font-size: 22px; font-weight: 500; color: #000; }
+.welcome-sub { font-size: 14px; color: rgba(0,0,0,0.5); }
+.chat-input-wrap {
+  padding: 16px 24px 20px;
+  border-top: 1px solid rgba(0,0,0,0.06);
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.chat-input {
+  flex: 1;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  height: 42px;
+  color: rgba(0,0,0,0.35);
+  background: #fff;
+  font-family: inherit;
+}
+.send-btn {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  background: #0A2463;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.send-btn svg { width: 16px; height: 16px; }
+
+/* ===== Right Panel ===== */
+.right-panel {
+  background: #FAFAFA;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+/* RP 탭 헤더 — RightPanel.tsx 그대로 */
+.rp-tabs {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px 0;
+  gap: 4px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  flex-shrink: 0;
+}
+.rp-tab {
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  cursor: pointer;
+  color: rgba(0,0,0,0.4);
+  position: relative;
+  margin-bottom: -1px;
+  transition: background 0.12s;
+}
+.rp-tab:hover { background: rgba(0,0,0,0.04); }
+.rp-tab.active {
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+}
+.rp-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 16px; height: 2px;
+  background: #0A2463;
+  border-radius: 1px;
+}
+.rp-tab-divider {
+  width: 1px; height: 16px;
+  background: rgba(0,0,0,0.10);
+  margin: 0 4px 8px;
+}
+.rp-tab svg { width: 18px; height: 18px; }
+
+/* ===== RP 홈 콘텐츠 (카테고리형) ===== */
+.rp-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0 20px;
+}
+.rp-scroll::-webkit-scrollbar { width: 4px; }
+.rp-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 2px; }
+
+/* 카테고리 헤더 */
+.cat-header {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.38);
+  letter-spacing: 0.04em;
+  padding: 16px 16px 6px;
+  text-transform: uppercase;
+}
+.cat-header:first-child { padding-top: 12px; }
+
+/* 일정 행 */
+.schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 16px;
+  transition: background 0.12s;
+  cursor: pointer;
+}
+.schedule-item:hover { background: rgba(0,0,0,0.025); }
+.schedule-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-blue { background: #0A2463; }
+.dot-green { background: #10B981; }
+.dot-amber { background: #F59E0B; }
+.schedule-time {
+  font-size: 12px;
+  color: rgba(0,0,0,0.45);
+  flex-shrink: 0;
+  width: 36px;
+}
+.schedule-title {
+  font-size: 13px;
+  color: rgba(0,0,0,0.8);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.schedule-loc {
+  font-size: 11px;
+  color: rgba(0,0,0,0.38);
+  flex-shrink: 0;
+}
+
+/* 처리 필요 행 */
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.action-item:hover { background: rgba(0,0,0,0.025); }
+.action-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px 3px 5px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.badge-amber {
+  background: rgba(245,158,11,0.10);
+  color: #B45309;
+}
+.badge-red {
+  background: rgba(239,68,68,0.10);
+  color: #DC2626;
+}
+.badge-blue {
+  background: rgba(10,36,99,0.08);
+  color: #0A2463;
+}
+.badge-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.bdot-amber { background: #F59E0B; }
+.bdot-red { background: #EF4444; }
+.bdot-blue { background: #0A2463; }
+
+.action-label {
+  font-size: 13px;
+  color: rgba(0,0,0,0.7);
+  flex: 1;
+}
+.action-count {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.85);
+}
+.action-chevron {
+  color: rgba(0,0,0,0.25);
+}
+.action-chevron svg { width: 14px; height: 14px; }
+
+/* 내 진행 행 */
+.progress-row {
+  padding: 8px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.progress-title {
+  font-size: 13px;
+  color: rgba(0,0,0,0.7);
+  margin-bottom: 2px;
+}
+.progress-chips {
+  display: flex;
+  gap: 6px;
+}
+.prog-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: rgba(0,0,0,0.55);
+}
+.prog-chip-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+}
+.pc-yellow { background: #F59E0B; }
+.pc-green  { background: #10B981; }
+.pc-red    { background: #EF4444; }
+.prog-chip strong { font-weight: 500; color: rgba(0,0,0,0.8); }
+
+/* 내 정보 행 */
+.info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+}
+.info-label {
+  font-size: 13px;
+  color: rgba(0,0,0,0.6);
+}
+.info-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.85);
+}
+.info-value span {
+  font-weight: 300;
+  color: rgba(0,0,0,0.4);
+  font-size: 12px;
+}
+
+/* 공지 행 */
+.notice-item {
+  padding: 7px 16px;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.notice-item:hover { background: rgba(0,0,0,0.025); }
+.notice-title {
+  font-size: 13px;
+  color: rgba(0,0,0,0.8);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.notice-meta {
+  font-size: 11px;
+  color: rgba(0,0,0,0.38);
+  margin-top: 2px;
+}
+
+/* 빠른 액션 그리드 */
+.qa-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 16px;
+}
+.qa-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.08);
+  background: #fff;
+  cursor: pointer;
+  gap: 4px;
+  transition: all 0.12s;
+}
+.qa-btn:hover { background: rgba(10,36,99,0.03); border-color: rgba(10,36,99,0.15); }
+.qa-btn.active .qa-icon-box { color: #0A2463; }
+.qa-btn.active .qa-label { color: #0A2463; }
+.qa-btn.inactive { opacity: 0.55; cursor: default; }
+.qa-btn.inactive:hover { background: #fff; border-color: rgba(0,0,0,0.08); }
+.qa-icon-box {
+  width: 28px; height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.5);
+}
+.qa-icon-box svg { width: 17px; height: 17px; }
+.qa-label {
+  font-size: 12px;
+  color: rgba(0,0,0,0.65);
+  font-weight: 400;
+  text-align: center;
+  line-height: 1.3;
+}
+.qa-soon {
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  margin-top: 1px;
+}
+
+/* 구분선 */
+.cat-sep {
+  height: 1px;
+  background: rgba(0,0,0,0.05);
+  margin: 4px 16px;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TopHeader -->
+  <header class="top-header">
+    <span class="brand">infomind</span>
+    <div class="search-bar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="검색..." readonly>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" title="알림">
+        <svg width="16" height="16" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <div class="avatar">김</div>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <div class="nav-item" title="AI 채팅">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      </div>
+      <div class="nav-item" title="전자결재">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+      </div>
+      <div class="nav-item" title="게시판">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item" title="주간보고">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      </div>
+      <div class="nav-item" title="캘린더">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+    </nav>
+
+    <!-- Main Chat Area -->
+    <main class="main">
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 김민기님</div>
+        <div class="welcome-sub">무엇이든 물어보세요</div>
+      </div>
+      <div class="chat-input-wrap">
+        <textarea class="chat-input" placeholder="메시지를 입력하세요..." readonly></textarea>
+        <button class="send-btn">
+          <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </main>
+
+    <!-- Right Panel -->
+    <aside class="right-panel">
+
+      <!-- 탭 헤더 -->
+      <div class="rp-tabs">
+        <!-- 대시보드 탭 (활성) -->
+        <div class="rp-tab active" title="대시보드">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </div>
+        <div class="rp-tab-divider"></div>
+        <!-- AI 탭 (비활성) -->
+        <div class="rp-tab" title="AI 어시스턴트">
+          <svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/><path d="M20 3v4"/><path d="M22 5h-4"/></svg>
+        </div>
+      </div>
+
+      <!-- 스크롤 가능한 콘텐츠 -->
+      <div class="rp-scroll">
+
+        <!-- 오늘 일정 -->
+        <div class="cat-header">오늘 일정</div>
+
+        <div class="schedule-item">
+          <div class="schedule-dot dot-blue"></div>
+          <span class="schedule-time">10:00</span>
+          <span class="schedule-title">스프린트 플래닝</span>
+          <span class="schedule-loc">회의실 A</span>
+        </div>
+        <div class="schedule-item">
+          <div class="schedule-dot dot-green"></div>
+          <span class="schedule-time">14:00</span>
+          <span class="schedule-title">코드 리뷰</span>
+          <span class="schedule-loc">온라인</span>
+        </div>
+        <div class="schedule-item">
+          <div class="schedule-dot dot-amber"></div>
+          <span class="schedule-time">16:30</span>
+          <span class="schedule-title">1:1 미팅</span>
+          <span class="schedule-loc">회의실 B</span>
+        </div>
+
+        <div class="cat-sep"></div>
+
+        <!-- 미처리 / 처리 필요 -->
+        <div class="cat-header">처리 필요</div>
+
+        <div class="action-item">
+          <span class="action-badge badge-amber">
+            <span class="badge-dot bdot-amber"></span>결재
+          </span>
+          <span class="action-label">받은 결재</span>
+          <span class="action-count">5건</span>
+          <span class="action-chevron">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </span>
+        </div>
+        <div class="action-item">
+          <span class="action-badge badge-red">
+            <span class="badge-dot bdot-red"></span>마감
+          </span>
+          <span class="action-label">주간보고</span>
+          <span class="action-count">D-1</span>
+          <span class="action-chevron">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </span>
+        </div>
+        <div class="action-item">
+          <span class="action-badge badge-blue">
+            <span class="badge-dot bdot-blue"></span>공지
+          </span>
+          <span class="action-label">새 공지</span>
+          <span class="action-count">3건</span>
+          <span class="action-chevron">
+            <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+          </span>
+        </div>
+
+        <div class="cat-sep"></div>
+
+        <!-- 내 진행 -->
+        <div class="cat-header">내 진행</div>
+
+        <div class="progress-row">
+          <div class="progress-title">올린 결재</div>
+          <div class="progress-chips">
+            <div class="prog-chip">
+              <div class="prog-chip-dot pc-yellow"></div>
+              진행 <strong>3</strong>
+            </div>
+            <div class="prog-chip">
+              <div class="prog-chip-dot pc-green"></div>
+              승인 <strong>1</strong>
+            </div>
+            <div class="prog-chip">
+              <div class="prog-chip-dot pc-red"></div>
+              반려 <strong>0</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="cat-sep"></div>
+
+        <!-- 내 정보 -->
+        <div class="cat-header">내 정보</div>
+
+        <div class="info-row">
+          <span class="info-label">남은 연차</span>
+          <span class="info-value">8.5 <span>/ 15일</span></span>
+        </div>
+
+        <div class="cat-sep"></div>
+
+        <!-- 최근 공지 -->
+        <div class="cat-header">최근 공지</div>
+
+        <div class="notice-item">
+          <div class="notice-title">사옥 이전 안내 (5월)</div>
+          <div class="notice-meta">04/21 · 총무팀</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-title">2025년 상반기 건강검진 신청 안내</div>
+          <div class="notice-meta">04/18 · 인사팀</div>
+        </div>
+        <div class="notice-item">
+          <div class="notice-title">네트워크 점검 일정 공지</div>
+          <div class="notice-meta">04/15 · IT팀</div>
+        </div>
+
+        <div class="cat-sep"></div>
+
+        <!-- 빠른 액션 -->
+        <div class="cat-header">빠른 액션</div>
+
+        <div class="qa-grid">
+          <!-- 활성: 휴가신청 -->
+          <button class="qa-btn active">
+            <div class="qa-icon-box">
+              <svg viewBox="0 0 24 24" stroke="#0A2463"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <span class="qa-label" style="color:#0A2463;font-weight:500;">휴가 신청</span>
+          </button>
+          <!-- 활성: 주간보고 -->
+          <button class="qa-btn active">
+            <div class="qa-icon-box">
+              <svg viewBox="0 0 24 24" stroke="#0A2463"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <span class="qa-label" style="color:#0A2463;font-weight:500;">주간보고</span>
+          </button>
+          <!-- 비활성: 차량예약 -->
+          <button class="qa-btn inactive" disabled>
+            <div class="qa-icon-box">
+              <svg viewBox="0 0 24 24"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v9a2 2 0 0 1-2 2h-3"/><circle cx="7.5" cy="17.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
+            </div>
+            <span class="qa-label">차량예약</span>
+            <span class="qa-soon">준비중</span>
+          </button>
+          <!-- 비활성: 회의실예약 -->
+          <button class="qa-btn inactive" disabled>
+            <div class="qa-icon-box">
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </div>
+            <span class="qa-label">회의실예약</span>
+            <span class="qa-soon">준비중</span>
+          </button>
+        </div>
+
+      </div><!-- /rp-scroll -->
+    </aside>
+  </div>
+</div>
+</body>
+</html>
