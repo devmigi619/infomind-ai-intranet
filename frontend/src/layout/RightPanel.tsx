@@ -13,6 +13,7 @@ import { RightPanelHome } from './RightPanelHome';
 import { RightPanelAI } from './RightPanelAI';
 import { PulseDot } from '../shared/components/PulseDot';
 import type { RpTab } from '../types';
+import { useTheme } from '../shared/hooks/useTheme';
 
 interface RightPanelProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ const TABS: { id: RpTab; label: string; Icon: React.ComponentType<{ size?: numbe
 
 export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }: RightPanelProps) {
   const widthAnim = useRef(new Animated.Value(isOpen ? 360 : 0)).current;
+  const theme = useTheme();
 
   useEffect(() => {
     Animated.timing(widthAnim, {
@@ -40,28 +42,45 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
   }, [isOpen, widthAnim]);
 
   return (
-    <Animated.View style={[styles.container, { width: widthAnim }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          width: widthAnim,
+          backgroundColor: theme.bg.surfaceAlt,
+          borderLeftColor: theme.border.default,
+        },
+      ]}
+    >
       <View style={styles.inner}>
         {/* Tabs */}
         <View style={styles.tabs}>
           {TABS.map(({ id, label, Icon }, idx) => {
             const isActive = rpTab === id;
-            // RN Web에서 hover 시 native browser tooltip 표시 (모바일 무시)
             const webTitleProp = Platform.OS === 'web' ? ({ title: label } as object) : {};
             return (
               <React.Fragment key={id}>
-                {idx > 0 && <View style={styles.tabDivider} />}
+                {idx > 0 && (
+                  <View style={[styles.tabDivider, { backgroundColor: theme.border.default }]} />
+                )}
                 <TouchableOpacity
                   onPress={() => onTabChange(id)}
-                  style={[styles.tab, isActive && styles.tabActive]}
+                  style={[
+                    styles.tab,
+                    isActive && { backgroundColor: theme.brand.primaryTint },
+                  ]}
                   activeOpacity={0.7}
                   accessibilityLabel={label}
                   {...webTitleProp}
                 >
-                  <Icon size={18} color={isActive ? '#0A2463' : 'rgba(0,0,0,0.4)'} />
-                  {isActive && <View style={styles.tabIndicator} />}
+                  <Icon size={18} color={isActive ? theme.brand.primary : theme.text.muted} />
+                  {isActive && (
+                    <View
+                      style={[styles.tabIndicator, { backgroundColor: theme.brand.primary }]}
+                    />
+                  )}
                   {id === 'ai' && hasUnreadAi && !isActive && (
-                    <PulseDot ringColor="#FAFAFA" top={4} right={4} />
+                    <PulseDot ringColor={theme.bg.surfaceAlt} top={4} right={4} />
                   )}
                 </TouchableOpacity>
               </React.Fragment>
@@ -75,7 +94,11 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
           contentContainerStyle={styles.contentInner}
           showsVerticalScrollIndicator={false}
         >
-          {rpTab === 'home' ? <RightPanelHome userName={userName} /> : <RightPanelAI />}
+          {rpTab === 'home' ? (
+            <RightPanelHome userName={userName} />
+          ) : (
+            <RightPanelAI />
+          )}
         </ScrollView>
       </View>
     </Animated.View>
@@ -84,9 +107,7 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FAFAFA',
     borderLeftWidth: 1,
-    borderLeftColor: 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
   },
   inner: {
@@ -110,9 +131,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     position: 'relative',
   },
-  tabActive: {
-    backgroundColor: 'rgba(10,36,99,0.08)',
-  },
   tabIndicator: {
     position: 'absolute',
     bottom: -8,
@@ -120,13 +138,11 @@ const styles = StyleSheet.create({
     marginLeft: -8,
     width: 16,
     height: 2,
-    backgroundColor: '#0A2463',
     borderRadius: 1,
   },
   tabDivider: {
     width: 1,
     height: 16,
-    backgroundColor: 'rgba(0,0,0,0.1)',
     marginHorizontal: 4,
   },
   content: {

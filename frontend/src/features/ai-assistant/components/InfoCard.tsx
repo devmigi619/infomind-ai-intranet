@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
 import { ArrowRight } from 'lucide-react-native';
-import { colors } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import type { AssistantCard } from '../types';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
@@ -14,19 +14,28 @@ interface InfoCardProps {
 
 export function InfoCard({ card }: InfoCardProps) {
   const bulletItems = card.summaryItems ?? (card.summary ? [card.summary] : []);
+  const theme = useTheme();
 
   const handleFullLink = () => {
     Alert.alert('', `전체 보기로 이동합니다 (추후 구현)\n경로: ${card.fullLink ?? '-'}`);
   };
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: theme.bg.surface,
+          borderColor: theme.border.default,
+        },
+      ]}
+    >
       {/* Header: title + tag */}
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={2}>{card.title}</Text>
+        <Text style={[styles.title, { color: theme.text.primary }]} numberOfLines={2}>{card.title}</Text>
         {card.tag ? (
-          <View style={[styles.tag, { backgroundColor: `${card.tagColor ?? colors.brand.primary}18` }]}>
-            <Text style={[styles.tagText, { color: card.tagColor ?? colors.brand.primary }]}>
+          <View style={[styles.tag, { backgroundColor: `${card.tagColor ?? theme.brand.primary}18` }]}>
+            <Text style={[styles.tagText, { color: card.tagColor ?? theme.brand.primary }]}>
               {card.tag}
             </Text>
           </View>
@@ -38,8 +47,8 @@ export function InfoCard({ card }: InfoCardProps) {
         <View style={styles.bulletList}>
           {bulletItems.map((item, i) => (
             <View key={i} style={styles.bulletRow}>
-              <View style={styles.bullet} />
-              <Text style={styles.bulletText}>{item}</Text>
+              <View style={[styles.bullet, { backgroundColor: theme.text.subtle }]} />
+              <Text style={[styles.bulletText, { color: theme.text.body }]}>{item}</Text>
             </View>
           ))}
         </View>
@@ -48,8 +57,8 @@ export function InfoCard({ card }: InfoCardProps) {
       {/* Full-link button */}
       {card.fullLink ? (
         <TouchableOpacity activeOpacity={0.7} onPress={handleFullLink} style={styles.fullLinkRow}>
-          <Text style={styles.fullLinkText}>전체 보기</Text>
-          <ArrowRight size={13} color={colors.brand.primary} />
+          <Text style={[styles.fullLinkText, { color: theme.brand.primary }]}>전체 보기</Text>
+          <ArrowRight size={13} color={theme.brand.primary} />
         </TouchableOpacity>
       ) : null}
     </View>
@@ -60,9 +69,7 @@ export function InfoCard({ card }: InfoCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background.surface,
     borderWidth: 1,
-    borderColor: colors.border.medium,
     borderRadius: 12,
     padding: 16,
     gap: 10,
@@ -76,7 +83,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: colors.text.primary,
     flex: 1,
     fontFamily: WEB_FONT,
   },
@@ -104,14 +110,12 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.text.subtle,
     marginTop: 7,
     flexShrink: 0,
   },
   bulletText: {
     flex: 1,
     fontSize: 13,
-    color: colors.text.body,
     lineHeight: 13 * 1.55,
     fontFamily: WEB_FONT,
   },
@@ -124,7 +128,6 @@ const styles = StyleSheet.create({
   },
   fullLinkText: {
     fontSize: 12,
-    color: colors.brand.primary,
     fontFamily: WEB_FONT,
   },
 });

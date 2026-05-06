@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Infomind — 10. 관리자 모드 + 다크모드 (옵션 B)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =============================================
+   CSS 변수 — 4가지 조합의 핵심
+   ============================================= */
+
+/* 기본: 일반 - 라이트 */
+:root {
+  /* 배경 */
+  --bg-app:       #F9F9F9;
+  --bg-surface:   #FFFFFF;
+  --bg-surface-alt:#FAFAFA;
+  --bg-muted:     #F5F5F5;
+  --bg-input:     #F0F0F0;
+
+  /* 텍스트 */
+  --text-primary:   #000000;
+  --text-secondary: rgba(0,0,0,0.85);
+  --text-body:      rgba(0,0,0,0.70);
+  --text-muted:     rgba(0,0,0,0.55);
+  --text-soft:      rgba(0,0,0,0.45);
+  --text-faint:     rgba(0,0,0,0.35);
+  --text-placeholder: rgba(0,0,0,0.35);
+
+  /* 보더 */
+  --border-light:  rgba(0,0,0,0.06);
+  --border-medium: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.12);
+
+  /* 브랜드 액센트 (일반 모드) */
+  --brand:         #0A2463;
+  --brand-dark:    #082052;
+  --brand-tint:    rgba(10,36,99,0.08);
+  --brand-tint-mid:rgba(10,36,99,0.14);
+  --brand-border:  rgba(10,36,99,0.3);
+
+  /* 관리자 액센트 (비활성 — placeholder) */
+  --admin:         #DC2626;
+  --admin-light:   #DC2626;
+  --admin-tint:    rgba(220,38,38,0.08);
+
+  /* 시맨틱 */
+  --warning: #F59E0B;
+  --warning-tint: rgba(245,158,11,0.12);
+  --success: #10B981;
+  --success-tint: rgba(16,185,129,0.12);
+  --danger:  #EF4444;
+  --danger-tint: rgba(239,68,68,0.12);
+
+  /* 카드 그림자 */
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.08);
+
+  /* 트랜지션 */
+  --t: 200ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* 다크 모드 오버라이드 */
+.dark {
+  --bg-app:        #050810;
+  --bg-surface:    #0f1419;
+  --bg-surface-alt:#1a1f29;
+  --bg-muted:      #1e2433;
+  --bg-input:      #252d3d;
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #e2e8f0;
+  --text-body:      #cbd5e1;
+  --text-muted:     #94a3b8;
+  --text-soft:      #64748b;
+  --text-faint:     #475569;
+  --text-placeholder: #4a5568;
+
+  --border-light:  rgba(255,255,255,0.06);
+  --border-medium: rgba(255,255,255,0.08);
+  --border-strong: rgba(255,255,255,0.12);
+
+  --brand:         #4d6db5;
+  --brand-dark:    #3b5499;
+  --brand-tint:    rgba(77,109,181,0.12);
+  --brand-tint-mid:rgba(77,109,181,0.18);
+  --brand-border:  rgba(77,109,181,0.4);
+
+  --admin-light:   #ef4444;
+  --admin-tint:    rgba(239,68,68,0.12);
+
+  --shadow-card: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* 관리자 모드 — 브랜드를 빨간색으로 오버라이드 */
+.admin {
+  --brand:         var(--admin-light);
+  --brand-dark:    #b91c1c;
+  --brand-tint:    var(--admin-tint);
+  --brand-tint-mid:rgba(220,38,38,0.14);
+  --brand-border:  rgba(220,38,38,0.4);
+}
+.dark.admin {
+  --brand:         #ef4444;
+  --brand-dark:    #dc2626;
+  --brand-tint:    rgba(239,68,68,0.12);
+  --brand-tint-mid:rgba(239,68,68,0.18);
+  --brand-border:  rgba(239,68,68,0.4);
+}
+
+/* =============================================
+   리셋 & 기반
+   ============================================= */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  min-width: 1280px;
+  -webkit-font-smoothing: antialiased;
+  transition: background var(--t), color var(--t);
+}
+button, input, textarea { font-family: inherit; }
+svg { stroke: currentColor; fill: none; }
+
+/* =============================================
+   레이아웃
+   ============================================= */
+.app {
+  display: grid;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+  transition: background var(--t);
+}
+.body {
+  display: grid;
+  grid-template-columns: 64px 1fr 360px;
+  height: calc(100vh - 48px);
+  overflow: hidden;
+}
+
+/* =============================================
+   TopHeader
+   ============================================= */
+.top-header {
+  display: flex;
+  align-items: center;
+  padding: 0 16px 0 20px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-medium);
+  gap: 16px;
+  position: relative;
+  z-index: 10;
+  transition:
+    background var(--t),
+    border-color var(--t),
+    box-shadow var(--t);
+}
+
+/* 관리자 모드 — 상단 2px 빨간 띠 */
+.admin .top-header {
+  border-top: 2px solid var(--brand);
+  box-shadow: 0 1px 0 var(--border-medium);
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 300;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  user-select: none;
+  flex-shrink: 0;
+  transition: color var(--t);
+}
+
+/* 관리자 배지 */
+.admin-badge {
+  display: none;
+  background: var(--brand);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  transition: background var(--t);
+}
+.admin .admin-badge { display: flex; align-items: center; }
+
+.search-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0 auto;
+  position: relative;
+  opacity: 0.5;
+}
+.search-bar input {
+  width: 100%;
+  height: 32px;
+  border: 1px solid var(--border-medium);
+  border-radius: 16px;
+  padding: 0 16px 0 40px;
+  background: var(--bg-input);
+  font-size: 13px;
+  color: var(--text-soft);
+  cursor: not-allowed;
+  transition: background var(--t), border-color var(--t), color var(--t);
+}
+.search-bar svg {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--text-faint);
+}
+.search-bar .preparing-tag {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 10px;
+  color: var(--text-faint);
+  letter-spacing: 0.04em;
+}
+
+.top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.icon-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  color: var(--text-body);
+  transition: background var(--t), color var(--t);
+}
+.icon-btn:hover { background: var(--brand-tint); color: var(--brand); }
+.icon-btn.active { color: var(--brand); background: var(--brand-tint); }
+
+.dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #EF4444;
+}
+
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 4px;
+  transition: background var(--t);
+}
+
+/* =============================================
+   NavRail
+   ============================================= */
+.nav-rail {
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-medium);
+  padding: 12px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+  overflow: hidden;
+  transition: background var(--t), border-color var(--t);
+}
+.nav-item {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border-radius: 12px;
+  cursor: pointer;
+  position: relative;
+  color: var(--text-muted);
+  transition: all var(--t);
+}
+.nav-item-label {
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.nav-item:hover {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+.nav-item.active {
+  background: var(--brand-tint);
+  color: var(--brand);
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--brand);
+  border-radius: 0 2px 2px 0;
+  transition: background var(--t);
+}
+.nav-item .badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: #EF4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 6px;
+  min-width: 13px;
+  text-align: center;
+}
+.nav-divider {
+  width: 32px;
+  height: 1px;
+  background: var(--border-medium);
+  margin: 4px 0;
+  transition: background var(--t);
+}
+.nav-spacer { flex: 1; }
+
+/* =============================================
+   메인 콘텐츠
+   ============================================= */
+.main-content {
+  background: var(--bg-surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  border-right: 1px solid var(--border-light);
+  transition: background var(--t), border-color var(--t);
+}
+
+.welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 32px;
+  gap: 6px;
+}
+
+.welcome-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: var(--brand-tint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--brand);
+  transition: background var(--t), color var(--t);
+}
+
+.welcome-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--brand);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  transition: color var(--t);
+}
+
+.welcome-title {
+  font-size: 24px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+  transition: color var(--t);
+}
+
+.welcome-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 360px;
+  transition: color var(--t);
+}
+
+/* 프롬프트 카드 */
+.prompt-cards {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 24px;
+  max-width: 640px;
+}
+.prompt-card {
+  background: var(--bg-surface-alt);
+  border: 1px solid var(--border-medium);
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  min-width: 180px;
+  max-width: 200px;
+  flex: 1;
+  transition: all var(--t);
+}
+.prompt-card:hover {
+  border-color: var(--brand-border);
+  background: var(--brand-tint);
+  box-shadow: var(--shadow-hover);
+}
+.prompt-card-icon {
+  font-size: 20px;
+  margin-bottom: 8px;
+  display: block;
+}
+.prompt-card-text {
+  font-size: 12px;
+  color: var(--text-body);
+  line-height: 1.5;
+  transition: color var(--t);
+}
+
+/* 채팅 입력 */
+.chat-input-wrap {
+  padding: 12px 24px 24px;
+}
+.chat-input {
+  display: flex;
+  align-items: center;
+  background: var(--bg-muted);
+  border-radius: 24px;
+  padding: 4px 4px 4px 20px;
+  border: 1px solid var(--border-light);
+  transition: all var(--t);
+  max-width: 640px;
+  margin: 0 auto;
+}
+.chat-input:focus-within {
+  background: var(--bg-surface);
+  border-color: var(--brand-border);
+  box-shadow: 0 0 0 3px var(--brand-tint);
+}
+.chat-input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  height: 40px;
+  color: var(--text-primary);
+  transition: color var(--t);
+}
+.chat-input input::placeholder { color: var(--text-placeholder); }
+.send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--brand);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--t);
+  flex-shrink: 0;
+}
+.send-btn:hover { background: var(--brand-dark); }
+
+/* =============================================
+   RightPanel
+   ============================================= */
+.right-panel {
+  background: var(--bg-surface-alt);
+  border-left: 1px solid var(--border-medium);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+  transition: background var(--t), border-color var(--t);
+}
+
+.rp-tabs {
+  display: flex;
+  padding: 10px 12px 6px;
+  gap: 2px;
+  flex-shrink: 0;
+  align-items: center;
+  border-bottom: 1px solid var(--border-light);
+  transition: border-color var(--t);
+}
+.rp-tab {
+  height: 32px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: all var(--t);
+}
+.rp-tab:hover { color: var(--text-body); background: var(--brand-tint); }
+.rp-tab.active {
+  color: var(--brand);
+  background: var(--brand-tint);
+}
+.rp-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--brand);
+  border-radius: 1px;
+  transition: background var(--t);
+}
+.rp-tab-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--border-medium);
+  margin: 0 4px;
+  transition: background var(--t);
+}
+
+.rp-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+.rp-content::-webkit-scrollbar { width: 4px; }
+.rp-content::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 2px; }
+
+/* 브리핑 */
+.briefing-greet {
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--brand-tint), transparent);
+  border-radius: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--brand);
+  border: 1px solid var(--brand-tint-mid);
+  transition: all var(--t);
+}
+
+/* 위젯 카드 */
+.card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  padding: 14px 14px 12px;
+  cursor: pointer;
+  transition: all var(--t);
+}
+.card:hover {
+  border-color: var(--brand-border);
+  box-shadow: var(--shadow-hover);
+}
+.card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.card-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.icon-blue    { background: var(--brand-tint); color: var(--brand); transition: background var(--t), color var(--t); }
+.icon-amber   { background: var(--warning-tint); color: var(--warning); }
+.icon-green   { background: var(--success-tint); color: var(--success); }
+.icon-red     { background: var(--danger-tint);  color: var(--danger); }
+
+.card-title   { font-size: 12px; font-weight: 600; color: var(--text-secondary); flex: 1; letter-spacing: 0.02em; transition: color var(--t); }
+.card-count   { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1; transition: color var(--t); }
+.card-body    { font-size: 12px; color: var(--text-muted); line-height: 1.6; transition: color var(--t); }
+.card-body strong { color: var(--text-secondary); font-weight: 500; }
+
+.section-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 2px 2px;
+  transition: color var(--t);
+}
+
+/* 연차 프로그레스 */
+.leave-bar {
+  height: 6px;
+  background: var(--bg-muted);
+  border-radius: 3px;
+  margin-top: 8px;
+  overflow: hidden;
+  transition: background var(--t);
+}
+.leave-fill {
+  height: 100%;
+  background: var(--success);
+  border-radius: 3px;
+  width: 60%;
+}
+
+/* 일정 아이템 */
+.schedule-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  transition: border-color var(--t);
+}
+.schedule-item:last-child { border-bottom: none; padding-bottom: 0; }
+.schedule-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+.dot-blue   { background: var(--brand); }
+.dot-amber  { background: var(--warning); }
+.dot-green  { background: var(--success); }
+.schedule-info { flex: 1; }
+.schedule-title { font-size: 12px; color: var(--text-secondary); font-weight: 500; margin-bottom: 1px; transition: color var(--t); }
+.schedule-time  { font-size: 11px; color: var(--text-soft); transition: color var(--t); }
+
+/* =============================================
+   관리자 모드 안내 배너 (RP 내부)
+   ============================================= */
+.admin-info-banner {
+  display: none;
+  background: var(--brand-tint);
+  border: 1px solid var(--brand-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--brand);
+  line-height: 1.5;
+  gap: 6px;
+  align-items: flex-start;
+  transition: all var(--t);
+}
+.admin .admin-info-banner { display: flex; }
+.admin-info-banner svg { flex-shrink: 0; margin-top: 1px; }
+
+/* =============================================
+   컨트롤 패널 (목업 전용)
+   ============================================= */
+.control-panel {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08);
+  min-width: 180px;
+  transition: background var(--t), border-color var(--t), box-shadow var(--t);
+}
+.control-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color var(--t);
+}
+.control-title::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--brand);
+  transition: background var(--t);
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+}
+.control-row + .control-row {
+  border-top: 1px solid var(--border-light);
+}
+
+.control-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  user-select: none;
+  transition: color var(--t);
+}
+.control-label-sub {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 1px;
+  transition: color var(--t);
+}
+
+/* 토글 스위치 */
+.toggle {
+  width: 36px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--border-strong);
+  position: relative;
+  cursor: pointer;
+  transition: background var(--t);
+  flex-shrink: 0;
+  border: none;
+  outline: none;
+  appearance: none;
+}
+.toggle::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-radius: 50%;
+  top: 2px;
+  left: 2px;
+  transition: left var(--t);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.25);
+}
+.toggle.on { background: var(--brand); }
+.toggle.on::after { left: 18px; }
+
+.control-combo-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--brand);
+  background: var(--brand-tint);
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-top: 10px;
+  text-align: center;
+  transition: all var(--t);
+  letter-spacing: 0.04em;
+}
+
+/* =============================================
+   토스트 안내
+   ============================================= */
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(0);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  border-radius: 10px;
+  padding: 10px 16px 10px 14px;
+  font-size: 12px;
+  color: var(--text-body);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 9998;
+  opacity: 1;
+  transition: opacity 500ms ease, transform 500ms ease, background var(--t);
+  max-width: 420px;
+  white-space: nowrap;
+}
+.toast.hidden { opacity: 0; transform: translateX(-50%) translateY(8px); pointer-events: none; }
+.toast-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-faint);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  margin-left: 4px;
+}
+.toast-close:hover { color: var(--text-body); }
+
+/* =============================================
+   스크롤바 전역
+   ============================================= */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+
+/* =============================================
+   애니메이션
+   ============================================= */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.welcome { animation: fadeSlideIn 0.3s ease; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- ===== TopHeader ===== -->
+  <header class="top-header">
+    <span class="brand">infomind</span>
+    <span class="admin-badge">관리자</span>
+
+    <div class="search-bar">
+      <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      <input type="text" placeholder="검색 준비 중..." disabled>
+      <span class="preparing-tag">준비중</span>
+    </div>
+
+    <div class="top-actions">
+      <button class="icon-btn" title="알림">
+        <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="1.5">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+        </svg>
+        <span class="dot"></span>
+      </button>
+      <button class="icon-btn" title="설정">
+        <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+      <div class="avatar">김</div>
+    </div>
+  </header>
+
+  <!-- ===== Body ===== -->
+  <div class="body">
+
+    <!-- NavRail -->
+    <nav class="nav-rail">
+      <div class="nav-item active">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span class="nav-item-label">홈</span>
+      </div>
+      <div class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <span class="nav-item-label">게시판</span>
+      </div>
+      <div class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5">
+          <polyline points="9 11 12 14 22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span class="nav-item-label">결재</span>
+        <span class="badge">3</span>
+      </div>
+      <div class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span class="nav-item-label">보고</span>
+      </div>
+      <div class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+        <span class="nav-item-label">캘린더</span>
+      </div>
+      <div class="nav-divider"></div>
+      <div class="nav-item">
+        <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="1.5">
+          <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
+        </svg>
+        <span class="nav-item-label">더보기</span>
+      </div>
+      <div class="nav-spacer"></div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="welcome">
+        <div class="welcome-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" stroke-width="1.2">
+            <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z" fill="currentColor" opacity="0.15" stroke="none"/>
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17" stroke-linecap="round" stroke-width="2"/>
+          </svg>
+        </div>
+        <div class="welcome-eyebrow" id="welcomeEyebrow">AI 업무 어시스턴트</div>
+        <div class="welcome-title" id="welcomeTitle">안녕하세요, 김민기님 👋</div>
+        <div class="welcome-subtitle" id="welcomeSubtitle">
+          오늘 어떤 업무를 도와드릴까요?<br>
+          아래 카드를 클릭하거나 직접 입력해보세요.
+        </div>
+
+        <div class="prompt-cards">
+          <div class="prompt-card">
+            <span class="prompt-card-icon">📋</span>
+            <div class="prompt-card-text">이번 주 결재 대기 건 요약해줘</div>
+          </div>
+          <div class="prompt-card">
+            <span class="prompt-card-icon">📅</span>
+            <div class="prompt-card-text">오늘 일정과 미팅 정리해줘</div>
+          </div>
+          <div class="prompt-card" id="adminPromptCard" style="display:none">
+            <span class="prompt-card-icon">⚙️</span>
+            <div class="prompt-card-text">시스템 현황 및 사용 통계 확인</div>
+          </div>
+          <div class="prompt-card" id="normalPromptCard">
+            <span class="prompt-card-icon">✍️</span>
+            <div class="prompt-card-text">주간 보고서 초안 작성 도와줘</div>
+          </div>
+        </div>
+
+        <div class="chat-input-wrap" style="width:100%;padding: 0 0 0 0;">
+          <div class="chat-input" style="max-width:540px;margin:0 auto;">
+            <input type="text" placeholder="AI에게 무엇이든 물어보세요...">
+            <button class="send-btn">
+              <svg width="16" height="16" viewBox="0 0 24 24" stroke-width="1.5" fill="none">
+                <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2" fill="currentColor" stroke="none"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- RightPanel -->
+    <aside class="right-panel">
+      <div class="rp-tabs">
+        <button class="rp-tab active">대시보드</button>
+        <button class="rp-tab">자비스</button>
+        <div class="rp-tab-divider"></div>
+        <button class="rp-tab">팀</button>
+      </div>
+
+      <div class="rp-content">
+
+        <!-- 관리자 안내 배너 -->
+        <div class="admin-info-banner">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="1.5">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <div>
+            <strong>관리자 모드 활성</strong><br>
+            시스템 설정, 사용자 관리, 통계 대시보드에 접근할 수 있습니다.
+          </div>
+        </div>
+
+        <!-- 브리핑 -->
+        <div class="briefing-greet" id="briefingText">
+          🌤 오늘 날씨 맑음 · 결재 대기 <strong>3건</strong> · 오늘 미팅 <strong>2개</strong>
+        </div>
+
+        <!-- 받은 결재 위젯 -->
+        <div class="section-label">받은 결재</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-blue">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="1.5">
+                <polyline points="9 11 12 14 22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+            </div>
+            <span class="card-title">결재 대기</span>
+            <span class="card-count">3</span>
+          </div>
+          <div class="card-body">
+            <strong>휴가 신청</strong> — 이지은 · 3박4일<br>
+            <strong>구매 요청</strong> — 박서준 · 노트북<br>
+            <strong>출장 보고</strong> — 최유진 · 부산 출장
+          </div>
+        </div>
+
+        <!-- 오늘 일정 위젯 -->
+        <div class="section-label">오늘 일정</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-amber">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="1.5">
+                <rect x="3" y="4" width="18" height="18" rx="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <span class="card-title">미팅 2건</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0;">
+            <div class="schedule-item">
+              <div class="schedule-dot dot-blue"></div>
+              <div class="schedule-info">
+                <div class="schedule-title">주간 팀 미팅</div>
+                <div class="schedule-time">10:00 – 11:00 · 회의실 A</div>
+              </div>
+            </div>
+            <div class="schedule-item">
+              <div class="schedule-dot dot-amber"></div>
+              <div class="schedule-info">
+                <div class="schedule-title">디자인 리뷰</div>
+                <div class="schedule-time">15:30 – 16:00 · 온라인</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 남은 연차 위젯 -->
+        <div class="section-label">남은 연차</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon icon-green">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="1.5">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                <polyline points="9 22 9 12 15 12 15 22"/>
+              </svg>
+            </div>
+            <span class="card-title">연차 현황</span>
+            <span class="card-count">9<span style="font-size:12px;font-weight:400;">일</span></span>
+          </div>
+          <div class="card-body">
+            연간 15일 중 <strong>6일 사용</strong> · 9일 잔여
+          </div>
+          <div class="leave-bar"><div class="leave-fill" style="width:40%;"></div></div>
+        </div>
+
+      </div>
+    </aside>
+  </div><!-- .body -->
+</div><!-- .app -->
+
+<!-- ===== 컨트롤 패널 (목업 전용) ===== -->
+<div class="control-panel" id="controlPanel">
+  <div class="control-title">모드 비교</div>
+
+  <div class="control-row">
+    <div>
+      <div class="control-label">관리자 모드</div>
+      <div class="control-label-sub">빨간 액센트 활성</div>
+    </div>
+    <button class="toggle" id="adminToggle" onclick="toggleAdmin()" title="관리자 모드 토글"></button>
+  </div>
+
+  <div class="control-row">
+    <div>
+      <div class="control-label">다크 모드</div>
+      <div class="control-label-sub">다크 팔레트 전환</div>
+    </div>
+    <button class="toggle" id="darkToggle" onclick="toggleDark()" title="다크 모드 토글"></button>
+  </div>
+
+  <div class="control-combo-label" id="comboLabel">일반 · 라이트</div>
+</div>
+
+<!-- ===== 토스트 ===== -->
+<div class="toast" id="toast">
+  <svg width="14" height="14" viewBox="0 0 24 24" stroke-width="1.5" style="flex-shrink:0;color:#10B981">
+    <circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/>
+  </svg>
+  우하단 컨트롤로 4가지 모드 조합을 전환해보세요
+  <button class="toast-close" onclick="closeToast()">
+    <svg width="12" height="12" viewBox="0 0 24 24" stroke-width="2">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </button>
+</div>
+
+<script>
+const app         = document.getElementById('app');
+const adminToggle = document.getElementById('adminToggle');
+const darkToggle  = document.getElementById('darkToggle');
+const comboLabel  = document.getElementById('comboLabel');
+const toast       = document.getElementById('toast');
+
+let isAdmin = false;
+let isDark  = false;
+
+function applyState() {
+  // 클래스 적용
+  app.classList.toggle('admin', isAdmin);
+  app.classList.toggle('dark',  isDark);
+  document.body.classList.toggle('dark', isDark);
+
+  // 토글 시각
+  adminToggle.classList.toggle('on', isAdmin);
+  darkToggle.classList.toggle('on',  isDark);
+
+  // 콤보 레이블
+  const adminText = isAdmin ? '관리자' : '일반';
+  const darkText  = isDark  ? '다크'   : '라이트';
+  comboLabel.textContent = `${adminText} · ${darkText}`;
+
+  // 관리자 전용 프롬프트 카드
+  document.getElementById('adminPromptCard').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('normalPromptCard').style.display = isAdmin ? 'none' : 'block';
+
+  // 환영 텍스트
+  const eyebrow = document.getElementById('welcomeEyebrow');
+  eyebrow.textContent = isAdmin ? '관리자 대시보드' : 'AI 업무 어시스턴트';
+
+  // 브리핑 텍스트 (관리자 모드 추가 정보)
+  const briefing = document.getElementById('briefingText');
+  if (isAdmin) {
+    briefing.innerHTML = '⚙️ 관리자 뷰 · 전체 결재 대기 <strong>12건</strong> · 활성 사용자 <strong>38명</strong>';
+  } else {
+    briefing.innerHTML = '🌤 오늘 날씨 맑음 · 결재 대기 <strong>3건</strong> · 오늘 미팅 <strong>2개</strong>';
+  }
+}
+
+function toggleAdmin() {
+  isAdmin = !isAdmin;
+  applyState();
+}
+
+function toggleDark() {
+  isDark = !isDark;
+  applyState();
+}
+
+function closeToast() {
+  toast.classList.add('hidden');
+}
+
+// 5초 후 토스트 자동 닫기
+setTimeout(() => toast.classList.add('hidden'), 5000);
+
+// 초기 상태 적용
+applyState();
+</script>
+</body>
+</html>

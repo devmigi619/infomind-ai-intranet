@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 import type { PanelId } from '../types';
 import { ALL_MENUS } from '../shared/constants/menus';
+import { useTheme } from '../shared/hooks/useTheme';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -44,6 +45,8 @@ export function NavRailMorePopover({
   onMenuClick,
   onCustomize,
 }: NavRailMorePopoverProps) {
+  const theme = useTheme();
+
   // ESC 키로 닫기 (웹 전용)
   useEffect(() => {
     if (Platform.OS !== 'web' || !isOpen) return;
@@ -66,8 +69,22 @@ export function NavRailMorePopover({
       <Pressable style={styles.backdrop} onPress={onClose} />
 
       {/* Popover 본체 */}
-      <View style={[styles.popover, { top: anchorTop }]}>
-        <Text style={styles.header}>전체 메뉴</Text>
+      <View
+        style={[
+          styles.popover,
+          { top: anchorTop, backgroundColor: theme.bg.surface, borderColor: theme.border.default },
+          Platform.OS === 'web'
+            ? ({ boxShadow: theme.shadow.modal } as object)
+            : {
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 8 },
+                shadowOpacity: 0.12,
+                shadowRadius: 16,
+                elevation: 8,
+              },
+        ]}
+      >
+        <Text style={[styles.header, { color: theme.text.subtle }]}>전체 메뉴</Text>
 
         <View style={styles.list}>
           {unpinnedMenus.map((meta) => {
@@ -79,21 +96,25 @@ export function NavRailMorePopover({
                 onPress={() => onMenuClick(meta.panel)}
                 activeOpacity={0.7}
               >
-                <Icon size={16} color="rgba(0,0,0,0.5)" />
-                <Text style={styles.itemText}>{meta.label}</Text>
+                <Icon size={16} color={theme.text.muted} />
+                <Text style={[styles.itemText, { color: theme.text.primary }]}>{meta.label}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
-        <TouchableOpacity style={styles.footer} onPress={onCustomize} activeOpacity={0.8}>
+        <TouchableOpacity
+          style={[styles.footer, { backgroundColor: theme.bg.surfaceAlt, borderTopColor: theme.border.subtle }]}
+          onPress={onCustomize}
+          activeOpacity={0.8}
+        >
           <View style={styles.footerLeft}>
-            <Settings size={13} color="#0A2463" />
-            <Text style={styles.footerText}>맞춤설정</Text>
+            <Settings size={13} color={theme.brand.primary} />
+            <Text style={[styles.footerText, { color: theme.brand.primary }]}>맞춤설정</Text>
           </View>
-          <ChevronRight size={14} color="#0A2463" />
+          <ChevronRight size={14} color={theme.brand.primary} />
         </TouchableOpacity>
       </View>
     </>
@@ -113,23 +134,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 72,
     width: 280,
-    backgroundColor: '#ffffff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
     zIndex: 100,
     overflow: 'hidden',
-    ...(Platform.OS === 'web'
-      ? {
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12)',
-        }
-      : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.12,
-          shadowRadius: 16,
-          elevation: 8,
-        }),
   },
   header: {
     paddingHorizontal: 16,
@@ -137,7 +145,6 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     fontSize: 11,
     fontWeight: '600',
-    color: 'rgba(0,0,0,0.45)',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
@@ -153,11 +160,9 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 13,
-    color: '#000000',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
     marginVertical: 4,
   },
   footer: {
@@ -166,9 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: '#FAFAFA',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.06)',
   },
   footerLeft: {
     flexDirection: 'row',
@@ -177,6 +180,5 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#0A2463',
   },
 });

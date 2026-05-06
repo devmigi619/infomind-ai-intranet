@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { ArrowRight, X } from 'lucide-react-native';
 import type { PanelId } from '../types';
+import { useTheme } from '../shared/hooks/useTheme';
 
 interface LeftPanelProps {
   activePanel: PanelId | null;
@@ -153,6 +154,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const translateAnim = useRef(new Animated.Value(0)).current;
   const lastPanelRef = useRef<PanelId | null>(activePanel);
+  const theme = useTheme();
 
   useEffect(() => {
     Animated.timing(widthAnim, {
@@ -191,21 +193,30 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
   const sections = activePanel ? (PANEL_PREVIEW[activePanel] ?? PLACEHOLDER_SECTIONS) : [];
 
   return (
-    <Animated.View style={[styles.container, { width: widthAnim }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          width: widthAnim,
+          backgroundColor: theme.bg.surface,
+          borderRightColor: theme.border.default,
+        },
+      ]}
+    >
       <View style={styles.inner}>
-        <View style={styles.header}>
-          <Text style={styles.title}>{title}</Text>
+        <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
+          <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
           <View style={styles.actions}>
             <TouchableOpacity
               onPress={onOpenFullScreen}
-              style={styles.openButton}
+              style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
               activeOpacity={0.7}
             >
-              <Text style={styles.openButtonText}>열기</Text>
-              <ArrowRight size={12} color="#0A2463" />
+              <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+              <ArrowRight size={12} color={theme.brand.primary} />
             </TouchableOpacity>
             <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
-              <X size={14} color="rgba(0,0,0,0.5)" />
+              <X size={14} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -226,15 +237,21 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
           >
             {sections.map((section) => (
               <View key={section.label}>
-                <Text style={styles.sectionLabel}>{section.label}</Text>
+                <Text style={[styles.sectionLabel, { color: theme.text.subtle }]}>{section.label}</Text>
                 {section.cards.map((card, idx) => (
                   <TouchableOpacity
                     key={`${section.label}-${idx}`}
-                    style={styles.card}
+                    style={[
+                      styles.card,
+                      {
+                        backgroundColor: theme.bg.surfaceAlt,
+                        borderColor: theme.border.subtle,
+                      },
+                    ]}
                     activeOpacity={0.7}
                   >
                     <View style={styles.cardRow}>
-                      <Text style={styles.cardTitle} numberOfLines={1}>
+                      <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={1}>
                         {card.title}
                       </Text>
                       {card.status && (
@@ -243,7 +260,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
                         </View>
                       )}
                     </View>
-                    <Text style={styles.cardMeta}>{card.meta}</Text>
+                    <Text style={[styles.cardMeta, { color: theme.text.muted }]}>{card.meta}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -257,9 +274,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#ffffff',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(0,0,0,0.08)',
     overflow: 'hidden',
   },
   inner: {
@@ -274,12 +289,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   title: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   actions: {
@@ -291,14 +304,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(10,36,99,0.08)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   openButtonText: {
     fontSize: 12,
-    color: '#0A2463',
     fontWeight: '500',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
@@ -322,7 +333,6 @@ const styles = StyleSheet.create({
   sectionLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: 'rgba(0,0,0,0.4)',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     marginTop: 8,
@@ -332,10 +342,8 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: 12,
-    backgroundColor: '#FAFAFA',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.04)',
     marginBottom: 8,
   },
   cardRow: {
@@ -348,7 +356,6 @@ const styles = StyleSheet.create({
   cardTitle: {
     flex: 1,
     fontSize: 13,
-    color: '#000000',
     fontWeight: '500',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
@@ -364,7 +371,6 @@ const styles = StyleSheet.create({
   },
   cardMeta: {
     fontSize: 11,
-    color: 'rgba(0,0,0,0.5)',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
 });

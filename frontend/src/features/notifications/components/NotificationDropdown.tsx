@@ -9,7 +9,7 @@ import {
   Platform,
   Alert,
 } from 'react-native';
-import { colors } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import {
   useNotifications,
   useMarkAsRead,
@@ -32,6 +32,7 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
   const { data: notifications = [] } = useNotifications();
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
+  const theme = useTheme();
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -91,11 +92,17 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
         <TouchableOpacity
           activeOpacity={1}
           onPress={(e) => e.stopPropagation()}
-          style={styles.dropdown}
+          style={[
+            styles.dropdown,
+            {
+              backgroundColor: theme.bg.surface,
+              borderColor: theme.border.default,
+            },
+          ]}
         >
           {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>알림</Text>
+          <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
+            <Text style={[styles.headerTitle, { color: theme.text.primary }]}>알림</Text>
             <TouchableOpacity
               onPress={handleMarkAllAsRead}
               activeOpacity={0.7}
@@ -104,7 +111,8 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
               <Text
                 style={[
                   styles.markAllText,
-                  unreadCount === 0 && styles.markAllTextDisabled,
+                  { color: theme.brand.primary },
+                  unreadCount === 0 && { color: theme.text.subtle },
                 ]}
               >
                 모두 읽음
@@ -127,9 +135,9 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
           </ScrollView>
 
           {/* Footer */}
-          <View style={styles.footer}>
+          <View style={[styles.footer, { borderTopColor: theme.border.subtle }]}>
             <TouchableOpacity onPress={handleViewAll} activeOpacity={0.7}>
-              <Text style={styles.viewAllText}>전체 알림 보기 →</Text>
+              <Text style={[styles.viewAllText, { color: theme.brand.primary }]}>전체 알림 보기 →</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -151,9 +159,7 @@ const styles = StyleSheet.create({
     right: 16,
     width: 380,
     maxHeight: 520,
-    backgroundColor: colors.background.surface,
     borderWidth: 1,
-    borderColor: colors.border.medium,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -169,22 +175,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border.light,
     flexShrink: 0,
   },
   headerTitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: colors.text.primary,
     fontFamily: WEB_FONT,
   },
   markAllText: {
     fontSize: 13,
-    color: colors.brand.primary,
     fontFamily: WEB_FONT,
-  },
-  markAllTextDisabled: {
-    color: colors.text.subtle,
   },
   body: {
     flex: 1,
@@ -194,12 +194,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderTopWidth: 1,
-    borderTopColor: colors.border.light,
     flexShrink: 0,
   },
   viewAllText: {
     fontSize: 13,
-    color: colors.brand.primary,
     fontFamily: WEB_FONT,
     paddingHorizontal: 16,
     paddingVertical: 8,

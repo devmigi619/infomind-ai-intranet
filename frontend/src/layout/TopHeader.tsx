@@ -5,6 +5,7 @@ import { AvatarMenu } from './AvatarMenu';
 import { PulseDot } from '../shared/components/PulseDot';
 import { NotificationDropdown } from '../features/notifications/components/NotificationDropdown';
 import { useUnreadNotificationCount } from '../features/notifications/api';
+import { useTheme } from '../shared/hooks/useTheme';
 
 interface TopHeaderProps {
   user: {
@@ -37,75 +38,139 @@ export function TopHeader({
   const isAdmin = user?.role === 'ADMIN';
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = useUnreadNotificationCount();
+  const theme = useTheme();
 
   return (
     <>
-    <View style={styles.container}>
-      {/* Left: Brand */}
-      <TouchableOpacity onPress={onBrandClick} activeOpacity={0.6}>
-        <Text style={styles.brand}>Infomind</Text>
-      </TouchableOpacity>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.bg.surface,
+            borderBottomColor: theme.border.default,
+            // 관리자 모드: 상단 2px 빨간 띠
+            borderTopWidth: theme.isAdmin ? 2 : 0,
+            borderTopColor: theme.isAdmin ? theme.brand.primary : 'transparent',
+          },
+        ]}
+      >
+        {/* Left: Brand + 관리자 배지 */}
+        <TouchableOpacity onPress={onBrandClick} activeOpacity={0.6}>
+          <Text
+            style={[
+              styles.brand,
+              { color: theme.text.primary },
+            ]}
+          >
+            Infomind
+          </Text>
+        </TouchableOpacity>
 
-      {/* Center: Search placeholder */}
-      <View style={styles.searchBarWrap}>
-        <View style={styles.searchBar}>
-          <Search size={14} color="rgba(0,0,0,0.3)" style={styles.searchIcon} />
-          <Text style={styles.searchPlaceholder}>통합검색 준비 중...</Text>
-          <Text style={styles.preparingTag}>준비 중</Text>
+        {/* 관리자 배지 */}
+        {theme.isAdmin && (
+          <View style={[styles.adminBadge, { backgroundColor: theme.brand.primary }]}>
+            <Text style={[styles.adminBadgeText, { color: theme.text.onBrand }]}>관리자</Text>
+          </View>
+        )}
+
+        {/* Center: Search placeholder */}
+        <View style={styles.searchBarWrap}>
+          <View
+            style={[
+              styles.searchBar,
+              {
+                backgroundColor: theme.mode === 'dark' ? theme.bg.surfaceAlt : '#F0F0F0',
+                borderColor: theme.border.default,
+              },
+            ]}
+          >
+            <Search size={14} color={theme.text.subtle} style={styles.searchIcon} />
+            <Text style={[styles.searchPlaceholder, { color: theme.text.muted }]}>
+              통합검색 준비 중...
+            </Text>
+            <Text style={[styles.preparingTag, { color: theme.text.subtle }]}>준비 중</Text>
+          </View>
+        </View>
+
+        {/* Right: Controls */}
+        <View style={styles.rightControls}>
+          {/* Admin toggle (ADMIN only) */}
+          {isAdmin && (
+            <TouchableOpacity
+              onPress={onToggleAdminMode}
+              activeOpacity={0.7}
+              style={styles.adminToggle}
+            >
+              <Text
+                style={[
+                  styles.adminLabel,
+                  { color: theme.text.muted },
+                  isAdminMode && { color: theme.brand.primary, fontWeight: '500' },
+                ]}
+              >
+                관리자 모드
+              </Text>
+              <View
+                style={[
+                  styles.switch,
+                  { backgroundColor: 'rgba(0,0,0,0.15)' },
+                  isAdminMode && { backgroundColor: theme.brand.primary },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.switchKnob,
+                    isAdminMode && styles.switchKnobActive,
+                  ]}
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+
+          {/* Bell with notification dropdown */}
+          <TouchableOpacity
+            style={[
+              styles.iconButton,
+              notifOpen && { backgroundColor: theme.brand.primaryTint },
+            ]}
+            activeOpacity={0.7}
+            onPress={() => setNotifOpen((v) => !v)}
+          >
+            <Bell size={18} color={notifOpen ? theme.brand.primary : theme.text.muted} />
+            {unreadCount > 0 && <PulseDot ringColor={theme.bg.surface} top={6} right={6} />}
+          </TouchableOpacity>
+
+          {/* RightPanel toggle */}
+          <TouchableOpacity
+            onPress={onToggleRightPanel}
+            style={[
+              styles.iconButton,
+              isRightPanelOpen && { backgroundColor: theme.brand.primaryTint },
+            ]}
+            activeOpacity={0.7}
+          >
+            <PanelRight
+              size={18}
+              color={isRightPanelOpen ? theme.brand.primary : theme.text.muted}
+            />
+            {hasUnreadAi && !isRightPanelOpen && (
+              <PulseDot ringColor={theme.bg.surface} top={6} right={6} />
+            )}
+          </TouchableOpacity>
+
+          {/* Avatar dropdown */}
+          {user && (
+            <AvatarMenu
+              name={user.name}
+              department={user.department}
+              position={user.position}
+              onLogout={onLogout}
+              onSettingsClick={onSettingsClick}
+            />
+          )}
         </View>
       </View>
-
-      {/* Right: Controls */}
-      <View style={styles.rightControls}>
-        {/* Admin toggle (ADMIN only) */}
-        {isAdmin && (
-          <TouchableOpacity
-            onPress={onToggleAdminMode}
-            activeOpacity={0.7}
-            style={styles.adminToggle}
-          >
-            <Text style={[styles.adminLabel, isAdminMode && styles.adminLabelActive]}>
-              관리자 모드
-            </Text>
-            <View style={[styles.switch, isAdminMode && styles.switchActive]}>
-              <View style={[styles.switchKnob, isAdminMode && styles.switchKnobActive]} />
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {/* Bell with notification dropdown */}
-        <TouchableOpacity
-          style={[styles.iconButton, notifOpen && styles.iconButtonActive]}
-          activeOpacity={0.7}
-          onPress={() => setNotifOpen((v) => !v)}
-        >
-          <Bell size={18} color={notifOpen ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
-          {unreadCount > 0 && <PulseDot ringColor="#ffffff" top={6} right={6} />}
-        </TouchableOpacity>
-
-        {/* RightPanel toggle */}
-        <TouchableOpacity
-          onPress={onToggleRightPanel}
-          style={[styles.iconButton, isRightPanelOpen && styles.iconButtonActive]}
-          activeOpacity={0.7}
-        >
-          <PanelRight size={18} color={isRightPanelOpen ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
-          {hasUnreadAi && !isRightPanelOpen && <PulseDot ringColor="#ffffff" top={6} right={6} />}
-        </TouchableOpacity>
-
-        {/* Avatar dropdown */}
-        {user && (
-          <AvatarMenu
-            name={user.name}
-            department={user.department}
-            position={user.position}
-            onLogout={onLogout}
-            onSettingsClick={onSettingsClick}
-          />
-        )}
-      </View>
-    </View>
-    <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
+      <NotificationDropdown isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
     </>
   );
 }
@@ -113,9 +178,7 @@ export function TopHeader({
 const styles = StyleSheet.create({
   container: {
     height: 48,
-    backgroundColor: '#ffffff',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
     flexDirection: 'row',
     alignItems: 'center',
     paddingLeft: 20,
@@ -125,8 +188,19 @@ const styles = StyleSheet.create({
   brand: {
     fontSize: 18,
     letterSpacing: 18 * 0.12,
-    color: '#000000',
     fontWeight: '300',
+    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  },
+  adminBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  adminBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.04 * 11,
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   searchBarWrap: {
@@ -137,9 +211,7 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 480,
     height: 32,
-    backgroundColor: '#F0F0F0',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -152,12 +224,10 @@ const styles = StyleSheet.create({
   searchPlaceholder: {
     flex: 1,
     fontSize: 13,
-    color: 'rgba(0,0,0,0.45)',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   preparingTag: {
     fontSize: 10,
-    color: 'rgba(0,0,0,0.35)',
     letterSpacing: 0.4,
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
@@ -174,23 +244,14 @@ const styles = StyleSheet.create({
   },
   adminLabel: {
     fontSize: 12,
-    color: 'rgba(0,0,0,0.55)',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  adminLabelActive: {
-    color: '#0A2463',
-    fontWeight: '500',
   },
   switch: {
     width: 32,
     height: 18,
     borderRadius: 9,
-    backgroundColor: 'rgba(0,0,0,0.15)',
     justifyContent: 'center',
     paddingHorizontal: 2,
-  },
-  switchActive: {
-    backgroundColor: '#0A2463',
   },
   switchKnob: {
     width: 14,
@@ -213,8 +274,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 8,
     position: 'relative',
-  },
-  iconButtonActive: {
-    backgroundColor: 'rgba(10,36,99,0.08)',
   },
 });

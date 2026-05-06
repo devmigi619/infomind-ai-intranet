@@ -1,3 +1,8 @@
+/**
+ * @deprecated Phase 2 다크모드 마이그레이션 완료로 더 이상 사용되지 않습니다.
+ * 모든 컴포넌트는 `useTheme()` 훅과 `themes.ts`의 시맨틱 토큰을 사용합니다.
+ * 다음 정리 시점에 이 파일을 삭제하세요.
+ */
 export const colors = {
   brand: {
     primary: '#0A2463',

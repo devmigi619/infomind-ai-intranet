@@ -8,7 +8,7 @@ import {
   AlertCircle,
   type LucideIcon,
 } from 'lucide-react-native';
-import { colors } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import type { AssistantCard } from '../types';
 
 // ─── Icon map ─────────────────────────────────────────────────────────────────
@@ -31,19 +31,28 @@ interface StatusCardProps {
 
 export function StatusCard({ card }: StatusCardProps) {
   const Icon = ICON_MAP[card.icon] ?? Activity;
+  const theme = useTheme();
 
   return (
-    <View style={styles.card}>
+    <View
+      style={[
+        styles.card,
+        {
+          backgroundColor: theme.bg.surface,
+          borderColor: theme.border.default,
+        },
+      ]}
+    >
       {/* Header row: icon + label */}
       <View style={styles.header}>
-        <View style={styles.iconBox}>
-          <Icon size={16} color={colors.semantic.success} />
+        <View style={[styles.iconBox, { backgroundColor: theme.semanticTint.success }]}>
+          <Icon size={16} color={theme.semantic.success} />
         </View>
-        <Text style={styles.label} numberOfLines={1}>{card.title}</Text>
+        <Text style={[styles.label, { color: theme.text.muted }]} numberOfLines={1}>{card.title}</Text>
       </View>
 
       {/* Value */}
-      <Text style={styles.value}>{card.value ?? '—'}</Text>
+      <Text style={[styles.value, { color: theme.text.primary }]}>{card.value ?? '—'}</Text>
     </View>
   );
 }
@@ -52,9 +61,7 @@ export function StatusCard({ card }: StatusCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: colors.background.surface,
     borderWidth: 1,
-    borderColor: colors.border.medium,
     borderRadius: 12,
     padding: 14,
     gap: 8,
@@ -68,7 +75,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 7,
-    backgroundColor: colors.semanticTint.success,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
@@ -76,13 +82,11 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 12,
     fontWeight: '500',
-    color: colors.text.muted,
     fontFamily: WEB_FONT,
   },
   value: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.text.primary,
     fontFamily: WEB_FONT,
   },
 });

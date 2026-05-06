@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { colors } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/hooks/useTheme';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -12,19 +12,28 @@ interface ToggleRowProps {
 }
 
 function ToggleRow({ label, value, onToggle, disabled = false }: ToggleRowProps) {
+  const theme = useTheme();
+
   return (
     <View style={styles.fieldRow}>
-      <Text style={[styles.fieldLabel, disabled && styles.fieldLabelDisabled]}>{label}</Text>
+      <Text style={[styles.fieldLabel, { color: theme.text.body }, disabled && { color: theme.text.subtle }]}>
+        {label}
+      </Text>
       <TouchableOpacity
         onPress={disabled ? undefined : onToggle}
         activeOpacity={disabled ? 1 : 0.7}
-        style={[styles.switch, value && !disabled && styles.switchActive]}
+        style={[
+          styles.switch,
+          { backgroundColor: theme.border.strong },
+          value && !disabled && { backgroundColor: theme.brand.primary },
+        ]}
       >
         <View
           style={[
             styles.switchKnob,
+            { backgroundColor: theme.bg.surface },
             value && !disabled && styles.switchKnobActive,
-            disabled && styles.switchKnobDisabled,
+            disabled && { backgroundColor: theme.bg.surfaceMute },
           ]}
         />
       </TouchableOpacity>
@@ -37,10 +46,11 @@ export function NotificationSection() {
   const [approvalAlert, setApprovalAlert] = useState(true);
   const [boardAlert, setBoardAlert] = useState(true);
   const [reportAlert, setReportAlert] = useState(false);
+  const theme = useTheme();
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>알림</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>알림</Text>
 
       <ToggleRow
         label="푸시 알림"
@@ -48,7 +58,7 @@ export function NotificationSection() {
         onToggle={() => setPushEnabled((v) => !v)}
       />
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       <View style={styles.subGroup}>
         <ToggleRow
@@ -81,13 +91,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '500',
-    color: colors.text.primary,
     marginBottom: 24,
     fontFamily: WEB_FONT,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border.light,
     marginVertical: 8,
   },
   subGroup: {
@@ -101,29 +109,20 @@ const styles = StyleSheet.create({
   },
   fieldLabel: {
     fontSize: 14,
-    color: colors.text.body,
     fontFamily: WEB_FONT,
-  },
-  fieldLabelDisabled: {
-    color: colors.text.subtle,
   },
   switch: {
     width: 40,
     height: 22,
     borderRadius: 11,
-    backgroundColor: colors.border.strong,
     justifyContent: 'center',
     paddingHorizontal: 2,
-  },
-  switchActive: {
-    backgroundColor: colors.brand.primary,
   },
   switchKnob: {
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: colors.white,
-    shadowColor: colors.black,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
@@ -131,8 +130,5 @@ const styles = StyleSheet.create({
   },
   switchKnobActive: {
     transform: [{ translateX: 18 }],
-  },
-  switchKnobDisabled: {
-    backgroundColor: colors.background.surfaceMuteAlt,
   },
 });

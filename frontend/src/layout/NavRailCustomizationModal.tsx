@@ -24,6 +24,7 @@ import {
 } from 'lucide-react-native';
 import { useUiStore } from '../store/uiStore';
 import { ALL_MENUS } from '../shared/constants/menus';
+import { useTheme } from '../shared/hooks/useTheme';
 import type { PanelId } from '../types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +53,7 @@ interface DragState {
 
 export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizationModalProps) {
   const { pinnedMenus, togglePinnedMenu, reorderPinnedMenus } = useUiStore();
+  const theme = useTheme();
   const [dragState, setDragState] = useState<DragState>({
     draggingIndex: null,
     dropTarget: null,
@@ -195,46 +197,50 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
     return (
       <View
         key={panelId}
-        style={[styles.menuRow, styles.menuRowChecked, isDragging && styles.menuRowDragging]}
+        style={[
+          styles.menuRow,
+          { backgroundColor: theme.bg.surface },
+          isDragging && styles.menuRowDragging,
+        ]}
       >
         {/* Drop indicator above */}
-        {dropAbove && <View style={styles.dropIndicatorAbove} />}
+        {dropAbove && <View style={[styles.dropIndicatorAbove, { backgroundColor: theme.brand.primary }]} />}
 
         {/* Drag handle */}
         <View style={styles.dragHandle}>
           <View style={styles.dragHandleRow}>
-            <View style={styles.dragHandleDot} />
-            <View style={styles.dragHandleDot} />
+            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
+            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
           </View>
           <View style={styles.dragHandleRow}>
-            <View style={styles.dragHandleDot} />
-            <View style={styles.dragHandleDot} />
+            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
+            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
           </View>
           <View style={styles.dragHandleRow}>
-            <View style={styles.dragHandleDot} />
-            <View style={styles.dragHandleDot} />
+            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
+            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
           </View>
         </View>
 
         {/* Checkbox */}
         <TouchableOpacity
-          style={[styles.checkbox, styles.checkboxChecked]}
+          style={[styles.checkbox, { backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }]}
           onPress={() => togglePinnedMenu(panelId)}
           activeOpacity={0.7}
         >
-          <Check size={11} color="#ffffff" strokeWidth={3} />
+          <Check size={11} color={theme.text.onBrand} strokeWidth={3} />
         </TouchableOpacity>
 
         {/* Icon */}
-        <View style={[styles.menuIcon, styles.menuIconChecked]}>
-          <Icon size={18} color="#0A2463" />
+        <View style={[styles.menuIcon, { backgroundColor: theme.brand.primaryTint }]}>
+          <Icon size={18} color={theme.brand.primary} />
         </View>
 
         {/* Label */}
-        <Text style={styles.menuName}>{meta.label}</Text>
+        <Text style={[styles.menuName, { color: theme.text.primary }]}>{meta.label}</Text>
 
         {/* Drop indicator below */}
-        {dropBelow && <View style={styles.dropIndicatorBelow} />}
+        {dropBelow && <View style={[styles.dropIndicatorBelow, { backgroundColor: theme.brand.primary }]} />}
       </View>
     );
   };
@@ -246,7 +252,11 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
     return (
       <TouchableOpacity
         key={meta.panel}
-        style={[styles.menuRow, styles.menuRowUnchecked, disabled && styles.menuRowDisabled]}
+        style={[
+          styles.menuRow,
+          { backgroundColor: theme.bg.surface },
+          disabled && styles.menuRowDisabled,
+        ]}
         onPress={() => !disabled && togglePinnedMenu(meta.panel)}
         activeOpacity={disabled ? 1 : 0.7}
       >
@@ -254,15 +264,29 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
         <View style={styles.dragHandlePlaceholder} />
 
         {/* Checkbox */}
-        <View style={[styles.checkbox, disabled && styles.checkboxDisabled]} />
+        <View
+          style={[
+            styles.checkbox,
+            { borderColor: theme.border.strong },
+            disabled && { backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default },
+          ]}
+        />
 
         {/* Icon */}
-        <View style={[styles.menuIcon, disabled && styles.menuIconDisabled]}>
-          <Icon size={18} color={disabled ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.55)'} />
+        <View
+          style={[
+            styles.menuIcon,
+            { backgroundColor: theme.brand.primaryTintSoft },
+            disabled && { backgroundColor: theme.bg.surfaceMute },
+          ]}
+        >
+          <Icon size={18} color={disabled ? theme.text.subtle : theme.text.muted} />
         </View>
 
         {/* Label */}
-        <Text style={[styles.menuName, disabled && styles.menuNameDisabled]}>{meta.label}</Text>
+        <Text style={[styles.menuName, { color: theme.text.primary }, disabled && { color: theme.text.muted }]}>
+          {meta.label}
+        </Text>
       </TouchableOpacity>
     );
   };
@@ -274,24 +298,39 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
       {/* Backdrop */}
       <Pressable style={styles.backdrop} onPress={onClose}>
         {/* 모달 본체 — 클릭이 backdrop으로 전파되지 않도록 onPress no-op */}
-        <Pressable style={styles.modalContainer} onPress={() => {}}>
+        <Pressable
+          style={[
+            styles.modalContainer,
+            { backgroundColor: theme.bg.surface },
+            Platform.OS === 'web'
+              ? ({ boxShadow: theme.shadow.modal } as object)
+              : {
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 20 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 30,
+                  elevation: 20,
+                },
+          ]}
+          onPress={() => {}}
+        >
           {/* Header */}
-          <View style={styles.modalHeader}>
+          <View style={[styles.modalHeader, { borderBottomColor: theme.border.subtle }]}>
             <View style={styles.modalTitleArea}>
-              <Text style={styles.modalTitle}>맞춤설정</Text>
-              <Text style={styles.modalDesc}>
+              <Text style={[styles.modalTitle, { color: theme.text.primary }]}>맞춤설정</Text>
+              <Text style={[styles.modalDesc, { color: theme.text.muted }]}>
                 NavRail에 노출할 메뉴를 체크하세요. 핸들로 드래그하여 순서를 변경할 수 있습니다.
               </Text>
             </View>
             <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
-              <X size={16} color="rgba(0,0,0,0.45)" />
+              <X size={16} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
 
           {/* Max 안내 */}
           {isMax && (
-            <View style={styles.maxBanner}>
-              <Text style={styles.maxBannerText}>최대 8개까지 선택할 수 있습니다.</Text>
+            <View style={[styles.maxBanner, { backgroundColor: theme.brand.primaryTintSoft, borderBottomColor: theme.border.subtle }]}>
+              <Text style={[styles.maxBannerText, { color: theme.brand.primary }]}>최대 8개까지 선택할 수 있습니다.</Text>
             </View>
           )}
 
@@ -299,17 +338,22 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
           <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
             <View style={styles.menuList} ref={menuListRef}>
               {/* 홈 (필수, 고정) */}
-              <View style={[styles.menuRow, styles.menuRowFixed]}>
+              <View style={[styles.menuRow, { backgroundColor: theme.bg.surfaceMute }]}>
                 <View style={styles.dragHandlePlaceholder} />
-                <View style={[styles.checkbox, styles.checkboxChecked, styles.checkboxDisabled]}>
-                  <Check size={11} color="#ffffff" strokeWidth={3} />
+                <View
+                  style={[
+                    styles.checkbox,
+                    { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default },
+                  ]}
+                >
+                  <Check size={11} color={theme.text.subtle} strokeWidth={3} />
                 </View>
-                <View style={styles.menuIcon}>
-                  <Home size={18} color="rgba(0,0,0,0.55)" />
+                <View style={[styles.menuIcon, { backgroundColor: theme.brand.primaryTintSoft }]}>
+                  <Home size={18} color={theme.text.muted} />
                 </View>
-                <Text style={[styles.menuName, styles.menuNameFixed]}>홈</Text>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>필수</Text>
+                <Text style={[styles.menuName, { color: theme.text.muted, fontStyle: 'italic' }]}>홈</Text>
+                <View style={[styles.tag, { backgroundColor: theme.bg.surfaceAlt }]}>
+                  <Text style={[styles.tagText, { color: theme.text.subtle }]}>필수</Text>
                 </View>
               </View>
 
@@ -336,18 +380,8 @@ const styles = StyleSheet.create({
   modalContainer: {
     width: 480,
     maxHeight: '85%' as unknown as number,
-    backgroundColor: '#ffffff',
     borderRadius: 16,
     overflow: 'hidden',
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }
-      : {
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 20 },
-          shadowOpacity: 0.25,
-          shadowRadius: 30,
-          elevation: 20,
-        }),
   },
   modalHeader: {
     flexDirection: 'row',
@@ -357,7 +391,6 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   modalTitleArea: {
     flex: 1,
@@ -365,12 +398,10 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#000000',
     marginBottom: 4,
   },
   modalDesc: {
     fontSize: 12,
-    color: 'rgba(0,0,0,0.55)',
     lineHeight: 18,
   },
   closeButton: {
@@ -383,13 +414,10 @@ const styles = StyleSheet.create({
   maxBanner: {
     paddingHorizontal: 24,
     paddingVertical: 8,
-    backgroundColor: 'rgba(10,36,99,0.06)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.04)',
   },
   maxBannerText: {
     fontSize: 12,
-    color: '#0A2463',
   },
   modalBody: {
     flex: 1,
@@ -403,14 +431,8 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 24,
     paddingVertical: 10,
-    backgroundColor: '#ffffff',
     position: 'relative',
   },
-  menuRowFixed: {
-    backgroundColor: 'rgba(0,0,0,0.02)',
-  },
-  menuRowChecked: {},
-  menuRowUnchecked: {},
   menuRowDragging: {
     opacity: 0.4,
   },
@@ -431,7 +453,6 @@ const styles = StyleSheet.create({
     width: 3,
     height: 3,
     borderRadius: 1.5,
-    backgroundColor: 'rgba(0,0,0,0.25)',
   },
   dragHandlePlaceholder: {
     width: 16,
@@ -440,19 +461,10 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.25)',
     borderRadius: 4,
     alignItems: 'center',
     justifyContent: 'center',
     flexShrink: 0,
-  },
-  checkboxChecked: {
-    backgroundColor: '#0A2463',
-    borderColor: '#0A2463',
-  },
-  checkboxDisabled: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    borderColor: 'rgba(0,0,0,0.15)',
   },
   menuIcon: {
     width: 32,
@@ -460,36 +472,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 8,
-    backgroundColor: 'rgba(10,36,99,0.04)',
     flexShrink: 0,
-  },
-  menuIconChecked: {
-    backgroundColor: 'rgba(10,36,99,0.08)',
-  },
-  menuIconDisabled: {
-    backgroundColor: 'rgba(0,0,0,0.04)',
   },
   menuName: {
     flex: 1,
     fontSize: 14,
-    color: '#000000',
-  },
-  menuNameFixed: {
-    color: 'rgba(0,0,0,0.55)',
-    fontStyle: 'italic',
-  },
-  menuNameDisabled: {
-    color: 'rgba(0,0,0,0.4)',
   },
   tag: {
     paddingHorizontal: 8,
     paddingVertical: 2,
-    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
   },
   tagText: {
     fontSize: 10,
-    color: 'rgba(0,0,0,0.4)',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
@@ -499,7 +494,6 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 2,
-    backgroundColor: '#0A2463',
     borderRadius: 2,
     zIndex: 1,
   },
@@ -509,7 +503,6 @@ const styles = StyleSheet.create({
     left: 24,
     right: 24,
     height: 2,
-    backgroundColor: '#0A2463',
     borderRadius: 2,
     zIndex: 1,
   },

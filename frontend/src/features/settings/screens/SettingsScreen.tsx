@@ -6,7 +6,7 @@ import { AccountSection } from '../sections/AccountSection';
 import { NotificationSection } from '../sections/NotificationSection';
 import { CustomizeSection } from '../sections/CustomizeSection';
 import { DisplaySection } from '../sections/DisplaySection';
-import { colors } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/hooks/useTheme';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -20,6 +20,7 @@ const CATEGORIES: { key: SettingsCategory; label: string }[] = [
 export function SettingsScreen() {
   const { settingsCategory, setSettingsCategory } = useUiStore();
   const { data: user } = useCurrentUser();
+  const theme = useTheme();
 
   const renderContent = () => {
     switch (settingsCategory) {
@@ -47,10 +48,18 @@ export function SettingsScreen() {
   };
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: theme.bg.surface }]}>
       {/* Left sidebar */}
-      <View style={styles.sidebar}>
-        <Text style={styles.pageTitle}>설정</Text>
+      <View
+        style={[
+          styles.sidebar,
+          {
+            backgroundColor: theme.bg.surfaceAlt,
+            borderRightColor: theme.border.subtle,
+          },
+        ]}
+      >
+        <Text style={[styles.pageTitle, { color: theme.text.primary }]}>설정</Text>
 
         <View style={styles.menuList}>
           {CATEGORIES.map(({ key, label }) => {
@@ -60,9 +69,21 @@ export function SettingsScreen() {
                 key={key}
                 onPress={() => setSettingsCategory(key)}
                 activeOpacity={0.7}
-                style={[styles.menuItem, isActive && styles.menuItemActive]}
+                style={[
+                  styles.menuItem,
+                  isActive && {
+                    borderLeftColor: theme.brand.primary,
+                    backgroundColor: theme.brand.primaryTint,
+                  },
+                ]}
               >
-                <Text style={[styles.menuItemText, isActive && styles.menuItemTextActive]}>
+                <Text
+                  style={[
+                    styles.menuItemText,
+                    { color: theme.text.body },
+                    isActive && { color: theme.brand.primary, fontWeight: '500' },
+                  ]}
+                >
                   {label}
                 </Text>
               </TouchableOpacity>
@@ -70,12 +91,12 @@ export function SettingsScreen() {
           })}
         </View>
 
-        <Text style={styles.versionText}>v0.0.1</Text>
+        <Text style={[styles.versionText, { color: theme.text.subtle }]}>v0.0.1</Text>
       </View>
 
       {/* Right content area */}
       <ScrollView
-        style={styles.contentArea}
+        style={[styles.contentArea, { backgroundColor: theme.bg.surface }]}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
@@ -89,13 +110,10 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: colors.background.surface,
   },
   sidebar: {
     width: 220,
-    backgroundColor: colors.background.surfaceAlt,
     borderRightWidth: 1,
-    borderRightColor: colors.border.light,
     paddingTop: 28,
     paddingBottom: 16,
     flexDirection: 'column',
@@ -103,7 +121,6 @@ const styles = StyleSheet.create({
   pageTitle: {
     fontSize: 28,
     fontWeight: '500',
-    color: colors.text.primary,
     paddingHorizontal: 20,
     marginBottom: 16,
     fontFamily: WEB_FONT,
@@ -117,29 +134,18 @@ const styles = StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: 'transparent',
   },
-  menuItemActive: {
-    borderLeftColor: colors.brand.primary,
-    backgroundColor: colors.brand.primaryTint,
-  },
   menuItemText: {
     fontSize: 14,
-    color: colors.text.body,
     fontFamily: WEB_FONT,
-  },
-  menuItemTextActive: {
-    color: colors.brand.primary,
-    fontWeight: '500',
   },
   versionText: {
     fontSize: 12,
-    color: colors.text.soft,
     paddingHorizontal: 20,
     paddingTop: 8,
     fontFamily: WEB_FONT,
   },
   contentArea: {
     flex: 1,
-    backgroundColor: colors.background.surface,
   },
   contentContainer: {
     padding: 32,

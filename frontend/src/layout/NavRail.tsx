@@ -18,6 +18,7 @@ import {
 } from 'lucide-react-native';
 import type { PanelId } from '../types';
 import { ALL_MENUS } from '../shared/constants/menus';
+import { useTheme } from '../shared/hooks/useTheme';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -66,6 +67,7 @@ export function NavRail({
 }: NavRailProps) {
   const isHomeActive = activePanel === null && activeFullScreen === null;
   const moreButtonRef = React.useRef<View>(null);
+  const theme = useTheme();
 
   const handleMorePress = () => {
     moreButtonRef.current?.measure((_x, _y, _w, _h, _pageX, pageY) => {
@@ -75,7 +77,15 @@ export function NavRail({
 
   if (isAdminMode) {
     return (
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.bg.surface,
+            borderRightColor: theme.border.default,
+          },
+        ]}
+      >
         {adminModules.map((mod, idx) => {
           const Icon = mod.icon;
           const isHomeButton = mod.id === 'admin-home';
@@ -87,13 +97,22 @@ export function NavRail({
             <React.Fragment key={mod.id}>
               <TouchableOpacity
                 onPress={() => onPanelClick(isHomeButton ? 'home' : mod.id)}
-                style={[styles.iconButton, isActive && styles.iconButtonActive]}
+                style={[
+                  styles.iconButton,
+                  isActive && { backgroundColor: theme.brand.primaryTint },
+                ]}
                 activeOpacity={0.7}
               >
-                {isActive && <View style={styles.activeIndicator} />}
-                <Icon size={22} color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+                {isActive && (
+                  <View
+                    style={[styles.activeIndicator, { backgroundColor: theme.brand.primary }]}
+                  />
+                )}
+                <Icon size={22} color={isActive ? theme.brand.primary : theme.text.muted} />
               </TouchableOpacity>
-              {idx === 0 && <View style={styles.divider} />}
+              {idx === 0 && (
+                <View style={[styles.divider, { backgroundColor: theme.border.default }]} />
+              )}
             </React.Fragment>
           );
         })}
@@ -103,18 +122,31 @@ export function NavRail({
 
   // User mode: home + pinnedMenus + more button
   return (
-    <View style={styles.container}>
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.bg.surface,
+          borderRightColor: theme.border.default,
+        },
+      ]}
+    >
       {/* 홈 (항상 고정) */}
       <TouchableOpacity
         onPress={() => onPanelClick('home')}
-        style={[styles.iconButton, isHomeActive && styles.iconButtonActive]}
+        style={[
+          styles.iconButton,
+          isHomeActive && { backgroundColor: theme.brand.primaryTint },
+        ]}
         activeOpacity={0.7}
       >
-        {isHomeActive && <View style={styles.activeIndicator} />}
-        <Home size={22} color={isHomeActive ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+        {isHomeActive && (
+          <View style={[styles.activeIndicator, { backgroundColor: theme.brand.primary }]} />
+        )}
+        <Home size={22} color={isHomeActive ? theme.brand.primary : theme.text.muted} />
       </TouchableOpacity>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border.default }]} />
 
       {/* 핀 된 메뉴들 */}
       {pinnedMenus.map((panelId) => {
@@ -122,17 +154,22 @@ export function NavRail({
         if (!meta) return null;
         const Icon = ICON_MAP[meta.iconName] ?? FileText;
         const isActive = activePanel === panelId || activeFullScreen === panelId;
-        const unread = panelId === 'approval' ? 2 : 0; // 기존 하드코딩 유지
+        const unread = panelId === 'approval' ? 2 : 0;
 
         return (
           <TouchableOpacity
             key={panelId}
             onPress={() => onPanelClick(panelId)}
-            style={[styles.iconButton, isActive && styles.iconButtonActive]}
+            style={[
+              styles.iconButton,
+              isActive && { backgroundColor: theme.brand.primaryTint },
+            ]}
             activeOpacity={0.7}
           >
-            {isActive && <View style={styles.activeIndicator} />}
-            <Icon size={22} color={isActive ? '#0A2463' : 'rgba(0,0,0,0.55)'} />
+            {isActive && (
+              <View style={[styles.activeIndicator, { backgroundColor: theme.brand.primary }]} />
+            )}
+            <Icon size={22} color={isActive ? theme.brand.primary : theme.text.muted} />
             {unread > 0 && (
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>{unread}</Text>
@@ -145,7 +182,7 @@ export function NavRail({
       {/* [⋯] 더보기 버튼 */}
       <View ref={moreButtonRef}>
         <TouchableOpacity onPress={handleMorePress} style={styles.iconButton} activeOpacity={0.7}>
-          <MoreHorizontal size={20} color="rgba(0,0,0,0.45)" />
+          <MoreHorizontal size={20} color={theme.text.subtle} />
         </TouchableOpacity>
       </View>
     </View>
@@ -155,9 +192,7 @@ export function NavRail({
 const styles = StyleSheet.create({
   container: {
     width: 64,
-    backgroundColor: '#ffffff',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(0,0,0,0.08)',
     paddingTop: 12,
     paddingBottom: 12,
     alignItems: 'center',
@@ -171,23 +206,18 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     position: 'relative',
   },
-  iconButtonActive: {
-    backgroundColor: 'rgba(10,36,99,0.08)',
-  },
   activeIndicator: {
     position: 'absolute',
     left: -8,
     top: 12,
     bottom: 12,
     width: 2,
-    backgroundColor: '#0A2463',
     borderTopRightRadius: 2,
     borderBottomRightRadius: 2,
   },
   divider: {
     width: 32,
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.08)',
     marginVertical: 4,
   },
   badge: {

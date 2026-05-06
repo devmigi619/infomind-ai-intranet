@@ -9,12 +9,14 @@ import {
   type TextInputContentSizeChangeEventData,
 } from 'react-native';
 import { Paperclip, ArrowUp } from 'lucide-react-native';
+import type { AppTheme } from '../hooks/useTheme';
 
 interface ChatInputProps {
   value: string;
   onChangeText: (text: string) => void;
   onSend: () => void;
   disabled?: boolean;
+  theme?: AppTheme;
 }
 
 // 1줄 ≈ lineHeight(21) + padding(top 6 + bottom 6) = 33px
@@ -22,7 +24,7 @@ interface ChatInputProps {
 const MIN_HEIGHT = 33;
 const MAX_HEIGHT = 117;
 
-export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputProps) {
+export function ChatInput({ value, onChangeText, onSend, disabled, theme }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [inputHeight, setInputHeight] = useState(MIN_HEIGHT); // Native 전용
   const inputRef = useRef<TextInput>(null);
@@ -68,13 +70,42 @@ export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputPr
 
   const canSend = !disabled && value.trim().length > 0;
 
+  // 테마 색상 (theme prop 있으면 토큰, 없으면 라이트 기본값)
+  const bgColor = theme ? theme.bg.surface : '#ffffff';
+  const inputBg = theme ? (theme.mode === 'dark' ? theme.bg.surfaceAlt : '#F5F5F5') : '#F5F5F5';
+  const inputBgFocused = theme ? theme.bg.surface : '#ffffff';
+  const borderFocused = theme ? theme.brand.primary : 'rgba(10,36,99,0.5)';
+  const textColor = theme ? theme.text.primary : '#000000';
+  const placeholderColor = theme ? theme.text.subtle : 'rgba(0,0,0,0.35)';
+  const iconColor = theme ? theme.text.subtle : 'rgba(0,0,0,0.4)';
+  const sendBg = theme ? theme.brand.primary : '#0A2463';
+
   return (
-    <View style={styles.container}>
-      <View style={[styles.inputWrap, isFocused && styles.inputWrapFocused]}>
+    <View style={[styles.container, { backgroundColor: bgColor }]}>
+      <View
+        style={[
+          styles.inputWrap,
+          { backgroundColor: inputBg },
+          isFocused && {
+            backgroundColor: inputBgFocused,
+            borderColor: borderFocused,
+            ...(Platform.OS === 'web'
+              ? ({ boxShadow: `0 2px 12px ${theme ? theme.brand.primaryTint : 'rgba(10,36,99,0.08)'}` } as any)
+              : {
+                  shadowColor: theme ? theme.brand.primary : '#0A2463',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.08,
+                  shadowRadius: 12,
+                  elevation: 2,
+                }),
+          },
+        ]}
+      >
         <TextInput
           ref={inputRef}
           style={[
             styles.input,
+            { color: textColor },
             Platform.OS === 'web'
               ? ({ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT } as any)
               : { height: inputHeight },
@@ -82,7 +113,7 @@ export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputPr
           value={value}
           onChangeText={onChangeText}
           placeholder="무엇이든 물어보세요"
-          placeholderTextColor="rgba(0,0,0,0.35)"
+          placeholderTextColor={placeholderColor}
           multiline
           editable={!disabled}
           onFocus={() => setIsFocused(true)}
@@ -98,11 +129,15 @@ export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputPr
             activeOpacity={0.6}
             // Phase 2: 첨부 동작 미구현
           >
-            <Paperclip size={18} color="rgba(0,0,0,0.4)" />
+            <Paperclip size={18} color={iconColor} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={handleSend}
-            style={[styles.sendButton, !canSend && styles.sendButtonDisabled]}
+            style={[
+              styles.sendButton,
+              { backgroundColor: sendBg },
+              !canSend && styles.sendButtonDisabled,
+            ]}
             activeOpacity={0.8}
             disabled={!canSend}
           >
@@ -120,12 +155,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     paddingTop: 16,
     paddingBottom: 24,
-    backgroundColor: '#ffffff',
   },
   inputWrap: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: '#F5F5F5',
     borderRadius: 18,
     paddingTop: 8,
     paddingRight: 8,
@@ -134,23 +167,9 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
-  inputWrapFocused: {
-    backgroundColor: '#ffffff',
-    borderColor: 'rgba(10,36,99,0.5)',
-    ...(Platform.OS === 'web'
-      ? ({ boxShadow: '0 2px 12px rgba(10,36,99,0.08)' } as any)
-      : {
-          shadowColor: '#0A2463',
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.08,
-          shadowRadius: 12,
-          elevation: 2,
-        }),
-  },
   input: {
     flex: 1,
     fontSize: 14,
-    color: '#000000',
     paddingTop: 6,
     paddingBottom: 6,
     lineHeight: 21,
@@ -176,7 +195,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#0A2463',
     alignItems: 'center',
     justifyContent: 'center',
   },

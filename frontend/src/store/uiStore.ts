@@ -7,6 +7,7 @@ import type { PanelId, RpTab } from '../types';
 const STORAGE_KEY = 'infomind-ui';
 
 export type SettingsCategory = 'account' | 'notification' | 'customize' | 'display';
+export type ThemePreference = 'light' | 'dark' | 'system';
 
 interface UiState {
   // State
@@ -19,6 +20,7 @@ interface UiState {
   pinnedMenus: PanelId[];
   settingsCategory: SettingsCategory;
   lastUserMessage: string | null;
+  themePreference: ThemePreference;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
@@ -35,6 +37,7 @@ interface UiState {
   reorderPinnedMenus: (from: number, to: number) => void;
   setSettingsCategory: (category: SettingsCategory) => void;
   setLastUserMessage: (message: string | null) => void;
+  setThemePreference: (pref: ThemePreference) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -47,6 +50,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   pinnedMenus: ['board', 'approval', 'report', 'calendar'],
   settingsCategory: 'account',
   lastUserMessage: null,
+  themePreference: 'system',
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -111,16 +115,28 @@ export const useUiStore = create<UiState>((set, get) => ({
     }),
 
   setSettingsCategory: (category) => set({ settingsCategory: category }),
+
+  setThemePreference: (pref) => set({ themePreference: pref }),
 }));
 
-// 비동기 hydrate (앱 시작 시 LocalStorage/AsyncStorage에서 pinnedMenus 복원)
+// 비동기 hydrate (앱 시작 시 LocalStorage/AsyncStorage에서 상태 복원)
 AsyncStorage.getItem(STORAGE_KEY)
   .then((stored) => {
     if (!stored) return;
     try {
       const parsed = JSON.parse(stored);
+      const next: Partial<UiState> = {};
       if (parsed?.pinnedMenus && Array.isArray(parsed.pinnedMenus)) {
-        useUiStore.setState({ pinnedMenus: parsed.pinnedMenus });
+        next.pinnedMenus = parsed.pinnedMenus;
+      }
+      if (
+        parsed?.themePreference &&
+        ['light', 'dark', 'system'].includes(parsed.themePreference)
+      ) {
+        next.themePreference = parsed.themePreference as ThemePreference;
+      }
+      if (Object.keys(next).length > 0) {
+        useUiStore.setState(next);
       }
     } catch (_) {
       // 깨진 JSON은 무시
@@ -130,15 +146,20 @@ AsyncStorage.getItem(STORAGE_KEY)
     // AsyncStorage 접근 실패는 무시 (디폴트 값 사용)
   });
 
-// pinnedMenus 변경 시 AsyncStorage에 저장
+// pinnedMenus / themePreference 변경 시 AsyncStorage에 저장
 let prevPinnedMenus = useUiStore.getState().pinnedMenus;
+let prevThemePreference = useUiStore.getState().themePreference;
 useUiStore.subscribe((state) => {
-  if (state.pinnedMenus !== prevPinnedMenus) {
+  const pinChanged = state.pinnedMenus !== prevPinnedMenus;
+  const themeChanged = state.themePreference !== prevThemePreference;
+  if (pinChanged || themeChanged) {
     prevPinnedMenus = state.pinnedMenus;
-    AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ pinnedMenus: state.pinnedMenus })).catch(
-      () => {
-        // 저장 실패는 조용히 무시
-      },
-    );
+    prevThemePreference = state.themePreference;
+    AsyncStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ pinnedMenus: state.pinnedMenus, themePreference: state.themePreference }),
+    ).catch(() => {
+      // 저장 실패는 조용히 무시
+    });
   }
 });

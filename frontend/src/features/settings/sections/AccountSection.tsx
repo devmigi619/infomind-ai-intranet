@@ -9,7 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { User } from 'lucide-react-native';
-import { colors } from '../../../shared/constants/colors';
+import { useTheme } from '../../../shared/hooks/useTheme';
 
 interface AccountSectionProps {
   user: {
@@ -25,6 +25,7 @@ const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: u
 export function AccountSection({ user }: AccountSectionProps) {
   const [email, setEmail] = useState(user?.email ?? '');
   const [phone, setPhone] = useState('');
+  const theme = useTheme();
 
   const handlePasswordChange = () => {
     if (Platform.OS === 'web') {
@@ -36,52 +37,59 @@ export function AccountSection({ user }: AccountSectionProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>계정</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>계정</Text>
 
       {/* Profile photo row */}
       <View style={styles.row}>
-        <View style={styles.avatarCircle}>
-          <User size={32} color={colors.text.muted} />
+        <View style={[styles.avatarCircle, { backgroundColor: theme.bg.surfaceMute }]}>
+          <User size={32} color={theme.text.muted} />
         </View>
         <TouchableOpacity activeOpacity={0.7} style={styles.photoButton}>
-          <Text style={styles.photoButtonText}>사진 변경</Text>
+          <Text style={[styles.photoButtonText, { color: theme.brand.primary }]}>사진 변경</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Read-only: name */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>이름</Text>
-        <Text style={styles.fieldValue}>{user?.name ?? '관리자'}</Text>
-        <Text style={styles.fieldHint}>관리자에게 문의</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>이름</Text>
+        <Text style={[styles.fieldValue, { color: theme.text.primary }]}>{user?.name ?? '관리자'}</Text>
+        <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
       </View>
 
       {/* Read-only: department */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>부서</Text>
-        <Text style={styles.fieldValue}>{user?.department ?? 'IT'}</Text>
-        <Text style={styles.fieldHint}>관리자에게 문의</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>부서</Text>
+        <Text style={[styles.fieldValue, { color: theme.text.primary }]}>{user?.department ?? 'IT'}</Text>
+        <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
       </View>
 
       {/* Read-only: position */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>직급</Text>
-        <Text style={styles.fieldValue}>{user?.position ?? '관리자'}</Text>
-        <Text style={styles.fieldHint}>관리자에게 문의</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>직급</Text>
+        <Text style={[styles.fieldValue, { color: theme.text.primary }]}>{user?.position ?? '관리자'}</Text>
+        <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Editable: email */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>이메일</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>이메일</Text>
         <TextInput
-          style={styles.textInput}
+          style={[
+            styles.textInput,
+            {
+              borderColor: theme.border.strong,
+              color: theme.text.primary,
+              backgroundColor: theme.bg.surface,
+            },
+          ]}
           value={email}
           onChangeText={setEmail}
           placeholder="이메일을 입력하세요"
-          placeholderTextColor={colors.text.subtle}
+          placeholderTextColor={theme.text.subtle}
           keyboardType="email-address"
           autoCapitalize="none"
         />
@@ -89,29 +97,36 @@ export function AccountSection({ user }: AccountSectionProps) {
 
       {/* Editable: phone */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>연락처</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>연락처</Text>
         <TextInput
-          style={styles.textInput}
+          style={[
+            styles.textInput,
+            {
+              borderColor: theme.border.strong,
+              color: theme.text.primary,
+              backgroundColor: theme.bg.surface,
+            },
+          ]}
           value={phone}
           onChangeText={setPhone}
           placeholder="010-0000-0000"
-          placeholderTextColor={colors.text.subtle}
+          placeholderTextColor={theme.text.subtle}
           keyboardType="phone-pad"
         />
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Password change row */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>비밀번호</Text>
-        <Text style={styles.passwordDots}>●●●●●●●●●</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>비밀번호</Text>
+        <Text style={[styles.passwordDots, { color: theme.text.muted }]}>●●●●●●●●●</Text>
         <TouchableOpacity
           onPress={handlePasswordChange}
           activeOpacity={0.8}
-          style={styles.primaryButton}
+          style={[styles.primaryButton, { backgroundColor: theme.brand.primary }]}
         >
-          <Text style={styles.primaryButtonText}>변경하기</Text>
+          <Text style={[styles.primaryButtonText, { color: theme.text.onBrand }]}>변경하기</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -125,7 +140,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '500',
-    color: colors.text.primary,
     marginBottom: 24,
     fontFamily: WEB_FONT,
   },
@@ -139,7 +153,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.background.surfaceMute,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -149,13 +162,11 @@ const styles = StyleSheet.create({
   },
   photoButtonText: {
     fontSize: 14,
-    color: colors.brand.primary,
     fontWeight: '500',
     fontFamily: WEB_FONT,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border.light,
     marginVertical: 8,
   },
   fieldRow: {
@@ -167,7 +178,6 @@ const styles = StyleSheet.create({
   fieldLabel: {
     width: 108,
     fontSize: 14,
-    color: colors.text.body,
     fontWeight: '500',
     fontFamily: WEB_FONT,
     flexShrink: 0,
@@ -175,12 +185,10 @@ const styles = StyleSheet.create({
   fieldValue: {
     flex: 1,
     fontSize: 14,
-    color: colors.text.primary,
     fontFamily: WEB_FONT,
   },
   fieldHint: {
     fontSize: 11,
-    color: colors.text.soft,
     fontFamily: WEB_FONT,
     flexShrink: 0,
   },
@@ -188,25 +196,20 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 36,
     borderWidth: 1,
-    borderColor: colors.border.strong,
     borderRadius: 8,
     paddingHorizontal: 10,
     fontSize: 14,
-    color: colors.text.primary,
-    backgroundColor: colors.background.surface,
     fontFamily: WEB_FONT,
   },
   passwordDots: {
     flex: 1,
     fontSize: 14,
-    color: colors.text.muted,
     fontFamily: WEB_FONT,
     letterSpacing: 2,
   },
   primaryButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: colors.brand.primary,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -214,7 +217,6 @@ const styles = StyleSheet.create({
   },
   primaryButtonText: {
     fontSize: 13,
-    color: colors.text.onBrand,
     fontWeight: '500',
     fontFamily: WEB_FONT,
   },

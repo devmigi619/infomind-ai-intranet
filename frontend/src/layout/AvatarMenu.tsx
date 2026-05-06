@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
 import { Settings, LogOut, User } from 'lucide-react-native';
+import { useTheme } from '../shared/hooks/useTheme';
 
 interface AvatarMenuProps {
   name: string;
@@ -12,24 +13,33 @@ interface AvatarMenuProps {
 
 export function AvatarMenu({ name, department, position, onLogout, onSettingsClick }: AvatarMenuProps) {
   const [open, setOpen] = useState(false);
+  const theme = useTheme();
 
   return (
     <View>
       <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.7} style={styles.trigger}>
-        <View style={styles.avatar}>
-          <User size={16} color="rgba(0,0,0,0.55)" />
+        <View style={[styles.avatar, { backgroundColor: theme.bg.surfaceMute }]}>
+          <User size={16} color={theme.text.muted} />
         </View>
-        <Text style={styles.nameText}>
+        <Text style={[styles.nameText, { color: theme.text.primary }]}>
           {name}{position ? ` ${position}` : ''}
         </Text>
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
-          <View style={styles.dropdown}>
-            <View style={styles.userBlock}>
-              <Text style={styles.userName}>{name}</Text>
-              <Text style={styles.userMeta}>
+          <View
+            style={[
+              styles.dropdown,
+              {
+                backgroundColor: theme.bg.surface,
+                borderColor: theme.border.default,
+              },
+            ]}
+          >
+            <View style={[styles.userBlock, { borderBottomColor: theme.border.subtle }]}>
+              <Text style={[styles.userName, { color: theme.text.primary }]}>{name}</Text>
+              <Text style={[styles.userMeta, { color: theme.text.muted }]}>
                 {department}
                 {department && position ? ' · ' : ''}
                 {position}
@@ -44,11 +54,11 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
                 onSettingsClick();
               }}
             >
-              <Settings size={16} color="#000000" />
-              <Text style={styles.itemText}>설정</Text>
+              <Settings size={16} color={theme.text.primary} />
+              <Text style={[styles.itemText, { color: theme.text.primary }]}>설정</Text>
             </TouchableOpacity>
 
-            <View style={styles.divider} />
+            <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
             <TouchableOpacity
               style={styles.item}
@@ -58,8 +68,8 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
                 onLogout();
               }}
             >
-              <LogOut size={16} color="#EF4444" />
-              <Text style={[styles.itemText, styles.dangerText]}>로그아웃</Text>
+              <LogOut size={16} color={theme.semantic.danger} />
+              <Text style={[styles.itemText, { color: theme.semantic.danger }]}>로그아웃</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -78,7 +88,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -86,7 +95,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 13,
     fontWeight: '500',
-    color: '#000000',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   overlay: {
@@ -98,9 +106,7 @@ const styles = StyleSheet.create({
     top: 44,
     right: 16,
     width: 220,
-    backgroundColor: '#ffffff',
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.08)',
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -113,17 +119,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.06)',
   },
   userName: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   userMeta: {
     fontSize: 12,
-    color: 'rgba(0,0,0,0.5)',
     marginTop: 2,
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
@@ -136,14 +139,9 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: 13,
-    color: '#000000',
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  dangerText: {
-    color: '#EF4444',
   },
   divider: {
     height: 1,
-    backgroundColor: 'rgba(0,0,0,0.06)',
   },
 });

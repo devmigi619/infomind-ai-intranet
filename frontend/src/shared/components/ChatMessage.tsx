@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
+import { useTheme } from '../hooks/useTheme';
+import type { AppTheme } from '../hooks/useTheme';
 
 interface ActionLink {
   label: string;
@@ -17,7 +19,7 @@ interface ChatMessageProps {
 
 // Three-dot thinking indicator. Each dot pulses with a 0.2s delay,
 // 1.4s total cycle, scale 0.85↔1, opacity 0.3↔1.
-function ThinkingDots() {
+function ThinkingDots({ theme }: { theme: AppTheme }) {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
   const dot3 = useRef(new Animated.Value(0)).current;
@@ -64,16 +66,16 @@ function ThinkingDots() {
   });
 
   return (
-    <View style={styles.thinkingBubble}>
-      <Animated.View style={[styles.dot, dotStyle(dot1)]} />
-      <Animated.View style={[styles.dot, dotStyle(dot2)]} />
-      <Animated.View style={[styles.dot, dotStyle(dot3)]} />
+    <View style={[styles.thinkingBubble, { backgroundColor: theme.bg.surfaceMute }]}>
+      <Animated.View style={[styles.dot, { backgroundColor: theme.text.subtle }, dotStyle(dot1)]} />
+      <Animated.View style={[styles.dot, { backgroundColor: theme.text.subtle }, dotStyle(dot2)]} />
+      <Animated.View style={[styles.dot, { backgroundColor: theme.text.subtle }, dotStyle(dot3)]} />
     </View>
   );
 }
 
 // Streaming cursor — blinks at 1s cycle.
-function StreamingCursor() {
+function StreamingCursor({ theme }: { theme: AppTheme }) {
   const opacity = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -97,7 +99,7 @@ function StreamingCursor() {
     return () => anim.stop();
   }, [opacity]);
 
-  return <Animated.Text style={[styles.cursor, { opacity }]}>▎</Animated.Text>;
+  return <Animated.Text style={[styles.cursor, { color: theme.brand.primary, opacity }]}>▎</Animated.Text>;
 }
 
 export function ChatMessage({
@@ -109,22 +111,30 @@ export function ChatMessage({
   isThinking,
 }: ChatMessageProps) {
   const isUser = role === 'user';
+  const theme = useTheme();
 
   // Thinking bubble: AI side, dots only (no text content yet).
   if (isThinking) {
     return (
       <View style={[styles.row, styles.rowAssistant]}>
-        <ThinkingDots />
+        <ThinkingDots theme={theme} />
       </View>
     );
   }
 
   return (
     <View style={[styles.row, isUser ? styles.rowUser : styles.rowAssistant]}>
-      <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAssistant]}>
-        <Text style={[styles.text, isUser ? styles.textUser : styles.textAssistant]}>
+      <View
+        style={[
+          styles.bubble,
+          isUser
+            ? { backgroundColor: theme.brand.primary, borderBottomRightRadius: 4 }
+            : { backgroundColor: theme.bg.surfaceMute, borderBottomLeftRadius: 4 },
+        ]}
+      >
+        <Text style={[styles.text, { color: isUser ? theme.text.onBrand : theme.text.body }]}>
           {content}
-          {isStreaming && !isUser && <StreamingCursor />}
+          {isStreaming && !isUser && <StreamingCursor theme={theme} />}
         </Text>
         {actions && actions.length > 0 && (
           <View style={styles.actions}>
@@ -132,10 +142,12 @@ export function ChatMessage({
               <TouchableOpacity
                 key={action.target}
                 onPress={() => onActionPress?.(action.target)}
-                style={styles.actionButton}
+                style={[styles.actionButton, { borderColor: isUser ? theme.text.onBrand : theme.brand.primary }]}
                 activeOpacity={0.7}
               >
-                <Text style={styles.actionText}>{action.label}</Text>
+                <Text style={[styles.actionText, { color: isUser ? theme.text.onBrand : theme.brand.primary }]}>
+                  {action.label}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -163,14 +175,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 16,
   },
-  bubbleUser: {
-    backgroundColor: '#0A2463',
-    borderBottomRightRadius: 4,
-  },
-  bubbleAssistant: {
-    backgroundColor: '#F5F5F5',
-    borderBottomLeftRadius: 4,
-  },
   text: {
     fontSize: 14,
     lineHeight: 22,
@@ -179,14 +183,7 @@ const styles = StyleSheet.create({
       default: undefined,
     }),
   },
-  textUser: {
-    color: '#ffffff',
-  },
-  textAssistant: {
-    color: '#000000',
-  },
   cursor: {
-    color: '#0A2463',
     fontSize: 14,
     lineHeight: 22,
     marginLeft: 2,
@@ -199,7 +196,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F5F5F5',
     borderRadius: 16,
     borderBottomLeftRadius: 4,
     paddingHorizontal: 18,
@@ -209,7 +205,6 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: 'rgba(0,0,0,0.35)',
   },
   actions: {
     flexDirection: 'row',
@@ -219,14 +214,12 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     borderWidth: 1,
-    borderColor: '#0A2463',
     borderRadius: 6,
     paddingHorizontal: 10,
     paddingVertical: 4,
   },
   actionText: {
     fontSize: 12,
-    color: '#0A2463',
     fontFamily: Platform.select({
       web: "'Noto Sans KR', sans-serif",
       default: undefined,

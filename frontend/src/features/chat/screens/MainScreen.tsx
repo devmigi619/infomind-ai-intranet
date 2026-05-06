@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatMessage } from '../../../shared/components/ChatMessage';
 import { ChatInput } from '../../../shared/components/ChatInput';
 import { useUiStore } from '../../../store/uiStore';
+import { useTheme } from '../../../shared/hooks/useTheme';
 
 interface ActionLink {
   label: string;
@@ -33,6 +34,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const scrollRef = useRef<ScrollView>(null);
   const setLastUserMessage = useUiStore((s) => s.setLastUserMessage);
   const markAiUnread = useUiStore((s) => s.markAiUnread);
+  const theme = useTheme();
 
   const sendMessage = useCallback(
     async (text: string) => {
@@ -173,14 +175,29 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const isEmpty = messages.length === 0;
 
   return (
-    <View style={[styles.container, isEmpty && styles.containerEmpty]}>
+    <View
+      style={[
+        styles.container,
+        isEmpty && styles.containerEmpty,
+        { backgroundColor: theme.bg.surface },
+      ]}
+    >
       {isEmpty ? (
         <View style={styles.welcome}>
-          <View style={styles.iconWrap}>
-            <Sparkles size={32} color="#0A2463" />
+          <View style={[styles.iconWrap, { backgroundColor: theme.brand.primaryTint }]}>
+            <Sparkles size={32} color={theme.brand.primary} />
           </View>
-          <Text style={styles.welcomeTitle}>안녕하세요, {user?.name ?? ''}님</Text>
-          <Text style={styles.welcomeSubtitle}>무엇을 도와드릴까요?</Text>
+          <Text
+            style={[
+              styles.welcomeTitle,
+              { color: theme.text.primary },
+            ]}
+          >
+            안녕하세요, {user?.name ?? ''}님
+          </Text>
+          <Text style={[styles.welcomeSubtitle, { color: theme.text.muted }]}>
+            무엇을 도와드릴까요?
+          </Text>
         </View>
       ) : (
         <ScrollView
@@ -208,6 +225,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         onChangeText={setInputText}
         onSend={handleSend}
         disabled={isStreaming}
+        theme={theme}
       />
     </View>
   );
@@ -216,7 +234,6 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
   },
   containerEmpty: {
     justifyContent: 'flex-end',
@@ -236,7 +253,6 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 20,
-    backgroundColor: 'rgba(10,36,99,0.08)',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -244,7 +260,6 @@ const styles = StyleSheet.create({
   welcomeTitle: {
     fontSize: 22,
     fontWeight: '500',
-    color: '#000000',
     fontFamily: Platform.select({
       web: "'Noto Sans KR', sans-serif",
       default: undefined,
@@ -252,7 +267,6 @@ const styles = StyleSheet.create({
   },
   welcomeSubtitle: {
     fontSize: 14,
-    color: 'rgba(0,0,0,0.55)',
     marginBottom: 16,
     fontFamily: Platform.select({
       web: "'Noto Sans KR', sans-serif",

@@ -1,29 +1,89 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
-import { colors } from '../../../shared/constants/colors';
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { useUiStore, type ThemePreference } from '../../../store/uiStore';
+import { useColorScheme } from 'react-native';
+import { useTheme } from '../../../shared/hooks/useTheme';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'light', label: '라이트' },
+  { value: 'dark', label: '다크' },
+  { value: 'system', label: '시스템 따라가기' },
+];
+
 export function DisplaySection() {
+  const themePreference = useUiStore((s) => s.themePreference);
+  const setThemePreference = useUiStore((s) => s.setThemePreference);
+  const systemScheme = useColorScheme();
+  const theme = useTheme();
+
+  const systemLabel = systemScheme === 'dark' ? '다크' : '라이트';
+
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>화면</Text>
+      <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>화면</Text>
 
       {/* Dark mode row */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>다크 모드</Text>
-        <View style={styles.prepTag}>
-          <Text style={styles.prepTagText}>준비 중</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>다크 모드</Text>
+        <View style={styles.optionGroup}>
+          {THEME_OPTIONS.map((opt) => {
+            const isSelected = themePreference === opt.value;
+            const displayLabel =
+              opt.value === 'system' ? `${opt.label} (현재: ${systemLabel})` : opt.label;
+            return (
+              <TouchableOpacity
+                key={opt.value}
+                onPress={() => setThemePreference(opt.value)}
+                style={[
+                  styles.optionButton,
+                  isSelected && { backgroundColor: theme.brand.primaryTint },
+                ]}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.radio,
+                    { borderColor: theme.border.strong },
+                    isSelected && { borderColor: theme.brand.primary },
+                  ]}
+                >
+                  {isSelected && (
+                    <View style={[styles.radioDot, { backgroundColor: theme.brand.primary }]} />
+                  )}
+                </View>
+                <Text
+                  style={[
+                    styles.optionLabel,
+                    { color: theme.text.muted },
+                    isSelected && { color: theme.brand.primary, fontWeight: '500' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {displayLabel}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       </View>
 
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Language row */}
       <View style={styles.fieldRow}>
-        <Text style={styles.fieldLabel}>언어</Text>
-        <View style={styles.selectBox}>
-          <Text style={styles.selectBoxText}>한국어</Text>
+        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>언어</Text>
+        <View
+          style={[
+            styles.selectBox,
+            {
+              borderColor: theme.border.strong,
+              backgroundColor: theme.bg.surfaceMute,
+            },
+          ]}
+        >
+          <Text style={[styles.selectBoxText, { color: theme.text.muted }]}>한국어</Text>
         </View>
       </View>
     </View>
@@ -37,51 +97,63 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 24,
     fontWeight: '500',
-    color: colors.text.primary,
     marginBottom: 24,
     fontFamily: WEB_FONT,
   },
   divider: {
     height: 1,
-    backgroundColor: colors.border.light,
     marginVertical: 4,
   },
   fieldRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingVertical: 14,
     gap: 12,
   },
   fieldLabel: {
     fontSize: 14,
-    color: colors.text.body,
     fontFamily: WEB_FONT,
+    paddingTop: 2,
   },
-  prepTag: {
-    paddingHorizontal: 10,
+  optionGroup: {
+    gap: 8,
+    alignItems: 'flex-start',
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingVertical: 4,
-    backgroundColor: colors.background.surfaceMute,
+    paddingHorizontal: 8,
     borderRadius: 8,
-    flexShrink: 0,
   },
-  prepTagText: {
-    fontSize: 11,
-    color: colors.text.soft,
+  radio: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  optionLabel: {
+    fontSize: 13,
     fontFamily: WEB_FONT,
   },
   selectBox: {
     paddingHorizontal: 14,
     paddingVertical: 7,
     borderWidth: 1,
-    borderColor: colors.border.strong,
     borderRadius: 8,
-    backgroundColor: colors.background.surfaceMute,
     flexShrink: 0,
   },
   selectBoxText: {
     fontSize: 13,
-    color: colors.text.muted,
     fontFamily: WEB_FONT,
   },
 });
