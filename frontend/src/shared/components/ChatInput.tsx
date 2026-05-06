@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useLayoutEffect } from 'react';
 import {
   View,
-  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -25,37 +24,29 @@ const MAX_HEIGHT = 117;
 
 export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
-  const [inputHeight, setInputHeight] = useState(MIN_HEIGHT);
+  const [inputHeight, setInputHeight] = useState(MIN_HEIGHT); // Native 전용
   const inputRef = useRef<TextInput>(null);
 
-  // Reset to MIN_HEIGHT immediately when value is cleared
-  useEffect(() => {
-    if (value === '') {
-      setInputHeight(MIN_HEIGHT);
-    }
+  // Web: value 변경마다 textarea의 height를 DOM에서 직접 측정/조정 (양방향 정확).
+  // React state를 거치지 않으므로 리렌더 사이클의 race condition 없음.
+  // textarea 기본 rows="2"가 scrollHeight 측정에 영향 → rows=1로 강제 후 측정.
+  useLayoutEffect(() => {
+    if (Platform.OS !== 'web') return;
+    const el = inputRef.current as any;
+    if (!el) return;
+    if (el.tagName === 'TEXTAREA') el.rows = 1;
+    el.style.height = 'auto';
+    const measured = Math.max(MIN_HEIGHT, Math.min(el.scrollHeight, MAX_HEIGHT));
+    el.style.height = `${measured}px`;
   }, [value]);
 
-  // Native: rely on onContentSizeChange
+  // Native: onContentSizeChange로 양방향 자동 조정
   const handleContentSizeChange = (
     e: NativeSyntheticEvent<TextInputContentSizeChangeEventData>,
   ) => {
     const h = e.nativeEvent.contentSize.height;
     const clamped = Math.min(Math.max(h, MIN_HEIGHT), MAX_HEIGHT);
     setInputHeight(clamped);
-  };
-
-  // Web: measure scrollHeight after each keystroke (auto-reset trick)
-  const handleChange = (text: string) => {
-    onChangeText(text);
-    if (Platform.OS === 'web') {
-      requestAnimationFrame(() => {
-        const el = inputRef.current as any;
-        if (!el) return;
-        el.style.height = 'auto';
-        const newHeight = Math.min(Math.max(el.scrollHeight, MIN_HEIGHT), MAX_HEIGHT);
-        setInputHeight(newHeight);
-      });
-    }
   };
 
   const handleSend = () => {
@@ -82,20 +73,23 @@ export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputPr
       <View style={[styles.inputWrap, isFocused && styles.inputWrapFocused]}>
         <TextInput
           ref={inputRef}
-          style={[styles.input, { height: inputHeight }]}
+          style={[
+            styles.input,
+            Platform.OS === 'web'
+              ? ({ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT } as any)
+              : { height: inputHeight },
+          ]}
           value={value}
-          onChangeText={handleChange}
-          placeholder="AI에게 물어보거나 작업을 요청하세요..."
+          onChangeText={onChangeText}
+          placeholder="무엇이든 물어보세요"
           placeholderTextColor="rgba(0,0,0,0.35)"
           multiline
           editable={!disabled}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           onKeyPress={handleKeyPress}
-          // Web uses the scrollHeight approach; native uses onContentSizeChange
+          // Web은 useLayoutEffect가, Native는 onContentSizeChange가 높이 처리
           onContentSizeChange={Platform.OS !== 'web' ? handleContentSizeChange : undefined}
-          // For native: keep the regular submit behavior off so newlines work.
-          // Native users use the send button.
           blurOnSubmit={false}
         />
         <View style={styles.actions}>
@@ -116,7 +110,7 @@ export function ChatInput({ value, onChangeText, onSend, disabled }: ChatInputPr
           </TouchableOpacity>
         </View>
       </View>
-      <Text style={styles.hint}>Shift+Enter로 줄바꿈 · Enter로 전송</Text>
+      {/* 안내 문구 제거됨 (Shift+Enter ...) */}
     </View>
   );
 }
@@ -188,15 +182,5 @@ const styles = StyleSheet.create({
   },
   sendButtonDisabled: {
     backgroundColor: 'rgba(0,0,0,0.15)',
-  },
-  hint: {
-    fontSize: 11,
-    color: 'rgba(0,0,0,0.35)',
-    marginTop: 6,
-    textAlign: 'center',
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
   },
 });

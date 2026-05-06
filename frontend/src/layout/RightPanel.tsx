@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
   View,
-  Text,
   TouchableOpacity,
   StyleSheet,
   Animated,
@@ -9,7 +8,7 @@ import {
   ScrollView,
   Platform,
 } from 'react-native';
-import { Home } from 'lucide-react-native';
+import { LayoutGrid, Sparkles } from 'lucide-react-native';
 import { RightPanelHome } from './RightPanelHome';
 import { RightPanelAI } from './RightPanelAI';
 import { PulseDot } from '../shared/components/PulseDot';
@@ -22,6 +21,11 @@ interface RightPanelProps {
   userName: string;
   hasUnreadAi: boolean;
 }
+
+const TABS: { id: RpTab; label: string; Icon: React.ComponentType<{ size?: number; color?: string }> }[] = [
+  { id: 'home', label: '대시보드', Icon: LayoutGrid },
+  { id: 'ai', label: 'AI 어시스턴트', Icon: Sparkles },
+];
 
 export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }: RightPanelProps) {
   const widthAnim = useRef(new Animated.Value(isOpen ? 360 : 0)).current;
@@ -40,26 +44,29 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
       <View style={styles.inner}>
         {/* Tabs */}
         <View style={styles.tabs}>
-          <TouchableOpacity
-            onPress={() => onTabChange('home')}
-            style={[styles.tab, rpTab === 'home' && styles.tabActive]}
-            activeOpacity={0.7}
-          >
-            <Home size={16} color={rpTab === 'home' ? '#0A2463' : 'rgba(0,0,0,0.4)'} />
-            {rpTab === 'home' && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-
-          <View style={styles.tabDivider} />
-
-          <TouchableOpacity
-            onPress={() => onTabChange('ai')}
-            style={[styles.tab, rpTab === 'ai' && styles.tabActive]}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.aiTabLabel, rpTab === 'ai' && styles.aiTabLabelActive]}>AI</Text>
-            {rpTab === 'ai' && <View style={styles.tabIndicator} />}
-            {hasUnreadAi && rpTab !== 'ai' && <PulseDot ringColor="#FAFAFA" top={6} right={6} />}
-          </TouchableOpacity>
+          {TABS.map(({ id, label, Icon }, idx) => {
+            const isActive = rpTab === id;
+            // RN Web에서 hover 시 native browser tooltip 표시 (모바일 무시)
+            const webTitleProp = Platform.OS === 'web' ? ({ title: label } as object) : {};
+            return (
+              <React.Fragment key={id}>
+                {idx > 0 && <View style={styles.tabDivider} />}
+                <TouchableOpacity
+                  onPress={() => onTabChange(id)}
+                  style={[styles.tab, isActive && styles.tabActive]}
+                  activeOpacity={0.7}
+                  accessibilityLabel={label}
+                  {...webTitleProp}
+                >
+                  <Icon size={18} color={isActive ? '#0A2463' : 'rgba(0,0,0,0.4)'} />
+                  {isActive && <View style={styles.tabIndicator} />}
+                  {id === 'ai' && hasUnreadAi && !isActive && (
+                    <PulseDot ringColor="#FAFAFA" top={4} right={4} />
+                  )}
+                </TouchableOpacity>
+              </React.Fragment>
+            );
+          })}
         </View>
 
         {/* Content */}
@@ -121,16 +128,6 @@ const styles = StyleSheet.create({
     height: 16,
     backgroundColor: 'rgba(0,0,0,0.1)',
     marginHorizontal: 4,
-  },
-  aiTabLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    color: 'rgba(0,0,0,0.4)',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  aiTabLabelActive: {
-    color: '#0A2463',
   },
   content: {
     flex: 1,

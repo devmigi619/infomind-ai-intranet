@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatMessage } from '../../../shared/components/ChatMessage';
 import { ChatInput } from '../../../shared/components/ChatInput';
+import { useUiStore } from '../../../store/uiStore';
 
 interface ActionLink {
   label: string;
@@ -30,10 +31,13 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const setLastUserMessage = useUiStore((s) => s.setLastUserMessage);
+  const markAiUnread = useUiStore((s) => s.markAiUnread);
 
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isStreaming) return;
+      setLastUserMessage(text.trim());
 
       const userMsgId = `u-${Date.now()}`;
       const thinkingId = 'thinking';
@@ -154,11 +158,12 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         );
       } finally {
         setIsStreaming(false);
+        markAiUnread();
         setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
         onAiResponseComplete?.();
       }
     },
-    [isStreaming, messages, onAiResponseComplete],
+    [isStreaming, messages, onAiResponseComplete, setLastUserMessage, markAiUnread],
   );
 
   const handleSend = useCallback(() => {

@@ -18,6 +18,7 @@ interface UiState {
   hasUnreadAi: boolean;
   pinnedMenus: PanelId[];
   settingsCategory: SettingsCategory;
+  lastUserMessage: string | null;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
@@ -33,6 +34,7 @@ interface UiState {
   togglePinnedMenu: (panel: PanelId) => void;
   reorderPinnedMenus: (from: number, to: number) => void;
   setSettingsCategory: (category: SettingsCategory) => void;
+  setLastUserMessage: (message: string | null) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -44,6 +46,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   hasUnreadAi: false,
   pinnedMenus: ['board', 'approval', 'report', 'calendar'],
   settingsCategory: 'account',
+  lastUserMessage: null,
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -88,6 +91,7 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   markAiUnread: () => set({ hasUnreadAi: true }),
   markAiRead: () => set({ hasUnreadAi: false }),
+  setLastUserMessage: (message) => set({ lastUserMessage: message }),
 
   togglePinnedMenu: (panel) =>
     set((s) => {
