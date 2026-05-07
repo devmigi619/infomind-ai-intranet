@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   Shield,
   Tag,
+  List,
   Settings,
   MoreHorizontal,
 } from 'lucide-react-native';
@@ -54,6 +55,7 @@ const adminModules: AdminNavModule[] = [
   { id: 'admin-roles', icon: Shield, label: '권한 관리' },
   { id: 'admin-categories', icon: Tag, label: '게시판 카테고리' },
   { id: 'admin-approval-line', icon: FileText, label: '결재선 템플릿' },
+  { id: 'admin-common-code', icon: List, label: '공통코드 관리' },
   { id: 'admin-system', icon: Settings, label: '시스템 설정' },
 ];
 

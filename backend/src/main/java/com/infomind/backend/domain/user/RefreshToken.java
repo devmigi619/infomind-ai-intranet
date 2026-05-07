@@ -4,7 +4,7 @@ import com.infomind.backend.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "INT_RF_TK")
@@ -25,7 +25,7 @@ public class RefreshToken extends BaseEntity {
     private String tk;
 
     @Column(name = "TK_EXP_DT", nullable = false)
-    private LocalDateTime tkExpDt;
+    private LocalDate tkExpDt;
 
     @Column(name = "RVK_YN", length = 1, nullable = false)
     @Builder.Default

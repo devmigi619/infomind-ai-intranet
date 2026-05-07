@@ -20,6 +20,7 @@ import {
   Settings,
   LayoutList,
   ShieldCheck,
+  List,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useTheme } from '../../shared/hooks/useTheme';
@@ -45,6 +46,7 @@ const ADMIN_MENUS: MenuItem[] = [
   { panelId: 'admin-home', label: '관리자 홈', Icon: LayoutList },
   { panelId: 'admin-users', label: '사용자 관리', Icon: Users },
   { panelId: 'admin-roles', label: '권한 관리', Icon: ShieldCheck },
+  { panelId: 'admin-common-code', label: '공통코드 관리', Icon: List },
 ];
 
 // PC NavRailMorePopover와 동일 정신: 작은 드롭다운형 시트

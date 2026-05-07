@@ -13,6 +13,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -178,7 +179,7 @@ public class ApprovalService {
         private ApprovalType type;
         private ApprovalStatus status;
         private String requesterName;
-        private LocalDateTime createdAt;
+        private LocalDate createdAt;
     }
 
     @Getter
@@ -190,7 +191,7 @@ public class ApprovalService {
         private ApprovalType type;
         private ApprovalStatus status;
         private String requesterName;
-        private LocalDateTime createdAt;
+        private LocalDate createdAt;
         private List<ApprovalLineDto> approvalLines;
     }
 

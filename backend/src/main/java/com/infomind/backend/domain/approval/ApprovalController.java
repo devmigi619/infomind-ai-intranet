@@ -29,7 +29,7 @@ public class ApprovalController {
             List<ApprovalService.ApprovalSummaryDto> result = approvalService.getPendingForMe(userId);
             return ResponseEntity.ok(ApiResponse.ok(result));
         } else {
-            PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+            PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "crtAt"));
             Page<ApprovalService.ApprovalSummaryDto> result = approvalService.getMyApprovals(userId, pageable);
             return ResponseEntity.ok(ApiResponse.ok(result));
         }

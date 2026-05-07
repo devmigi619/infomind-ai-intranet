@@ -13,7 +13,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -90,7 +89,7 @@ public class WeeklyReportService {
         private String thisWeek;
         private String nextWeek;
         private String issues;
-        private LocalDateTime createdAt;
+        private LocalDate createdAt;
     }
 
     @Getter

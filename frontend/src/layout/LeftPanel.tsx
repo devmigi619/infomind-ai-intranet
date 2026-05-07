@@ -34,6 +34,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   'admin-roles': '권한 관리',
   'admin-categories': '게시판 카테고리',
   'admin-approval-line': '결재선 템플릿',
+  'admin-common-code': '공통코드 관리',
   'admin-system': '시스템 설정',
   settings: '설정',
 };

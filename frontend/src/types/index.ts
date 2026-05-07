@@ -13,6 +13,7 @@ export type PanelId =
   | 'admin-roles'
   | 'admin-categories'
   | 'admin-approval-line'
+  | 'admin-common-code'
   | 'admin-system'
   | 'settings';
 

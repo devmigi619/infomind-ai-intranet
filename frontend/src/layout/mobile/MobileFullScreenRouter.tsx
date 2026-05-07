@@ -7,6 +7,7 @@ import { ApprovalScreen } from '../../features/approval/screens/ApprovalScreen';
 import { WeeklyReportScreen } from '../../features/report/screens/WeeklyReportScreen';
 import { SettingsScreen } from '../../features/settings/screens/SettingsScreen';
 import { PlaceholderScreen } from '../../features/placeholder/screens/PlaceholderScreen';
+import { AdminCommonCodeScreen } from '../../features/admin-common-code/screens/AdminCommonCodeScreen';
 
 const PLACEHOLDER_TITLES: Record<string, string> = {
   calendar: '캘린더',
@@ -20,6 +21,7 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
   'admin-roles': '권한 관리',
   'admin-categories': '카테고리 관리',
   'admin-approval-line': '결재선 관리',
+  'admin-common-code': '공통코드 관리',
   'admin-system': '시스템 설정',
 };
 
@@ -79,6 +81,8 @@ export function MobileFullScreenRouter() {
         return <WeeklyReportScreen />;
       case 'settings':
         return <SettingsScreen />;
+      case 'admin-common-code':
+        return <AdminCommonCodeScreen />;
       default:
         return (
           <PlaceholderScreen

@@ -9,8 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.LocalDateTime;
-import java.time.ZoneId;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -35,15 +34,12 @@ public class UserService {
         String accessToken = jwtProvider.generateToken(user.getUserId(), user.getUserSe());
         String refreshTokenStr = jwtProvider.generateRefreshToken(user.getUserId());
 
-        // 리프레시 토큰 DB 저장
-        LocalDateTime expiry = jwtProvider.getExpiration(refreshTokenStr)
-                .toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
-
+        // 리프레시 토큰 DB 저장 (7일 유효)
         RefreshToken refreshToken = RefreshToken.builder()
                 .tkId(UUID.randomUUID().toString())
                 .userId(user.getUserId())
                 .tk(refreshTokenStr)
-                .tkExpDt(expiry)
+                .tkExpDt(LocalDate.now().plusDays(7))
                 .rvkYn("N")
                 .ipAddr(resolveIp())
                 .build();
