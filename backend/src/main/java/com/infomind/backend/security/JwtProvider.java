@@ -26,24 +26,23 @@ public class JwtProvider {
         this.expiryHours = expiryHours;
     }
 
-    public String generateToken(Long userId, String username, String role) {
+    public String generateToken(String userId, String userSe) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expiryHours * 3600 * 1000);
         return Jwts.builder()
-                .subject(String.valueOf(userId))
-                .claim("username", username)
-                .claim("role", role)
+                .subject(userId)
+                .claim("userSe", userSe)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
                 .compact();
     }
 
-    public String generateRefreshToken(Long userId) {
+    public String generateRefreshToken(String userId) {
         Date now = new Date();
         Date expiry = new Date(now.getTime() + 30L * 24 * 3600 * 1000);
         return Jwts.builder()
-                .subject(String.valueOf(userId))
+                .subject(userId)
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(secretKey)
@@ -68,7 +67,13 @@ public class JwtProvider {
                 .getPayload();
     }
 
-    public Long getUserId(String token) {
-        return Long.parseLong(getClaims(token).getSubject());
+    /** JWT subject = userId (String) */
+    public String getUserId(String token) {
+        return getClaims(token).getSubject();
+    }
+
+    /** 토큰 만료 시각 반환 (리프레시 토큰 DB 저장 시 사용) */
+    public Date getExpiration(String token) {
+        return getClaims(token).getExpiration();
     }
 }

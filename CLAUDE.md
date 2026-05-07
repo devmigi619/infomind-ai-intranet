@@ -135,7 +135,7 @@ com.infomind
 | 클래스 | PascalCase | `ApprovalService` |
 | 메서드/변수 | camelCase | `submitApproval` |
 | 상수 | UPPER_SNAKE | `MAX_RETRY_COUNT` |
-| DB 컬럼 | snake_case | `created_at` |
+| DB 컬럼 | UPPER_SNAKE | `USER_ID`, `CRT_AT` |
 | DTO | Request / Response 접미사 | `ApprovalSubmitRequest` |
 
 ### AI Backend (FastAPI)

@@ -16,16 +16,38 @@ public class AuthController {
 
     private final UserService userService;
 
+    @PostMapping("/login")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse response = userService.login(request.getUserId(), request.getPassword());
+        return ResponseEntity.ok(ApiResponse.ok(response));
+    }
+
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<RefreshResponse>> refresh(@RequestBody RefreshRequest request) {
         RefreshResponse response = userService.refresh(request.getRefreshToken());
         return ResponseEntity.ok(ApiResponse.ok(response));
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = userService.login(request.getUsername(), request.getPassword());
-        return ResponseEntity.ok(ApiResponse.ok(response));
+    @PostMapping("/logout")
+    public ResponseEntity<ApiResponse<Void>> logout(@RequestBody RefreshRequest request) {
+        userService.logout(request.getRefreshToken());
+        return ResponseEntity.ok(ApiResponse.ok(null));
+    }
+
+    @Getter
+    public static class LoginRequest {
+        @NotBlank
+        private String userId;
+        @NotBlank
+        private String password;
+    }
+
+    @Getter
+    @Builder
+    public static class LoginResponse {
+        private String token;
+        private String refreshToken;
+        private UserController.UserInfoResponse user;
     }
 
     @Getter
@@ -37,21 +59,5 @@ public class AuthController {
     @Builder
     public static class RefreshResponse {
         private String token;
-    }
-
-    @Getter
-    public static class LoginRequest {
-        @NotBlank
-        private String username;
-        @NotBlank
-        private String password;
-    }
-
-    @Getter
-    @Builder
-    public static class LoginResponse {
-        private String token;
-        private String refreshToken;
-        private UserController.UserInfoResponse user;
     }
 }

@@ -12,11 +12,11 @@ import { Eye, EyeOff } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 
 interface LoginScreenProps {
-  onLogin: (username: string, password: string) => Promise<void>;
+  onLogin: (userId: string, password: string) => Promise<void>;
 }
 
 export function LoginScreen({ onLogin }: LoginScreenProps) {
-  const [username, setUsername] = useState('');
+  const [userId, setUserId] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,14 +24,14 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
   const theme = useTheme();
 
   const handleLogin = async () => {
-    if (!username || !password) {
+    if (!userId || !password) {
       setError('아이디와 비밀번호를 입력해주세요.');
       return;
     }
     setError('');
     setIsLoading(true);
     try {
-      await onLogin(username, password);
+      await onLogin(userId, password);
     } catch {
       setError('아이디 또는 비밀번호가 올바르지 않습니다.');
     } finally {
@@ -54,8 +54,8 @@ export function LoginScreen({ onLogin }: LoginScreenProps) {
               backgroundColor: theme.bg.surface,
             },
           ]}
-          value={username}
-          onChangeText={setUsername}
+          value={userId}
+          onChangeText={setUserId}
           placeholder="아이디"
           placeholderTextColor={theme.text.subtle}
           autoCapitalize="none"

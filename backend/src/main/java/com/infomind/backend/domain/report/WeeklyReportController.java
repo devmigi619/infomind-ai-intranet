@@ -21,7 +21,7 @@ public class WeeklyReportController {
     public ResponseEntity<ApiResponse<Page<WeeklyReportService.WeeklyReportDto>>> getMyReports(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "weekStart"));
         return ResponseEntity.ok(ApiResponse.ok(weeklyReportService.getMyReports(userId, pageable)));
     }
@@ -34,7 +34,7 @@ public class WeeklyReportController {
     @PostMapping
     public ResponseEntity<ApiResponse<WeeklyReportService.WeeklyReportDto>> createReport(
             @Valid @RequestBody WeeklyReportService.CreateReportRequest request) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok(weeklyReportService.createReport(userId, request)));
     }
 
@@ -42,7 +42,7 @@ public class WeeklyReportController {
     public ResponseEntity<ApiResponse<WeeklyReportService.WeeklyReportDto>> updateReport(
             @PathVariable Long id,
             @Valid @RequestBody WeeklyReportService.CreateReportRequest request) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok(weeklyReportService.updateReport(id, userId, request)));
     }
 }

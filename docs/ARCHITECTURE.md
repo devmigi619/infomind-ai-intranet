@@ -95,6 +95,50 @@ Nginx 역할:
 - PostgreSQL 16 (Docker Compose)
 - 영구 볼륨 `postgres-data`
 
+## BaseEntity — Audit 필드
+
+모든 JPA 엔티티는 `BaseEntity`를 상속한다. `@PrePersist/@PreUpdate`로 자동 설정되며 JPA `@EnableJpaAuditing`은 미사용.
+
+| 필드 | 컬럼 | updatable | 설명 |
+|---|---|---|---|
+| `crtAt` | `CRT_AT` | false | 생성일시 |
+| `crtBy` | `CRT_BY` | false | 생성자 (userId, 미인증 시 `"system"`) |
+| `crtIp` | `CRT_IP` | false | 생성 IP (`X-Forwarded-For` → `RemoteAddr` 순으로 추출) |
+| `updAt` | `UPD_AT` | true | 최종 수정일시 |
+| `updBy` | `UPD_BY` | true | 최종 수정자 |
+| `updIp` | `UPD_IP` | true | 최종 수정 IP |
+
+> IP는 `RequestContextHolder` → `HttpServletRequest`에서 추출. 비 HTTP 컨텍스트(배치 등)에서는 `"unknown"`.
+
+## User 도메인
+
+### 테이블 구조
+
+| 테이블 | 설명 |
+|---|---|
+| `INT_USER` | 사용자 계정. PK = `USER_ID` (String, 로그인 ID) |
+| `INT_RF_TK` | Refresh Token 저장. UUID PK(`TK_ID`) |
+
+### 핵심 설계 결정
+
+- **PK 타입**: `Long id` → `String userId` (로그인 ID 그대로 PK)
+- **권한**: `Role` enum 제거 → `USER_SE` 컬럼(String)으로 대체 (`ADMIN`, `USER` 등)
+- **FCM 토큰**: `INT_USER`에 미포함 — 별도 테이블 여부 추후 결정
+- **Refresh Token**: stateless → DB 저장으로 전환
+  - 로그인 시 UUID로 `INT_RF_TK` INSERT
+  - refresh 시 `RVK_YN='N'` 조건으로 유효성 검증
+  - logout 시 해당 토큰 `RVK_YN='Y'` 업데이트 (즉시 무효화)
+
+### JWT 정책
+
+| 항목 | 값 |
+|---|---|
+| 알고리즘 | HS256 |
+| subject | `String userId` (로그인 ID) |
+| 커스텀 claim | `userSe` (권한, 구 `role` claim 대체) |
+| principal 타입 | `String` — 전 Service/Controller 공통 |
+| 액세스 토큰 유효기간 | 8시간 (application.yml `jwt.expiry-hours`) |
+
 ## AI / LLM
 
 ### 로컬 (선택)

@@ -28,7 +28,7 @@ public class PostController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String category) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "crtAt"));
         return ResponseEntity.ok(ApiResponse.ok(postService.getPosts(category, pageable)));
     }
 
@@ -41,7 +41,7 @@ public class PostController {
     public ResponseEntity<ApiResponse<PostDetailDto>> createPost(
             Authentication authentication,
             @Valid @RequestBody PostRequest request) {
-        Long userId = (Long) authentication.getPrincipal();
+        String userId = (String) authentication.getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok(postService.createPost(userId, request)));
     }
 
@@ -50,7 +50,7 @@ public class PostController {
             @PathVariable Long id,
             Authentication authentication,
             @Valid @RequestBody PostRequest request) {
-        Long userId = (Long) authentication.getPrincipal();
+        String userId = (String) authentication.getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok(postService.updatePost(id, userId, request)));
     }
 
@@ -58,7 +58,7 @@ public class PostController {
     public ResponseEntity<Void> deletePost(
             @PathVariable Long id,
             Authentication authentication) {
-        Long userId = (Long) authentication.getPrincipal();
+        String userId = (String) authentication.getPrincipal();
         String role = authentication.getAuthorities().stream()
                 .map(a -> a.getAuthority().replace("ROLE_", ""))
                 .findFirst().orElse("USER");

@@ -28,9 +28,9 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (StringUtils.hasText(token) && jwtProvider.validateToken(token)) {
             try {
-                Long userId = jwtProvider.getUserId(token);
-                String role = jwtProvider.getClaims(token).get("role", String.class);
-                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + role));
+                String userId = jwtProvider.getUserId(token);
+                String userSe = jwtProvider.getClaims(token).get("userSe", String.class);
+                List<SimpleGrantedAuthority> authorities = List.of(new SimpleGrantedAuthority("ROLE_" + userSe));
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(userId, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(authentication);

@@ -41,6 +41,7 @@ public class SecurityConfig {
                         .requestMatchers("POST /api/auth/login").permitAll()
                         .requestMatchers("/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/refresh").permitAll()
+                        .requestMatchers("/api/auth/logout").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .anyRequest().authenticated())
                 .addFilterBefore(new JwtFilter(jwtProvider),

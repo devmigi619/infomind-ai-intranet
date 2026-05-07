@@ -23,7 +23,7 @@ public class WeeklyReportService {
     private final UserRepository userRepository;
 
     @Transactional(readOnly = true)
-    public Page<WeeklyReportDto> getMyReports(Long userId, Pageable pageable) {
+    public Page<WeeklyReportDto> getMyReports(String userId, Pageable pageable) {
         User user = getUser(userId);
         return weeklyReportRepository.findByAuthorOrderByWeekStartDesc(user, pageable).map(this::toDto);
     }
@@ -35,7 +35,7 @@ public class WeeklyReportService {
     }
 
     @Transactional
-    public WeeklyReportDto createReport(Long authorId, CreateReportRequest req) {
+    public WeeklyReportDto createReport(String authorId, CreateReportRequest req) {
         User author = getUser(authorId);
         WeeklyReport report = WeeklyReport.builder()
                 .author(author)
@@ -48,16 +48,16 @@ public class WeeklyReportService {
     }
 
     @Transactional
-    public WeeklyReportDto updateReport(Long reportId, Long userId, CreateReportRequest req) {
+    public WeeklyReportDto updateReport(Long reportId, String userId, CreateReportRequest req) {
         WeeklyReport report = getWeeklyReport(reportId);
-        if (!report.getAuthor().getId().equals(userId)) {
+        if (!report.getAuthor().getUserId().equals(userId)) {
             throw new SecurityException("수정 권한이 없습니다.");
         }
         report.update(req.getThisWeek(), req.getNextWeek(), req.getIssues());
         return toDto(report);
     }
 
-    private User getUser(Long userId) {
+    private User getUser(String userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
@@ -70,12 +70,12 @@ public class WeeklyReportService {
     private WeeklyReportDto toDto(WeeklyReport report) {
         return WeeklyReportDto.builder()
                 .id(report.getId())
-                .authorName(report.getAuthor().getName())
+                .authorName(report.getAuthor().getUserNm())
                 .weekStart(report.getWeekStart())
                 .thisWeek(report.getThisWeek())
                 .nextWeek(report.getNextWeek())
                 .issues(report.getIssues())
-                .createdAt(report.getCreatedAt())
+                .createdAt(report.getCrtAt())
                 .build();
     }
 

@@ -110,8 +110,8 @@ function AppContent() {
 
   const handleSettingsClick = () => openSettingsScreen();
 
-  const handleLogin = async (username: string, password: string) => {
-    await loginMutation.mutateAsync({ username, password });
+  const handleLogin = async (userId: string, password: string) => {
+    await loginMutation.mutateAsync({ userId, password });
   };
 
   const handleLogout = async () => {

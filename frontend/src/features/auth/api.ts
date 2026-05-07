@@ -6,7 +6,7 @@ import {Platform} from "react-native";
 
 export interface User {
   id: number;
-  username: string;
+    userId: string;
   name: string;
   department: string;
   position: string;
@@ -15,8 +15,8 @@ export interface User {
 
 // === HTTP 함수 ===
 const authApi = {
-  login: async (username: string, password: string) => {
-    const res = await apiClient.post('/api/auth/login', { username, password });
+  login: async (userId: string, password: string) => {
+    const res = await apiClient.post('/api/auth/login', { userId, password });
     const { token, refreshToken, user } = res.data.data;
     await AsyncStorage.setItem('token', token);
     await AsyncStorage.setItem('refreshToken', refreshToken);
@@ -56,8 +56,8 @@ export const useCurrentUser = () =>
 export const useLogin = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ username, password }: { username: string; password: string }) =>
-      authApi.login(username, password),
+    mutationFn: ({ userId, password }: { userId: string; password: string }) =>
+      authApi.login(userId, password),
     onSuccess: (user) => {
       qc.setQueryData(['auth', 'currentUser'], user);
     },

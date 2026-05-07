@@ -5,7 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
-@Table(name = "users")
+@Table(name = "INT_USER")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Builder
@@ -13,30 +13,51 @@ import lombok.*;
 public class User extends BaseEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "USER_ID", length = 100)
+    private String userId;          // PK = 로그인 ID
 
-    @Column(unique = true, nullable = false)
-    private String username;
+    @Column(name = "USER_NM", length = 100)
+    private String userNm;
 
-    @Column(nullable = false)
-    private String password;
+    @Column(name = "PWD", length = 500)
+    private String pwd;
 
-    @Column(nullable = false)
-    private String name;
+    @Column(name = "MTELNO", length = 30)
+    private String mtelno;
 
-    private String email;
-    private String department;
-    private String position;
+    @Column(name = "TELNO", length = 30)
+    private String telno;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    @Builder.Default
-    private Role role = Role.USER;
+    @Column(name = "GNDR_SE", length = 20)
+    private String gndrSe;
 
-    private String fcmToken;
+    @Column(name = "BRDT", length = 8)
+    private String brdt;
 
-    public void updateFcmToken(String fcmToken) {
-        this.fcmToken = fcmToken;
-    }
+    @Column(name = "EML", length = 40)
+    private String eml;
+
+    @Column(name = "ADDR", length = 255)
+    private String addr;
+
+    @Column(name = "DADDR", length = 255)
+    private String daddr;
+
+    @Column(name = "ZIP", length = 10)
+    private String zip;
+
+    @Column(name = "USER_SE", length = 20)
+    private String userSe;          // 사용자 구분 (ADMIN / USER 등)
+
+    @Column(name = "JBGD_CD", length = 20)
+    private String jbgdCd;          // 직급 코드
+
+    @Column(name = "DEPT_CD", length = 100)
+    private String deptCd;          // 부서 코드
+
+    @Column(name = "HIRE_YMD", length = 8)
+    private String hireYmd;         // 입사일자 (YYYYMMDD)
+
+    @Column(name = "RESG_YMD", length = 8)
+    private String resgYmd;         // 퇴사일자 (YYYYMMDD)
 }

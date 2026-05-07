@@ -28,13 +28,13 @@ public class ApprovalService {
     private final FcmService fcmService;
 
     @Transactional(readOnly = true)
-    public Page<ApprovalSummaryDto> getMyApprovals(Long userId, Pageable pageable) {
+    public Page<ApprovalSummaryDto> getMyApprovals(String userId, Pageable pageable) {
         User user = getUser(userId);
         return approvalRepository.findByRequester(user, pageable).map(this::toSummary);
     }
 
     @Transactional(readOnly = true)
-    public List<ApprovalSummaryDto> getPendingForMe(Long userId) {
+    public List<ApprovalSummaryDto> getPendingForMe(String userId) {
         User user = getUser(userId);
         return approvalRepository.findPendingForApprover(user).stream()
                 .map(this::toSummary)
@@ -48,7 +48,7 @@ public class ApprovalService {
     }
 
     @Transactional
-    public ApprovalDetailDto createApproval(Long requesterId, CreateApprovalRequest req) {
+    public ApprovalDetailDto createApproval(String requesterId, CreateApprovalRequest req) {
         User requester = getUser(requesterId);
         Approval approval = Approval.builder()
                 .title(req.getTitle())
@@ -58,7 +58,7 @@ public class ApprovalService {
                 .build();
         Approval saved = approvalRepository.save(approval);
 
-        List<Long> approverIds = req.getApproverIds();
+        List<String> approverIds = req.getApproverIds();
         List<ApprovalLine> lines = new ArrayList<>();
         for (int i = 0; i < approverIds.size(); i++) {
             User approver = getUser(approverIds.get(i));
@@ -75,7 +75,7 @@ public class ApprovalService {
     }
 
     @Transactional
-    public ApprovalDetailDto approve(Long approvalId, Long approverId, String comment) {
+    public ApprovalDetailDto approve(Long approvalId, String approverId, String comment) {
         Approval approval = getApproval(approvalId);
         User approver = getUser(approverId);
 
@@ -93,24 +93,19 @@ public class ApprovalService {
 
         if (nextLine == null) {
             approval.updateStatus(ApprovalStatus.APPROVED);
-            fcmService.sendNotification(
-                    approval.getRequester().getFcmToken(),
-                    "결재 완료",
-                    "'" + approval.getTitle() + "' 결재가 최종 승인되었습니다."
-            );
+            // FCM 토큰은 추후 별도 관리 예정
+            fcmService.sendNotification(null, "결재 완료",
+                    "'" + approval.getTitle() + "' 결재가 최종 승인되었습니다.");
         } else {
-            fcmService.sendNotification(
-                    nextLine.getApprover().getFcmToken(),
-                    "결재 요청",
-                    "'" + approval.getTitle() + "' 결재를 검토해 주세요."
-            );
+            fcmService.sendNotification(null, "결재 요청",
+                    "'" + approval.getTitle() + "' 결재를 검토해 주세요.");
         }
 
         return toDetail(approval);
     }
 
     @Transactional
-    public ApprovalDetailDto reject(Long approvalId, Long approverId, String comment) {
+    public ApprovalDetailDto reject(Long approvalId, String approverId, String comment) {
         Approval approval = getApproval(approvalId);
         User approver = getUser(approverId);
 
@@ -121,16 +116,14 @@ public class ApprovalService {
         line.reject(comment);
         approval.updateStatus(ApprovalStatus.REJECTED);
 
-        fcmService.sendNotification(
-                approval.getRequester().getFcmToken(),
-                "결재 반려",
-                "'" + approval.getTitle() + "' 결재가 반려되었습니다."
-        );
+        // FCM 토큰은 추후 별도 관리 예정
+        fcmService.sendNotification(null, "결재 반려",
+                "'" + approval.getTitle() + "' 결재가 반려되었습니다.");
 
         return toDetail(approval);
     }
 
-    private User getUser(Long userId) {
+    private User getUser(String userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
     }
@@ -146,8 +139,8 @@ public class ApprovalService {
                 .title(approval.getTitle())
                 .type(approval.getType())
                 .status(approval.getStatus())
-                .requesterName(approval.getRequester().getName())
-                .createdAt(approval.getCreatedAt())
+                .requesterName(approval.getRequester().getUserNm())
+                .createdAt(approval.getCrtAt())
                 .build();
     }
 
@@ -156,7 +149,7 @@ public class ApprovalService {
         List<ApprovalLineDto> lineDtos = lines.stream()
                 .map(l -> ApprovalLineDto.builder()
                         .seq(l.getSeq())
-                        .approverName(l.getApprover().getName())
+                        .approverName(l.getApprover().getUserNm())
                         .status(l.getStatus())
                         .comment(l.getComment())
                         .decidedAt(l.getDecidedAt())
@@ -169,8 +162,8 @@ public class ApprovalService {
                 .content(approval.getContent())
                 .type(approval.getType())
                 .status(approval.getStatus())
-                .requesterName(approval.getRequester().getName())
-                .createdAt(approval.getCreatedAt())
+                .requesterName(approval.getRequester().getUserNm())
+                .createdAt(approval.getCrtAt())
                 .approvalLines(lineDtos)
                 .build();
     }
@@ -220,7 +213,7 @@ public class ApprovalService {
         @NotNull
         private ApprovalType type;
         @NotNull
-        private List<Long> approverIds;
+        private List<String> approverIds;  // Long → String
     }
 
     @Getter

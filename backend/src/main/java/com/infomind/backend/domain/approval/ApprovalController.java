@@ -24,7 +24,7 @@ public class ApprovalController {
             @RequestParam(defaultValue = "my") String type,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if ("pending".equalsIgnoreCase(type)) {
             List<ApprovalService.ApprovalSummaryDto> result = approvalService.getPendingForMe(userId);
             return ResponseEntity.ok(ApiResponse.ok(result));
@@ -43,7 +43,7 @@ public class ApprovalController {
     @PostMapping
     public ResponseEntity<ApiResponse<ApprovalService.ApprovalDetailDto>> createApproval(
             @Valid @RequestBody ApprovalService.CreateApprovalRequest request) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return ResponseEntity.ok(ApiResponse.ok(approvalService.createApproval(userId, request)));
     }
 
@@ -51,7 +51,7 @@ public class ApprovalController {
     public ResponseEntity<ApiResponse<ApprovalService.ApprovalDetailDto>> approve(
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalService.ApproveRequest request) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String comment = request != null ? request.getComment() : null;
         return ResponseEntity.ok(ApiResponse.ok(approvalService.approve(id, userId, comment)));
     }
@@ -60,7 +60,7 @@ public class ApprovalController {
     public ResponseEntity<ApiResponse<ApprovalService.ApprovalDetailDto>> reject(
             @PathVariable Long id,
             @RequestBody(required = false) ApprovalService.ApproveRequest request) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String userId = (String) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         String comment = request != null ? request.getComment() : null;
         return ResponseEntity.ok(ApiResponse.ok(approvalService.reject(id, userId, comment)));
     }
