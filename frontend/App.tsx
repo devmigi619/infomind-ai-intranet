@@ -9,9 +9,11 @@ import { NavRailMorePopover } from './src/layout/NavRailMorePopover';
 import { NavRailCustomizationModal } from './src/layout/NavRailCustomizationModal';
 import { LeftPanel } from './src/layout/LeftPanel';
 import { RightPanel } from './src/layout/RightPanel';
+import { MobileApp } from './src/layout/mobile/MobileApp';
 import { useUiStore } from './src/store/uiStore';
 import { useCurrentUser, useLogin, useLogout } from './src/features/auth/api';
 import { usePushNotifications } from './src/shared/hooks/usePushNotifications';
+import { useResponsive } from './src/shared/hooks/useResponsive';
 import { LoginScreen } from './src/features/auth/screens/LoginScreen';
 import { MainScreen } from './src/features/chat/screens/MainScreen';
 import { BoardScreen } from './src/features/board/screens/BoardScreen';
@@ -60,8 +62,8 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
 
 function AppContent() {
   const [morePopoverOpen, setMorePopoverOpen] = useState(false);
-  const [customizationOpen, setCustomizationOpen] = useState(false);
   const [moreAnchorTop, setMoreAnchorTop] = useState(0);
+  const { isMobile } = useResponsive();
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -97,6 +99,7 @@ function AppContent() {
     isAdminMode,
     hasUnreadAi,
     pinnedMenus,
+    isCustomizationOpen,
     setRpTab,
     handleNavClick,
     openFullScreen,
@@ -106,6 +109,7 @@ function AppContent() {
     toggleRightPanel,
     toggleAdminMode,
     markAiUnread,
+    setCustomizationOpen,
   } = useUiStore();
 
   const handleSettingsClick = () => openSettingsScreen();
@@ -186,6 +190,20 @@ function AppContent() {
     );
   }
 
+  // Mobile layout
+  if (isMobile && user) {
+    return (
+      <>
+        <StatusBar style="dark" />
+        <MobileApp
+          user={user}
+          onLogout={handleLogout}
+          onNavigate={handleNavigate}
+        />
+      </>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       <View style={styles.root}>
@@ -234,7 +252,7 @@ function AppContent() {
           />
 
           <NavRailCustomizationModal
-            isOpen={customizationOpen}
+            isOpen={isCustomizationOpen}
             onClose={() => setCustomizationOpen(false)}
           />
 
@@ -250,7 +268,7 @@ function AppContent() {
             isOpen={isRightPanelOpen}
             rpTab={rpTab}
             onTabChange={setRpTab}
-            userName={user?.name ?? ''}
+            userId={user?.id ?? ''}
             hasUnreadAi={hasUnreadAi}
           />
         </View>

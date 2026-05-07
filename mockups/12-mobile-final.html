@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infomind — 12. 모바일 최종 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ===== 리셋 ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #C8C8C8;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 40px 0 60px;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font-family: inherit; }
+svg { stroke: currentColor; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+
+/* ===== 레이블 ===== */
+.page-label {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(0,0,0,0.4);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  user-select: none;
+}
+
+/* ===== 폰 프레임 ===== */
+.phone-frame {
+  position: relative;
+  width: 375px;
+  height: 812px;
+  background: #fff;
+  border-radius: 48px;
+  box-shadow:
+    0 0 0 2px #555,
+    0 0 0 10px #1c1c1e,
+    0 0 0 12px #2c2c2e,
+    0 44px 110px rgba(0,0,0,0.6);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+/* 노치 */
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 34px;
+  background: #1c1c1e;
+  border-radius: 20px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* ===== 앱 루트 ===== */
+.app {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #F9F9F9;
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  flex-shrink: 0;
+  padding-top: 48px; /* 노치(44px) 여백 */
+  height: 104px;
+  display: flex;
+  align-items: flex-end;
+  padding-left: 16px;
+  padding-right: 12px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 300;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  gap: 4px;
+}
+.header-brand {
+  flex: 1;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: #0A2463;
+  user-select: none;
+}
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: transparent;
+  border-radius: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.6);
+  transition: background 140ms, color 140ms;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.icon-btn:hover { background: rgba(0,0,0,0.06); color: rgba(0,0,0,0.85); }
+.icon-btn:active { background: rgba(0,0,0,0.1); }
+.notif-wrap { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  pointer-events: none;
+}
+.avatar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0A2463;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+  margin-left: 3px;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 140ms;
+}
+.avatar-btn:hover { opacity: 0.88; }
+
+/* ===== 자비스 플로팅 영역 ===== */
+.jarvis-floating {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(10,36,99,0.035) 0%, rgba(10,36,99,0.055) 100%);
+  border-bottom: 1px solid rgba(10,36,99,0.1);
+  position: relative;
+  z-index: 200;
+  overflow: hidden;
+  /* 3단계 높이 전환 */
+  transition: height 240ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* 1단계: collapsed — 40px */
+.jarvis-floating.state-1 { height: 40px; }
+/* 2단계: medium — 148px */
+.jarvis-floating.state-2 { height: 148px; }
+/* 3단계: full — ~65% of 812 ≈ 480px (812 - 104 헤더 - 64 탭 = 644 가용 중 480 사용) */
+.jarvis-floating.state-3 { height: 480px; }
+
+/* ===== 1단계: 한 줄 바 ===== */
+.jarvis-bar {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 14px 0 14px;
+  gap: 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.jarvis-bar-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+.jarvis-bar-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0A2463;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.jarvis-bar-chevron {
+  flex-shrink: 0;
+  color: rgba(10,36,99,0.5);
+  transition: transform 200ms;
+}
+.jarvis-floating.state-2 .jarvis-bar-chevron,
+.jarvis-floating.state-3 .jarvis-bar-chevron {
+  transform: rotate(180deg);
+}
+
+/* ===== 2단계 / 3단계 내용 ===== */
+.jarvis-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+/* 2단계 헤더 행 */
+.jarvis-panel-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px 8px;
+  gap: 6px;
+}
+.jarvis-panel-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0A2463;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.jarvis-ctrl-btns {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.jarvis-ctrl {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: rgba(10,36,99,0.07);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0A2463;
+  transition: background 130ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.jarvis-ctrl:hover { background: rgba(10,36,99,0.13); }
+.jarvis-ctrl:active { background: rgba(10,36,99,0.2); }
+
+/* ===== 빠른액션 그리드 (2단계 기본) ===== */
+.quick-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  padding: 0 14px 10px;
+}
+.qa-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  background: #fff;
+  border: 1px solid rgba(10,36,99,0.14);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: #0A2463;
+  transition: background 140ms, border-color 140ms, box-shadow 140ms;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+.qa-chip:hover {
+  background: rgba(10,36,99,0.06);
+  border-color: rgba(10,36,99,0.25);
+  box-shadow: 0 2px 8px rgba(10,36,99,0.1);
+}
+.qa-chip:active {
+  background: rgba(10,36,99,0.1);
+}
+.qa-icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ===== 3단계: 컨텍스트 카드 (full sheet) ===== */
+.context-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 12px;
+  overflow-y: auto;
+  height: calc(100% - 48px); /* 패널 헤더 높이 제외 */
+  -webkit-overflow-scrolling: touch;
+}
+.ctx-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 13px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: box-shadow 160ms, border-color 160ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.ctx-card:hover {
+  box-shadow: 0 3px 12px rgba(10,36,99,0.09);
+  border-color: rgba(10,36,99,0.16);
+}
+.ctx-card-type {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.ctx-type-action { color: #0A2463; }
+.ctx-type-info { color: rgba(0,0,0,0.4); }
+.ctx-type-stat { color: #10B981; }
+.ctx-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.85);
+  margin-bottom: 2px;
+}
+.ctx-card-desc {
+  font-size: 11px;
+  color: rgba(0,0,0,0.45);
+  line-height: 1.45;
+}
+.ctx-card-badge {
+  display: inline-block;
+  margin-top: 7px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.badge-urgent {
+  background: rgba(239,68,68,0.1);
+  color: #DC2626;
+}
+.badge-ok {
+  background: rgba(16,185,129,0.1);
+  color: #059669;
+}
+.badge-warn {
+  background: rgba(245,158,11,0.1);
+  color: #D97706;
+}
+
+/* ===== 메인 채팅 영역 ===== */
+.main-chat {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 14px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 메시지 행 */
+.msg-row {
+  display: flex;
+  gap: 8px;
+}
+.msg-row.user { justify-content: flex-end; }
+.msg-row.ai { justify-content: flex-start; }
+
+/* AI 아이콘 */
+.ai-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #0A2463;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.ai-msg-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  max-width: 258px;
+}
+
+/* 말풍선 */
+.bubble {
+  padding: 9px 13px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.58;
+}
+.bubble.user {
+  background: #0A2463;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+  max-width: 236px;
+}
+.bubble.ai {
+  background: #fff;
+  color: rgba(0,0,0,0.85);
+  border: 1px solid rgba(0,0,0,0.08);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+.msg-time {
+  font-size: 10px;
+  color: rgba(0,0,0,0.28);
+  margin-top: 3px;
+  padding: 0 2px;
+}
+.msg-row.user .msg-time { text-align: right; }
+
+/* AI 브리핑 본문 */
+.briefing-list {
+  margin-top: 6px;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.briefing-list li {
+  font-size: 12.5px;
+  color: rgba(0,0,0,0.78);
+  line-height: 1.5;
+  padding-left: 12px;
+  position: relative;
+}
+.briefing-list li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: #0A2463;
+}
+.briefing-urgent { color: #DC2626 !important; font-weight: 500; }
+
+/* 인라인 액션 칩 행 */
+.chips-row {
+  margin-top: 8px;
+  margin-left: 36px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 11px;
+  border-radius: 15px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: background 140ms, box-shadow 140ms;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+  user-select: none;
+}
+.chip.action {
+  border-color: rgba(10,36,99,0.28);
+  color: #0A2463;
+  background: rgba(10,36,99,0.04);
+}
+.chip.action:hover {
+  background: rgba(10,36,99,0.09);
+  box-shadow: 0 2px 8px rgba(10,36,99,0.12);
+}
+
+/* ===== 입력바 ===== */
+.input-bar {
+  flex-shrink: 0;
+  padding: 8px 12px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 100;
+}
+.chat-input {
+  flex: 1;
+  height: 38px;
+  background: #F3F4F6;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 19px;
+  padding: 0 14px;
+  font-size: 13px;
+  color: rgba(0,0,0,0.85);
+  outline: none;
+  transition: border-color 160ms, background 160ms;
+}
+.chat-input::placeholder { color: rgba(0,0,0,0.3); }
+.chat-input:focus {
+  border-color: rgba(10,36,99,0.3);
+  background: #fff;
+}
+.send-btn {
+  width: 38px;
+  height: 38px;
+  background: #0A2463;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: opacity 140ms, transform 120ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.send-btn:hover { opacity: 0.88; }
+.send-btn:active { transform: scale(0.94); }
+
+/* ===== 하단 탭바 ===== */
+.bottom-tabs {
+  flex-shrink: 0;
+  height: 64px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: stretch;
+  position: relative;
+  z-index: 200;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  color: rgba(0,0,0,0.35);
+  font-size: 10px;
+  font-weight: 500;
+  transition: color 150ms;
+  position: relative;
+}
+.tab-item.active { color: #0A2463; }
+.tab-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 2px;
+  background: #0A2463;
+  border-radius: 0 0 2px 2px;
+}
+.tab-item svg { width: 22px; height: 22px; }
+.tab-badge {
+  position: absolute;
+  top: 8px;
+  right: calc(50% - 18px);
+  min-width: 16px;
+  height: 16px;
+  background: #EF4444;
+  border-radius: 8px;
+  border: 2px solid #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  padding: 0 3px;
+}
+
+/* ===== 토스트 ===== */
+.toast {
+  position: absolute;
+  bottom: 80px;
+  left: 12px;
+  right: 12px;
+  background: rgba(10,36,99,0.92);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  padding: 10px 14px;
+  border-radius: 12px;
+  z-index: 1000;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.22);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 300ms, transform 300ms;
+  pointer-events: none;
+}
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ===== 상태 전환 안내 overlay ===== */
+.mode-indicator {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10,36,99,0.88);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 20px;
+  z-index: 500;
+  opacity: 0;
+  transition: opacity 250ms;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.mode-indicator.visible { opacity: 1; }
+
+/* ===== AI 타이핑 인디케이터 ===== */
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 13px;
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  width: fit-content;
+}
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 50%;
+  animation: typingBounce 1.2s ease-in-out infinite;
+}
+.typing-dot:nth-child(2) { animation-delay: 0.2s; }
+.typing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce {
+  0%, 80%, 100% { transform: translateY(0); opacity: 0.5; }
+  40% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* 상태 전환 fade */
+.jarvis-content .quick-actions-grid,
+.jarvis-content .context-cards {
+  transition: opacity 260ms;
+}
+.hidden-content {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+/* visibility safe pattern */
+.layer-off {
+  visibility: hidden;
+  pointer-events: none;
+  opacity: 0;
+}
+</style>
+</head>
+<body>
+
+<p class="page-label">Infomind Mobile — 최종 시안 v12</p>
+
+<div class="phone-frame">
+  <div class="app">
+
+    <!-- ===== TopHeader ===== -->
+    <header class="top-header">
+      <div class="header-inner">
+        <span class="header-brand">Infomind</span>
+        <div class="header-right">
+          <!-- 새로고침(새 대화) -->
+          <button class="icon-btn" id="btnReset" title="새 대화 시작">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+          </button>
+          <!-- 알림 -->
+          <button class="icon-btn notif-wrap" title="알림">
+            <svg width="18" height="18" viewBox="0 0 24 24" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            <span class="notif-badge"></span>
+          </button>
+          <!-- 아바타 -->
+          <button class="avatar-btn" title="내 프로필">KM</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== 자비스 플로팅 영역 (3단계) ===== -->
+    <div class="jarvis-floating state-2" id="jarvisFloat">
+
+      <!-- 한 줄 바 (1단계 / 접힘 표시 — 항상 렌더) -->
+      <div class="jarvis-bar" id="jarvisBar">
+        <span class="jarvis-bar-icon">✨</span>
+        <span class="jarvis-bar-label" id="jarvisBarLabel">자비스 — 빠른액션 4개</span>
+        <svg class="jarvis-bar-chevron" width="16" height="16" viewBox="0 0 24 24" stroke-width="2.2">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      <!-- 2단계 / 3단계 콘텐츠 -->
+      <div class="jarvis-content" id="jarvisContent">
+
+        <!-- 패널 헤더 (2·3단계 공통) -->
+        <div class="jarvis-panel-header">
+          <div class="jarvis-panel-title">
+            <span>✨</span>
+            <span id="jarvisPanelTitle">자비스</span>
+          </div>
+          <div class="jarvis-ctrl-btns">
+            <!-- 접기 (→ 1단계) -->
+            <button class="jarvis-ctrl" id="btnCollapse" title="접기">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2.5">
+                <polyline points="18 15 12 9 6 15"/>
+              </svg>
+            </button>
+            <!-- 크게 펼치기 / 축소 (2↔3단계) -->
+            <button class="jarvis-ctrl" id="btnExpand" title="크게 펼치기">
+              <svg width="13" height="13" viewBox="0 0 24 24" stroke-width="2.5">
+                <polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/>
+                <line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 빠른액션 그리드 (기본 모드) -->
+        <div class="quick-actions-grid" id="quickGrid">
+          <button class="qa-chip" data-action="휴가 신청해줘">
+            <span class="qa-icon">💼</span>
+            <span>휴가 신청</span>
+          </button>
+          <button class="qa-chip" data-action="주간보고 작성해줘">
+            <span class="qa-icon">📝</span>
+            <span>주간보고</span>
+          </button>
+          <button class="qa-chip" data-action="차량 예약해줘">
+            <span class="qa-icon">🚗</span>
+            <span>차량 예약</span>
+          </button>
+          <button class="qa-chip" data-action="회의실 예약해줘">
+            <span class="qa-icon">🏢</span>
+            <span>회의실 예약</span>
+          </button>
+        </div>
+
+        <!-- 컨텍스트 카드 (자비스 모드) — visibility:hidden 안전 패턴 -->
+        <div class="context-cards layer-off" id="ctxCards">
+          <div class="ctx-card">
+            <div class="ctx-card-type ctx-type-action">액션</div>
+            <div class="ctx-card-title">휴가 결재 상신</div>
+            <div class="ctx-card-desc">연차휴가 신청서 작성 후 팀장 결재 라인으로 상신</div>
+            <span class="ctx-card-badge badge-urgent">D-2 임박 결재 5건</span>
+          </div>
+          <div class="ctx-card">
+            <div class="ctx-card-type ctx-type-info">정보</div>
+            <div class="ctx-card-title">휴가 규정 안내</div>
+            <div class="ctx-card-desc">연차 15일 기본 제공, 반차·병가 정책 확인</div>
+          </div>
+          <div class="ctx-card">
+            <div class="ctx-card-type ctx-type-stat">현황</div>
+            <div class="ctx-card-title">남은 연차</div>
+            <div class="ctx-card-desc">올해 사용: 6일 / 잔여: 9일 (반차 포함)</div>
+            <span class="ctx-card-badge badge-ok">잔여 9일</span>
+          </div>
+          <div class="ctx-card">
+            <div class="ctx-card-type ctx-type-action">액션</div>
+            <div class="ctx-card-title">연차 신청 바로가기</div>
+            <div class="ctx-card-desc">신청 화면으로 이동하여 일정을 선택하세요</div>
+          </div>
+        </div>
+
+      </div><!-- /jarvis-content -->
+    </div><!-- /jarvis-floating -->
+
+    <!-- ===== 메인 채팅 영역 ===== -->
+    <div class="main-chat" id="mainChat">
+
+      <!-- AI 브리핑 (첫 화면) -->
+      <div class="msg-row ai" id="briefingMsg">
+        <div class="ai-avatar">
+          <svg width="14" height="14" viewBox="0 0 24 24" stroke="#fff" stroke-width="2" fill="none">
+            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" fill="#fff" stroke="none"/>
+          </svg>
+        </div>
+        <div class="ai-msg-wrap">
+          <div class="bubble ai">
+            <div style="font-weight:500;margin-bottom:6px;">좋은 아침입니다, 김민기 님 ☀️</div>
+            <div style="font-size:12.5px;color:rgba(0,0,0,0.55);margin-bottom:7px;">오늘 챙기실 일을 정리해드렸어요.</div>
+            <ul class="briefing-list">
+              <li class="briefing-urgent">받은 결재 5건 (휴가신청 D-2 임박)</li>
+              <li>오늘 일정 3건 (10:00 스프린트 플래닝)</li>
+              <li class="briefing-urgent">주간보고 마감 D-1 (작성 미시작)</li>
+              <li>새 공지 2건 (사옥 이전 안내)</li>
+            </ul>
+            <div style="margin-top:8px;font-size:12px;color:rgba(0,0,0,0.45);">도움 필요하시면 말씀해주세요.</div>
+          </div>
+          <div class="msg-time">오전 9:02</div>
+        </div>
+      </div>
+
+      <!-- 동적 메시지 삽입 위치 -->
+
+    </div><!-- /main-chat -->
+
+    <!-- ===== 입력바 ===== -->
+    <div class="input-bar">
+      <input class="chat-input" type="text" id="chatInput" placeholder="자비스에게 물어보세요...">
+      <button class="send-btn" id="sendBtn" title="전송">
+        <svg width="16" height="16" viewBox="0 0 24 24" stroke="#fff" stroke-width="2.2" fill="none">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2" fill="#fff" stroke="none"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ===== 하단 탭바 ===== -->
+    <nav class="bottom-tabs">
+      <button class="tab-item active" id="tab-home">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+        <span>홈</span>
+      </button>
+      <button class="tab-item" id="tab-board">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/>
+          <line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span>게시판</span>
+      </button>
+      <button class="tab-item" id="tab-approval">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+          <path d="M9 11l3 3L22 4"/>
+          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+        </svg>
+        <span>결재</span>
+        <span class="tab-badge">5</span>
+      </button>
+      <button class="tab-item" id="tab-report">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <span>주간보고</span>
+        <span class="tab-badge" style="background:#F59E0B;">D-1</span>
+      </button>
+      <button class="tab-item" id="tab-more">
+        <svg viewBox="0 0 24 24" stroke-width="2">
+          <circle cx="12" cy="5" r="1" fill="currentColor"/>
+          <circle cx="12" cy="12" r="1" fill="currentColor"/>
+          <circle cx="12" cy="19" r="1" fill="currentColor"/>
+        </svg>
+        <span>더보기</span>
+      </button>
+    </nav>
+
+    <!-- ===== 토스트 ===== -->
+    <div class="toast" id="toast">
+      ✨ 자비스가 빠른액션을 보여주고 있어요. 채팅을 시작하면 컨텍스트 액션으로 바뀝니다.
+    </div>
+
+    <!-- 모드 변경 표시 -->
+    <div class="mode-indicator" id="modeIndicator"></div>
+
+  </div><!-- /app -->
+</div><!-- /phone-frame -->
+
+<script>
+(function () {
+  'use strict';
+
+  /* ── 상태 ── */
+  var floatState = 2;        // 1 | 2 | 3
+  var mode = 'quick';        // 'quick' | 'jarvis'
+  var isTyping = false;
+
+  /* ── DOM 참조 ── */
+  var jarvisFloat   = document.getElementById('jarvisFloat');
+  var jarvisBar     = document.getElementById('jarvisBar');
+  var jarvisBarLabel = document.getElementById('jarvisBarLabel');
+  var jarvisPanelTitle = document.getElementById('jarvisPanelTitle');
+  var jarvisContent = document.getElementById('jarvisContent');
+  var quickGrid     = document.getElementById('quickGrid');
+  var ctxCards      = document.getElementById('ctxCards');
+  var btnCollapse   = document.getElementById('btnCollapse');
+  var btnExpand     = document.getElementById('btnExpand');
+  var chatInput     = document.getElementById('chatInput');
+  var sendBtn       = document.getElementById('sendBtn');
+  var mainChat      = document.getElementById('mainChat');
+  var toast         = document.getElementById('toast');
+  var modeIndicator = document.getElementById('modeIndicator');
+  var btnReset      = document.getElementById('btnReset');
+
+  /* ── 플로팅 단계 전환 ── */
+  function setFloatState(n) {
+    floatState = n;
+    jarvisFloat.className = 'jarvis-floating state-' + n;
+
+    // 1단계: 콘텐츠 숨김 (visibility 안전 패턴)
+    if (n === 1) {
+      jarvisContent.style.visibility = 'hidden';
+      jarvisContent.style.pointerEvents = 'none';
+      jarvisContent.style.opacity = '0';
+    } else {
+      jarvisContent.style.visibility = '';
+      jarvisContent.style.pointerEvents = '';
+      jarvisContent.style.opacity = '1';
+    }
+
+    // expand 버튼 아이콘 교체
+    if (n === 3) {
+      // 축소 아이콘
+      btnExpand.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="10" y1="14" x2="3" y2="21"/><line x1="21" y1="3" x2="14" y2="10"/></svg>';
+      btnExpand.title = '축소';
+    } else {
+      // 확대 아이콘
+      btnExpand.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" fill="none"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>';
+      btnExpand.title = '크게 펼치기';
+    }
+  }
+
+  /* ── 모드 전환 (빠른액션 ↔ 자비스 컨텍스트) ── */
+  function setMode(m) {
+    mode = m;
+    if (m === 'quick') {
+      quickGrid.classList.remove('hidden-content');
+      quickGrid.style.display = '';
+      ctxCards.classList.add('layer-off');
+      jarvisBarLabel.textContent = '자비스 — 빠른액션 4개';
+      jarvisPanelTitle.textContent = '자비스';
+    } else {
+      // fade out quick → fade in ctx
+      quickGrid.classList.add('hidden-content');
+      setTimeout(function () {
+        quickGrid.style.display = 'none';
+        ctxCards.classList.remove('layer-off');
+      }, 260);
+      jarvisBarLabel.textContent = '자비스 — 컨텍스트 액션 ↓';
+      jarvisPanelTitle.textContent = '자비스 — 맞춤 액션';
+    }
+  }
+
+  /* ── 바 클릭: 1↔2 토글 ── */
+  jarvisBar.addEventListener('click', function () {
+    setFloatState(floatState === 1 ? 2 : 1);
+  });
+
+  /* ── 접기 버튼 (→ 1단계) ── */
+  btnCollapse.addEventListener('click', function (e) {
+    e.stopPropagation();
+    setFloatState(1);
+  });
+
+  /* ── 확장 버튼 (2↔3단계) ── */
+  btnExpand.addEventListener('click', function (e) {
+    e.stopPropagation();
+    if (floatState === 3) {
+      setFloatState(2);
+    } else {
+      setFloatState(3);
+      // 3단계에서 컨텍스트 카드 보이려면 모드가 jarvis면 바로 표시
+      if (mode === 'jarvis') {
+        ctxCards.classList.remove('layer-off');
+      }
+    }
+  });
+
+  /* ── 빠른액션 칩 클릭 ── */
+  quickGrid.addEventListener('click', function (e) {
+    var chip = e.target.closest('.qa-chip');
+    if (!chip) return;
+    var action = chip.getAttribute('data-action');
+    if (!action) return;
+
+    // 입력창에 채우고 전송 트리거
+    chatInput.value = action;
+    sendMessage();
+  });
+
+  /* ── 전송 ── */
+  sendBtn.addEventListener('click', sendMessage);
+  chatInput.addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  function sendMessage() {
+    var text = chatInput.value.trim();
+    if (!text || isTyping) return;
+    chatInput.value = '';
+
+    appendUserMsg(text);
+    showTyping();
+
+    // 플로팅 2단계로 열기
+    if (floatState === 1) setFloatState(2);
+
+    setTimeout(function () {
+      removeTyping();
+      var reply = getAIReply(text);
+      appendAIMsg(reply);
+
+      // 모드 전환: 빠른액션 → 자비스
+      if (mode === 'quick') {
+        setMode('jarvis');
+        showModeIndicator('컨텍스트 액션으로 전환됐어요');
+      }
+
+      // 1단계였으면 2단계 유지
+      if (floatState < 2) setFloatState(2);
+    }, 1100 + Math.random() * 400);
+  }
+
+  function appendUserMsg(text) {
+    var row = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML =
+      '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:0;">' +
+        '<div class="bubble user">' + escHtml(text) + '</div>' +
+        '<div class="msg-time">' + nowTime() + '</div>' +
+      '</div>';
+    mainChat.appendChild(row);
+    scrollChat();
+  }
+
+  function appendAIMsg(html) {
+    var row = document.createElement('div');
+    row.className = 'msg-row ai';
+    row.innerHTML =
+      '<div class="ai-avatar">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' +
+      '</div>' +
+      '<div class="ai-msg-wrap">' +
+        '<div class="bubble ai">' + html + '</div>' +
+        '<div class="msg-time">' + nowTime() + '</div>' +
+      '</div>';
+    mainChat.appendChild(row);
+    scrollChat();
+  }
+
+  var typingRow = null;
+  function showTyping() {
+    isTyping = true;
+    typingRow = document.createElement('div');
+    typingRow.className = 'msg-row ai';
+    typingRow.id = 'typingRow';
+    typingRow.innerHTML =
+      '<div class="ai-avatar">' +
+        '<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' +
+      '</div>' +
+      '<div class="typing-indicator">' +
+        '<div class="typing-dot"></div>' +
+        '<div class="typing-dot"></div>' +
+        '<div class="typing-dot"></div>' +
+      '</div>';
+    mainChat.appendChild(typingRow);
+    scrollChat();
+  }
+  function removeTyping() {
+    isTyping = false;
+    if (typingRow && typingRow.parentNode) {
+      typingRow.parentNode.removeChild(typingRow);
+    }
+    typingRow = null;
+  }
+
+  /* ── AI 응답 시뮬레이션 ── */
+  function getAIReply(text) {
+    var t = text.replace(/해줘$/, '').trim();
+    if (text.indexOf('휴가') !== -1) {
+      return '네, 휴가 신청할게요. 언제부터 언제까지 사용하실 건가요?';
+    }
+    if (text.indexOf('주간보고') !== -1) {
+      return '주간보고 작성을 도와드릴게요. 이번 주 완료한 업무를 알려주세요.';
+    }
+    if (text.indexOf('차량') !== -1) {
+      return '차량 예약을 진행할게요. 사용 일시와 목적지를 알려주세요.';
+    }
+    if (text.indexOf('회의실') !== -1) {
+      return '회의실 예약을 도와드릴게요. 몇 시에 몇 명이 사용하실 건가요?';
+    }
+    return '알겠습니다. 어떻게 도와드릴까요?';
+  }
+
+  /* ── 새 대화 (↻) ── */
+  btnReset.addEventListener('click', function () {
+    // 동적 메시지 제거 (첫 브리핑 메시지 이후 것만)
+    var msgs = mainChat.querySelectorAll('.msg-row');
+    msgs.forEach(function (m) {
+      if (m.id !== 'briefingMsg') m.parentNode.removeChild(m);
+    });
+    // 상태 초기화
+    setMode('quick');
+    setFloatState(2);
+    chatInput.value = '';
+    showToast('새 대화가 시작됐어요.');
+    scrollChat();
+  });
+
+  /* ── 탭 전환 ── */
+  document.querySelectorAll('.tab-item').forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      document.querySelectorAll('.tab-item').forEach(function (t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+    });
+  });
+
+  /* ── 토스트 ── */
+  function showToast(msg) {
+    toast.textContent = msg;
+    toast.classList.add('visible');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(function () { toast.classList.remove('visible'); }, 4000);
+  }
+
+  /* ── 모드 인디케이터 ── */
+  function showModeIndicator(text) {
+    modeIndicator.textContent = text;
+    modeIndicator.classList.add('visible');
+    clearTimeout(modeIndicator._timer);
+    modeIndicator._timer = setTimeout(function () { modeIndicator.classList.remove('visible'); }, 2200);
+  }
+
+  /* ── 스크롤 하단 ── */
+  function scrollChat() {
+    setTimeout(function () {
+      mainChat.scrollTop = mainChat.scrollHeight;
+    }, 30);
+  }
+
+  /* ── 유틸 ── */
+  function nowTime() {
+    var d = new Date();
+    var h = d.getHours(), m = d.getMinutes();
+    var ampm = h < 12 ? '오전' : '오후';
+    var hh = h % 12 || 12;
+    return ampm + ' ' + hh + ':' + String(m).padStart(2, '0');
+  }
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  /* ── 초기화 ── */
+  // 로드 시 2단계 열림 상태 (합의: 첫 화면은 플로팅 2단계 노출)
+  setFloatState(2);
+  setMode('quick');
+
+  // 토스트 (5초 후 fade)
+  setTimeout(function () { showToast('✨ 자비스 영역을 탭하면 1↔2↔3단계 전환. 빠른액션 칩 클릭으로 대화 시뮬레이션.'); }, 600);
+
+})();
+</script>
+</body>
+</html>

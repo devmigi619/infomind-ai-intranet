@@ -7,6 +7,7 @@ import { NotificationSection } from '../sections/NotificationSection';
 import { CustomizeSection } from '../sections/CustomizeSection';
 import { DisplaySection } from '../sections/DisplaySection';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -21,6 +22,7 @@ export function SettingsScreen() {
   const { settingsCategory, setSettingsCategory } = useUiStore();
   const { data: user } = useCurrentUser();
   const theme = useTheme();
+  const { isMobile } = useResponsive();
 
   const renderContent = () => {
     switch (settingsCategory) {
@@ -46,6 +48,49 @@ export function SettingsScreen() {
         return <DisplaySection />;
     }
   };
+
+  if (isMobile) {
+    return (
+      <View style={[styles.mobileRoot, { backgroundColor: theme.bg.surface }]}>
+        {/* 상단 가로 탭 */}
+        <View style={[styles.tabBar, { borderBottomColor: theme.border.subtle }]}>
+          {CATEGORIES.map(({ key, label }) => {
+            const isActive = settingsCategory === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setSettingsCategory(key)}
+                activeOpacity={0.7}
+                style={styles.tabItem}
+              >
+                <Text
+                  style={[
+                    styles.tabLabel,
+                    { color: isActive ? theme.brand.primary : theme.text.muted },
+                    isActive && { fontWeight: '500' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
+                {isActive && (
+                  <View style={[styles.tabUnderline, { backgroundColor: theme.brand.primary }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        <ScrollView
+          style={[styles.contentArea, { backgroundColor: theme.bg.surface }]}
+          contentContainerStyle={styles.mobileContentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {renderContent()}
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.root, { backgroundColor: theme.bg.surface }]}>
@@ -149,5 +194,35 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 32,
+  },
+  mobileRoot: {
+    flex: 1,
+    flexDirection: 'column',
+  },
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    paddingHorizontal: 8,
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  tabLabel: {
+    fontSize: 14,
+    fontFamily: WEB_FONT,
+  },
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 16,
+    right: 16,
+    height: 2,
+    borderRadius: 1,
+  },
+  mobileContentContainer: {
+    padding: 16,
   },
 });

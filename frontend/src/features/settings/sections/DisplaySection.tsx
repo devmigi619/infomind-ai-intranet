@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native
 import { useUiStore, type ThemePreference } from '../../../store/uiStore';
 import { useColorScheme } from 'react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -17,6 +18,7 @@ export function DisplaySection() {
   const setThemePreference = useUiStore((s) => s.setThemePreference);
   const systemScheme = useColorScheme();
   const theme = useTheme();
+  const { isMobile } = useResponsive();
 
   const systemLabel = systemScheme === 'dark' ? '다크' : '라이트';
 
@@ -25,7 +27,7 @@ export function DisplaySection() {
       <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>화면</Text>
 
       {/* Dark mode row */}
-      <View style={styles.fieldRow}>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
         <Text style={[styles.fieldLabel, { color: theme.text.body }]}>다크 모드</Text>
         <View style={styles.optionGroup}>
           {THEME_OPTIONS.map((opt) => {
@@ -72,7 +74,7 @@ export function DisplaySection() {
       <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Language row */}
-      <View style={styles.fieldRow}>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
         <Text style={[styles.fieldLabel, { color: theme.text.body }]}>언어</Text>
         <View
           style={[
@@ -110,6 +112,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     gap: 12,
+  },
+  // 모바일: 라벨 위, 옵션/셀렉트 아래
+  fieldRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    gap: 8,
   },
   fieldLabel: {
     fontSize: 14,

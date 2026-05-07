@@ -4,6 +4,7 @@ import { Sparkles } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatMessage } from '../../../shared/components/ChatMessage';
 import { ChatInput } from '../../../shared/components/ChatInput';
+import { FloatingResetButton } from '../../../shared/components/FloatingResetButton';
 import { useUiStore } from '../../../store/uiStore';
 import { useTheme } from '../../../shared/hooks/useTheme';
 
@@ -219,6 +220,9 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
           ))}
         </ScrollView>
       )}
+
+      {/* Floating reset button — 채팅창 우측 하단 */}
+      <FloatingResetButton />
 
       <ChatInput
         value={inputText}

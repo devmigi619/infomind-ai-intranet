@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
 import {
   useNotifications,
   useMarkAsRead,
@@ -33,6 +34,8 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
   const markAsRead = useMarkAsRead();
   const markAllAsRead = useMarkAllAsRead();
   const theme = useTheme();
+  const { isMobile, width: screenWidth } = useResponsive();
+  const dropdownWidth = isMobile ? screenWidth - 32 : 380;
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -97,6 +100,8 @@ export function NotificationDropdown({ isOpen, onClose }: NotificationDropdownPr
             {
               backgroundColor: theme.bg.surface,
               borderColor: theme.border.default,
+              width: dropdownWidth,
+              right: isMobile ? 16 : 16,
             },
           ]}
         >

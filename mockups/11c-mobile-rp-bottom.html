@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infomind — 11c. 모바일 RP 하단 부분 시트</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #D0D0D0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font-family: inherit; }
+svg { stroke: currentColor; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+
+/* ===== 폰 프레임 ===== */
+.phone-frame {
+  position: relative;
+  width: 375px;
+  height: 812px;
+  background: #fff;
+  border-radius: 48px;
+  box-shadow:
+    0 0 0 2px #555,
+    0 0 0 10px #1c1c1e,
+    0 0 0 12px #2c2c2e,
+    0 40px 100px rgba(0,0,0,0.55);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 34px;
+  background: #1c1c1e;
+  border-radius: 20px;
+  z-index: 9999;
+}
+
+/* ===== 앱 루트 ===== */
+.app {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #F9F9F9;
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  flex-shrink: 0;
+  padding-top: 54px;
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 200;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  gap: 6px;
+}
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.65);
+  transition: background 140ms;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: rgba(0,0,0,0.06); }
+.icon-btn:active { background: rgba(0,0,0,0.1); }
+.header-brand {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #000;
+  user-select: none;
+}
+.header-right { display: flex; align-items: center; gap: 2px; }
+.notif-wrap { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+}
+.avatar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0A2463;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+/* ===== 메인 스크롤 영역 ===== */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 8px;
+}
+
+/* AI 채팅 영역 */
+.chat-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 24px 20px;
+}
+.ai-orb {
+  width: 56px;
+  height: 56px;
+  background: #0A2463;
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+  box-shadow: 0 6px 20px rgba(10,36,99,0.28);
+}
+.welcome-title {
+  font-size: 19px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 6px;
+  letter-spacing: -0.02em;
+}
+.welcome-sub {
+  font-size: 13px;
+  color: rgba(0,0,0,0.48);
+  text-align: center;
+  line-height: 1.65;
+}
+
+/* 채팅 말풍선 */
+.chat-messages {
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.msg-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+.msg-row.user { justify-content: flex-end; }
+.msg-row.ai { justify-content: flex-start; }
+.msg-ai-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: #0A2463;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-bottom: 2px;
+}
+.msg-bubble {
+  max-width: 76%;
+  padding: 10px 13px;
+  border-radius: 16px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.msg-bubble.user {
+  background: #0A2463;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+.msg-bubble.ai {
+  background: #fff;
+  color: #000;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.msg-thinking {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding: 10px 14px;
+}
+.dot-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.3);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.dot-pulse:nth-child(2) { animation-delay: 0.2s; }
+.dot-pulse:nth-child(3) { animation-delay: 0.4s; }
+@keyframes pulse {
+  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* 추천 프롬프트 */
+.section-block { padding: 0 16px 16px; }
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.32);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+.prompt-cards { display: flex; flex-direction: column; gap: 9px; }
+.prompt-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  transition: box-shadow 160ms, border-color 160ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.prompt-card:hover { border-color: rgba(10,36,99,0.2); box-shadow: 0 3px 12px rgba(10,36,99,0.08); }
+.prompt-emoji {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  flex-shrink: 0;
+}
+.p-blue { background: rgba(10,36,99,0.07); }
+.p-green { background: rgba(16,185,129,0.1); }
+.p-amber { background: rgba(245,158,11,0.1); }
+.prompt-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+.prompt-body span {
+  font-size: 12px;
+  color: rgba(0,0,0,0.48);
+  line-height: 1.5;
+}
+
+/* ===== 채팅 입력바 ===== */
+.chat-input-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 10px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 150;
+}
+.chat-input {
+  flex: 1;
+  height: 40px;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  border-radius: 20px;
+  padding: 0 14px;
+  font-size: 14px;
+  background: #F9F9F9;
+  color: #000;
+  outline: none;
+  transition: border-color 150ms, background 150ms;
+}
+.chat-input:focus { border-color: rgba(10,36,99,0.32); background: #fff; }
+.chat-input::placeholder { color: rgba(0,0,0,0.32); }
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0A2463;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: opacity 150ms;
+}
+.send-btn:hover { opacity: 0.85; }
+
+/* ===== 하단 탭바 ===== */
+.bottom-nav {
+  flex-shrink: 0;
+  height: 64px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: 4px;
+  position: relative;
+  z-index: 300;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(0,0,0,0.36);
+  transition: color 160ms;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.tab-item.active { color: #0A2463; }
+.tab-item svg { width: 22px; height: 22px; }
+.tab-label { font-size: 10px; font-weight: 500; }
+.tab-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 2.5px;
+  background: #0A2463;
+  border-radius: 0 0 3px 3px;
+}
+
+/* ===== LP 좌측 드로어 (11b 안전 패턴 적용) ===== */
+.lp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  visibility: hidden;
+  pointer-events: none;
+}
+.lp-overlay.open {
+  visibility: visible;
+  pointer-events: auto;
+}
+.lp-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  transition: background 280ms ease;
+}
+.lp-overlay.open .lp-dim { background: rgba(0,0,0,0.38); }
+.lp-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 300px;
+  background: #fff;
+  transform: translateX(-100%);
+  transition: transform 280ms cubic-bezier(0.16,1,0.3,1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 6px 0 24px rgba(0,0,0,0.14);
+}
+.lp-overlay.open .lp-panel { transform: translateX(0); }
+.lp-header {
+  padding: 54px 18px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lp-brand { font-size: 19px; font-weight: 300; letter-spacing: 0.1em; color: #000; }
+.lp-close-btn {
+  width: 30px; height: 30px;
+  border: none; background: rgba(0,0,0,0.06);
+  border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(0,0,0,0.55);
+}
+.lp-user {
+  display: flex; align-items: center; gap: 11px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.lp-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%; background: #0A2463;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 13px; font-weight: 700;
+}
+.lp-user-name { font-size: 14px; font-weight: 600; color: #000; line-height: 1.3; }
+.lp-user-dept { font-size: 11px; color: rgba(0,0,0,0.45); margin-top: 2px; }
+.lp-nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+.lp-sec-label {
+  font-size: 10px; font-weight: 700;
+  color: rgba(0,0,0,0.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 18px 5px;
+}
+.lp-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 18px;
+  border: none; background: transparent;
+  cursor: pointer; width: 100%; text-align: left;
+  font-size: 14px; font-weight: 400;
+  color: rgba(0,0,0,0.72);
+  transition: background 110ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.lp-item:hover { background: rgba(0,0,0,0.04); }
+.lp-item.active { color: #0A2463; background: rgba(10,36,99,0.06); font-weight: 600; }
+.lp-item svg { width: 17px; height: 17px; opacity: 0.65; flex-shrink: 0; }
+.lp-item.active svg { opacity: 1; }
+.lp-footer { border-top: 1px solid rgba(0,0,0,0.08); padding: 10px 0 20px; }
+
+/* ===================================================================
+   RP 하단 부분 시트 (11c 핵심)
+   - visibility: hidden + pointer-events: none (11b 안전 패턴 적용)
+   - 시작: translateY(100%) → 열림: translateY(0)
+   - z-index: 탭바(300) 위
+   =================================================================== */
+.rp-sheet {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;              /* 탭바 포함 바닥에 붙음 */
+  height: 35%;            /* 화면 35% ≈ 284px */
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -8px 24px rgba(0,0,0,0.12), 0 -1px 0 rgba(0,0,0,0.06);
+  z-index: 400;           /* 탭바(300) 위 */
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(100%);
+  transition: transform 320ms cubic-bezier(0.16,1,0.3,1),
+              visibility 0ms 320ms;
+  display: flex;
+  flex-direction: column;
+}
+.rp-sheet.open {
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0);
+  transition: transform 320ms cubic-bezier(0.16,1,0.3,1),
+              visibility 0ms 0ms;
+}
+/* 풀스크린 확장 상태 */
+.rp-sheet.expanded {
+  height: 90%;
+  border-radius: 16px 16px 0 0;
+}
+
+/* drag handle */
+.rp-handle-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0 6px;
+}
+.rp-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(0,0,0,0.16);
+  border-radius: 2px;
+}
+
+/* 시트 헤더 */
+.rp-sheet-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px 10px;
+}
+.rp-sheet-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(0,0,0,0.45);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.rp-sheet-close {
+  width: 26px; height: 26px;
+  border: none; background: rgba(0,0,0,0.07);
+  border-radius: 7px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(0,0,0,0.55);
+  flex-shrink: 0;
+}
+.rp-sheet-close:hover { background: rgba(0,0,0,0.1); }
+
+/* 시트 본문 */
+.rp-sheet-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* 자비스 카드 공통 */
+.jarvis-card {
+  border-radius: 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(0,0,0,0.07);
+  background: #fff;
+}
+
+/* 1. 액션 카드 */
+.jarvis-card.action {
+  border-color: rgba(10,36,99,0.22);
+  background: rgba(10,36,99,0.03);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: background 140ms;
+}
+.jarvis-card.action:hover { background: rgba(10,36,99,0.06); }
+.action-icon {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: #0A2463;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.action-text { flex: 1; }
+.action-text strong {
+  display: block;
+  font-size: 13px; font-weight: 600;
+  color: #0A2463;
+  margin-bottom: 1px;
+}
+.action-text span {
+  font-size: 11px;
+  color: rgba(10,36,99,0.55);
+}
+.action-arrow { color: #0A2463; opacity: 0.7; flex-shrink: 0; }
+
+/* 2. 정보 카드 */
+.jarvis-card.info {}
+.info-tag {
+  font-size: 10px; font-weight: 700;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+.info-summary {
+  font-size: 12px;
+  color: rgba(0,0,0,0.65);
+  line-height: 1.6;
+  margin-bottom: 9px;
+}
+.info-more-btn {
+  font-size: 11px; font-weight: 600;
+  color: #0A2463;
+  background: transparent;
+  border: 1px solid rgba(10,36,99,0.22);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: background 120ms;
+}
+.info-more-btn:hover { background: rgba(10,36,99,0.05); }
+
+/* 3. 현황 카드 */
+.jarvis-card.status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.status-num-wrap {}
+.status-num {
+  font-size: 32px;
+  font-weight: 700;
+  color: #000;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+.status-denom {
+  font-size: 13px;
+  color: rgba(0,0,0,0.35);
+  margin-left: 1px;
+}
+.status-bar-wrap { flex: 1; }
+.status-label {
+  font-size: 11px; font-weight: 600;
+  color: rgba(0,0,0,0.45);
+  margin-bottom: 6px;
+}
+.status-bar-bg {
+  height: 5px;
+  background: rgba(0,0,0,0.08);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.status-bar-fill {
+  height: 100%;
+  background: #0A2463;
+  border-radius: 3px;
+  width: 46.7%; /* 7/15 */
+}
+.status-sub {
+  font-size: 10px;
+  color: rgba(0,0,0,0.35);
+  margin-top: 4px;
+}
+
+/* ===== 토스트 ===== */
+.toast {
+  position: absolute;
+  top: 120px;
+  left: 16px;
+  right: 16px;
+  z-index: 9000;
+  background: rgba(10,36,99,0.93);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  padding: 10px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.22);
+  pointer-events: auto;
+  opacity: 1;
+  transition: opacity 500ms ease;
+}
+.toast.fade { opacity: 0; pointer-events: none; }
+.toast-icon {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  background: rgba(255,255,255,0.18);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.toast-text { flex: 1; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="app">
+
+    <!-- ① TopHeader -->
+    <header class="top-header">
+      <div class="header-inner">
+        <button class="icon-btn" id="hamburgerBtn">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <line x1="3" y1="6" x2="17" y2="6" stroke-width="1.5"/>
+            <line x1="3" y1="10" x2="17" y2="10" stroke-width="1.5"/>
+            <line x1="3" y1="14" x2="17" y2="14" stroke-width="1.5"/>
+          </svg>
+        </button>
+        <span class="header-brand">Infomind</span>
+        <div class="header-right">
+          <div class="notif-wrap">
+            <button class="icon-btn">
+              <svg width="19" height="19" viewBox="0 0 19 19">
+                <path d="M9.5 2a5.5 5.5 0 0 1 5.5 5.5v3l1.4 2.5H2.6L4 10.5V7.5A5.5 5.5 0 0 1 9.5 2Z" stroke-width="1.4"/>
+                <path d="M7.5 15.5a2 2 0 0 0 4 0" stroke-width="1.4"/>
+              </svg>
+            </button>
+            <span class="notif-badge"></span>
+          </div>
+          <button class="avatar-btn">MK</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ② 메인 채팅 -->
+    <main class="main" id="mainArea">
+      <div class="chat-welcome">
+        <div class="ai-orb">
+          <svg width="26" height="26" viewBox="0 0 26 26" stroke="#fff" stroke-width="1.6" fill="none">
+            <circle cx="13" cy="13" r="9"/>
+            <circle cx="13" cy="13" r="3.5"/>
+          </svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 김민기 님</div>
+        <div class="welcome-sub">오늘 무엇을 도와드릴까요?<br>질문하거나 업무를 요청해 보세요.</div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-label">추천 질문</div>
+        <div class="prompt-cards">
+          <div class="prompt-card" onclick="simulateChat('휴가 신청 도와줘')">
+            <div class="prompt-emoji p-blue">🏖️</div>
+            <div class="prompt-body">
+              <strong>휴가 신청 도와줘</strong>
+              <span>연차 잔여 확인 + 결재 초안 자동 작성</span>
+            </div>
+          </div>
+          <div class="prompt-card" onclick="simulateChat('이번 주 결재 현황')">
+            <div class="prompt-emoji p-amber">📋</div>
+            <div class="prompt-body">
+              <strong>이번 주 결재 현황 요약</strong>
+              <span>대기 3건, 완료 5건 — 상세 확인</span>
+            </div>
+          </div>
+          <div class="prompt-card" onclick="simulateChat('주간보고 초안 작성')">
+            <div class="prompt-emoji p-green">📝</div>
+            <div class="prompt-body">
+              <strong>주간보고 초안 작성</strong>
+              <span>이번 주 업무 내용 정리</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 채팅 메시지 (동적 추가됨) -->
+      <div class="chat-messages" id="chatMessages"></div>
+    </main>
+
+    <!-- ③ 채팅 입력바 -->
+    <div class="chat-input-bar">
+      <input class="chat-input" id="chatInput" type="text" placeholder="Infomind에게 질문하세요…">
+      <button class="send-btn" id="sendBtn" onclick="handleSend()">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#fff" stroke-width="1.8">
+          <path d="M2 15L15.5 8.5L2 2v5l9 1.5-9 1.5V15Z" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ④ 하단 탭바 -->
+    <nav class="bottom-nav">
+      <button class="tab-item active" data-tab="home">
+        <svg viewBox="0 0 22 22"><path d="M3 10L11 3l8 7V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" stroke-width="1.5"/><path d="M8 21v-7h6v7" stroke-width="1.5"/></svg>
+        <span class="tab-label">홈</span>
+      </button>
+      <button class="tab-item" data-tab="board">
+        <svg viewBox="0 0 22 22"><rect x="3" y="3" width="16" height="16" rx="2" stroke-width="1.5"/><line x1="7" y1="8" x2="15" y2="8" stroke-width="1.5"/><line x1="7" y1="11.5" x2="13" y2="11.5" stroke-width="1.5"/><line x1="7" y1="15" x2="10" y2="15" stroke-width="1.5"/></svg>
+        <span class="tab-label">게시판</span>
+      </button>
+      <button class="tab-item" data-tab="approval">
+        <svg viewBox="0 0 22 22"><path d="M6 2h10l4 4v15a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke-width="1.5"/><polyline points="16,2 16,6 22,6" stroke-width="1.5"/><line x1="7" y1="11" x2="15" y2="11" stroke-width="1.5"/><line x1="7" y1="15" x2="11" y2="15" stroke-width="1.5"/></svg>
+        <span class="tab-label">결재</span>
+      </button>
+      <button class="tab-item" data-tab="report">
+        <svg viewBox="0 0 22 22"><rect x="3" y="4" width="16" height="16" rx="2" stroke-width="1.5"/><line x1="7" y1="2" x2="7" y2="6" stroke-width="1.5"/><line x1="15" y1="2" x2="15" y2="6" stroke-width="1.5"/><line x1="3" y1="10" x2="19" y2="10" stroke-width="1.5"/></svg>
+        <span class="tab-label">주간보고</span>
+      </button>
+      <button class="tab-item" data-tab="more">
+        <svg viewBox="0 0 22 22">
+          <circle cx="5" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="11" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="17" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tab-label">더보기</span>
+      </button>
+    </nav>
+
+    <!-- LP 드로어 (11b 안전 패턴) -->
+    <div class="lp-overlay" id="lpOverlay">
+      <div class="lp-dim" id="lpDim"></div>
+      <div class="lp-panel">
+        <div class="lp-header">
+          <span class="lp-brand">Infomind</span>
+          <button class="lp-close-btn" id="lpClose">
+            <svg width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="2" x2="12" y2="12" stroke-width="1.6"/><line x1="12" y1="2" x2="2" y2="12" stroke-width="1.6"/></svg>
+          </button>
+        </div>
+        <div class="lp-user">
+          <div class="lp-avatar">MK</div>
+          <div>
+            <div class="lp-user-name">김민기</div>
+            <div class="lp-user-dept">개발팀 · 시니어 개발자</div>
+          </div>
+        </div>
+        <nav class="lp-nav">
+          <div class="lp-sec-label">메인</div>
+          <button class="lp-item active">
+            <svg viewBox="0 0 17 17"><path d="M2 7.5L8.5 2l6.5 5.5V15a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5Z" stroke-width="1.4"/></svg>
+            홈 / AI 채팅
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><rect x="2" y="2" width="13" height="13" rx="2" stroke-width="1.4"/><line x1="5" y1="6" x2="12" y2="6" stroke-width="1.4"/><line x1="5" y1="9" x2="10" y2="9" stroke-width="1.4"/></svg>
+            게시판
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><path d="M5 1h8l3 3.5V15a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1Z" stroke-width="1.4"/></svg>
+            전자결재
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><rect x="2" y="3" width="13" height="12" rx="2" stroke-width="1.4"/><line x1="5" y1="1" x2="5" y2="5" stroke-width="1.4"/><line x1="12" y1="1" x2="12" y2="5" stroke-width="1.4"/><line x1="2" y1="8" x2="15" y2="8" stroke-width="1.4"/></svg>
+            주간보고
+          </button>
+          <div class="lp-sec-label">설정</div>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><circle cx="8.5" cy="8.5" r="2" stroke-width="1.4"/><path d="M8.5 1v2M8.5 14v2M1 8.5h2M14 8.5h2" stroke-width="1.4" stroke-linecap="round"/></svg>
+            설정
+          </button>
+        </nav>
+        <div class="lp-footer">
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><path d="M6 14H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3" stroke-width="1.4"/><polyline points="10,11 14,8.5 10,6" stroke-width="1.4"/><line x1="14" y1="8.5" x2="5.5" y2="8.5" stroke-width="1.4"/></svg>
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RP 하단 부분 시트 (11c 핵심) -->
+    <div class="rp-sheet" id="rpSheet">
+      <div class="rp-handle-bar" id="rpHandleBar">
+        <div class="rp-handle"></div>
+      </div>
+      <div class="rp-sheet-header">
+        <span class="rp-sheet-title">자비스 제안</span>
+        <button class="rp-sheet-close" id="rpClose">
+          <svg width="12" height="12" viewBox="0 0 12 12"><line x1="2" y1="2" x2="10" y2="10" stroke-width="1.7"/><line x1="10" y1="2" x2="2" y2="10" stroke-width="1.7"/></svg>
+        </button>
+      </div>
+      <div class="rp-sheet-body">
+        <!-- 카드 1: 액션 -->
+        <div class="jarvis-card action" onclick="showToastMsg('결재 화면으로 이동합니다')">
+          <div class="action-icon">
+            <svg width="16" height="16" viewBox="0 0 16 16" stroke="#fff" stroke-width="1.5">
+              <path d="M4 1h6l4 4v9a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1Z"/>
+              <polyline points="10,1 10,5 14,5"/>
+              <line x1="5" y1="8" x2="11" y2="8" stroke-width="1.4"/>
+              <line x1="5" y1="11" x2="8" y2="11" stroke-width="1.4"/>
+            </svg>
+          </div>
+          <div class="action-text">
+            <strong>휴가 결재 쓰러가기</strong>
+            <span>전자결재 → 연차 신청서 바로 열기</span>
+          </div>
+          <div class="action-arrow">
+            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M5 3l4 4-4 4" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+
+        <!-- 카드 2: 정보 -->
+        <div class="jarvis-card info">
+          <div class="info-tag">관련 규정</div>
+          <div class="info-summary">연차휴가는 1년 이상 근무 시 15일 발생. 반차는 오전(09~14시) / 오후(14~18시) 구분. 3일 이상 연속 사용 시 팀장 사전 승인 필요.</div>
+          <button class="info-more-btn" onclick="showToastMsg('휴가규정 전체 보기')">전체보기</button>
+        </div>
+
+        <!-- 카드 3: 현황 -->
+        <div class="jarvis-card status">
+          <div class="status-num-wrap">
+            <span class="status-num">7</span><span class="status-denom">일</span>
+          </div>
+          <div class="status-bar-wrap">
+            <div class="status-label">남은 연차</div>
+            <div class="status-bar-bg">
+              <div class="status-bar-fill"></div>
+            </div>
+            <div class="status-sub">사용 8일 / 전체 15일</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 안내 토스트 -->
+    <div class="toast" id="toast">
+      <div class="toast-icon">
+        <svg width="10" height="10" viewBox="0 0 10 10" stroke="#fff" stroke-width="1.5"><circle cx="5" cy="5" r="4"/><line x1="5" y1="4" x2="5" y2="7" stroke-linecap="round"/><circle cx="5" cy="2.8" r="0.4" fill="#fff" stroke="none"/></svg>
+      </div>
+      <span class="toast-text">RP 시트가 <strong>하단</strong>에서 자동 등장. 채팅에서 "휴가 신청 도와줘"를 눌러보세요. swipe up → 펼치기, X → 닫기</span>
+    </div>
+
+  </div><!-- .app -->
+</div><!-- .phone-frame -->
+
+<script>
+/* ===== LP ===== */
+const lpOverlay = document.getElementById('lpOverlay');
+const lpDim     = document.getElementById('lpDim');
+const lpClose   = document.getElementById('lpClose');
+const hamburger = document.getElementById('hamburgerBtn');
+
+function openLP() { lpOverlay.classList.add('open'); }
+function closeLP() { lpOverlay.classList.remove('open'); }
+
+hamburger.addEventListener('click', openLP);
+lpClose.addEventListener('click', closeLP);
+lpDim.addEventListener('click', closeLP);
+
+document.querySelectorAll('.lp-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.lp-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+    setTimeout(closeLP, 180);
+  });
+});
+
+/* ===== RP 시트 ===== */
+const rpSheet = document.getElementById('rpSheet');
+const rpClose = document.getElementById('rpClose');
+
+function openRP() {
+  rpSheet.classList.add('open');
+  rpSheet.classList.remove('expanded');
+}
+function closeRP() {
+  rpSheet.classList.remove('open');
+  rpSheet.classList.remove('expanded');
+}
+
+rpClose.addEventListener('click', closeRP);
+
+/* swipe 제스처 (드래그 핸들) */
+let startY = 0;
+let startHeight = 0;
+let isDragging = false;
+
+const handleBar = document.getElementById('rpHandleBar');
+
+handleBar.addEventListener('pointerdown', (e) => {
+  isDragging = true;
+  startY = e.clientY;
+  startHeight = rpSheet.offsetHeight;
+  handleBar.setPointerCapture(e.pointerId);
+  rpSheet.style.transition = 'none';
+});
+
+handleBar.addEventListener('pointermove', (e) => {
+  if (!isDragging) return;
+  const dy = e.clientY - startY;
+  const newHeight = Math.max(80, Math.min(730, startHeight - dy));
+  rpSheet.style.height = newHeight + 'px';
+});
+
+handleBar.addEventListener('pointerup', (e) => {
+  if (!isDragging) return;
+  isDragging = false;
+  rpSheet.style.transition = '';
+  const currentH = rpSheet.offsetHeight;
+  const phoneH = 812;
+
+  if (currentH > phoneH * 0.6) {
+    // 풀스크린 확장
+    rpSheet.classList.add('expanded');
+    rpSheet.style.height = '';
+  } else if (currentH < phoneH * 0.2) {
+    // 닫기
+    rpSheet.style.height = '';
+    closeRP();
+  } else {
+    // 35% 기본 상태
+    rpSheet.classList.remove('expanded');
+    rpSheet.style.height = '';
+  }
+});
+
+/* ===== 채팅 시뮬레이션 ===== */
+const chatMessages = document.getElementById('chatMessages');
+const chatInput = document.getElementById('chatInput');
+let chatActive = false;
+
+function appendMsg(type, text) {
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + type;
+  if (type === 'ai') {
+    row.innerHTML = `
+      <div class="msg-ai-avatar">
+        <svg width="14" height="14" viewBox="0 0 14 14" stroke="#fff" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="2"/></svg>
+      </div>
+      <div class="msg-bubble ai">${text}</div>`;
+  } else {
+    row.innerHTML = `<div class="msg-bubble user">${text}</div>`;
+  }
+  chatMessages.appendChild(row);
+  row.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return row;
+}
+
+function appendThinking() {
+  const row = document.createElement('div');
+  row.className = 'msg-row ai';
+  row.innerHTML = `
+    <div class="msg-ai-avatar">
+      <svg width="14" height="14" viewBox="0 0 14 14" stroke="#fff" stroke-width="1.4"><circle cx="7" cy="7" r="5"/><circle cx="7" cy="7" r="2"/></svg>
+    </div>
+    <div class="msg-bubble ai msg-thinking">
+      <div class="dot-pulse"></div>
+      <div class="dot-pulse"></div>
+      <div class="dot-pulse"></div>
+    </div>`;
+  chatMessages.appendChild(row);
+  row.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  return row;
+}
+
+function simulateChat(text) {
+  if (chatActive) return;
+  chatActive = true;
+
+  // 웰컴 + 프롬프트 숨기기
+  document.querySelector('.chat-welcome').style.display = 'none';
+  document.querySelector('.section-block').style.display = 'none';
+
+  appendMsg('user', text);
+
+  const thinkRow = appendThinking();
+
+  setTimeout(() => {
+    thinkRow.remove();
+    appendMsg('ai', '알겠습니다! 연차 잔여 현황을 확인해드릴게요. 휴가 결재 신청도 바로 도와드릴 수 있어요.');
+    // RP 시트 자동 등장
+    setTimeout(() => {
+      openRP();
+      chatActive = false;
+    }, 400);
+  }, 1600);
+}
+
+function handleSend() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  chatInput.value = '';
+  simulateChat(text);
+}
+
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleSend();
+});
+
+/* ===== 탭 전환 ===== */
+document.querySelectorAll('.tab-item').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+/* ===== ESC ===== */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeLP(); closeRP(); }
+});
+
+/* ===== 간단 토스트 ===== */
+function showToastMsg(msg) {
+  const t = document.getElementById('toast');
+  t.querySelector('.toast-text').textContent = msg;
+  t.classList.remove('fade');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.add('fade'), 2000);
+}
+
+/* ===== 안내 토스트 5초 후 fade ===== */
+const mainToast = document.getElementById('toast');
+setTimeout(() => mainToast.classList.add('fade'), 5000);
+</script>
+</body>
+</html>

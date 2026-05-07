@@ -35,7 +35,7 @@ export function TopHeader({
   onToggleAdminMode,
   hasUnreadAi,
 }: TopHeaderProps) {
-  const isAdmin = user?.role === 'ADMIN';
+  const isAdmin = user?.userId === 'admin';
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = useUnreadNotificationCount();
   const theme = useTheme();

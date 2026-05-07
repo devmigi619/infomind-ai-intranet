@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { User } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
 
 interface AccountSectionProps {
   user: {
@@ -26,6 +27,7 @@ export function AccountSection({ user }: AccountSectionProps) {
   const [email, setEmail] = useState(user?.email ?? '');
   const [phone, setPhone] = useState('');
   const theme = useTheme();
+  const { isMobile } = useResponsive();
 
   const handlePasswordChange = () => {
     if (Platform.OS === 'web') {
@@ -52,34 +54,56 @@ export function AccountSection({ user }: AccountSectionProps) {
       <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Read-only: name */}
-      <View style={styles.fieldRow}>
-        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>이름</Text>
-        <Text style={[styles.fieldValue, { color: theme.text.primary }]}>{user?.name ?? '관리자'}</Text>
-        <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
+        <View style={isMobile ? styles.labelHintRowMobile : undefined}>
+          <Text style={[styles.fieldLabel, isMobile && styles.fieldLabelMobile, { color: theme.text.body }]}>이름</Text>
+          {isMobile && (
+            <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+          )}
+        </View>
+        <Text style={[styles.fieldValue, isMobile && styles.fieldValueMobile, { color: theme.text.primary }]}>{user?.name ?? '관리자'}</Text>
+        {!isMobile && (
+          <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+        )}
       </View>
 
       {/* Read-only: department */}
-      <View style={styles.fieldRow}>
-        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>부서</Text>
-        <Text style={[styles.fieldValue, { color: theme.text.primary }]}>{user?.department ?? 'IT'}</Text>
-        <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
+        <View style={isMobile ? styles.labelHintRowMobile : undefined}>
+          <Text style={[styles.fieldLabel, isMobile && styles.fieldLabelMobile, { color: theme.text.body }]}>부서</Text>
+          {isMobile && (
+            <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+          )}
+        </View>
+        <Text style={[styles.fieldValue, isMobile && styles.fieldValueMobile, { color: theme.text.primary }]}>{user?.department ?? 'IT'}</Text>
+        {!isMobile && (
+          <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+        )}
       </View>
 
       {/* Read-only: position */}
-      <View style={styles.fieldRow}>
-        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>직급</Text>
-        <Text style={[styles.fieldValue, { color: theme.text.primary }]}>{user?.position ?? '관리자'}</Text>
-        <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
+        <View style={isMobile ? styles.labelHintRowMobile : undefined}>
+          <Text style={[styles.fieldLabel, isMobile && styles.fieldLabelMobile, { color: theme.text.body }]}>직급</Text>
+          {isMobile && (
+            <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+          )}
+        </View>
+        <Text style={[styles.fieldValue, isMobile && styles.fieldValueMobile, { color: theme.text.primary }]}>{user?.position ?? '관리자'}</Text>
+        {!isMobile && (
+          <Text style={[styles.fieldHint, { color: theme.text.subtle }]}>관리자에게 문의</Text>
+        )}
       </View>
 
       <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Editable: email */}
-      <View style={styles.fieldRow}>
-        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>이메일</Text>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
+        <Text style={[styles.fieldLabel, isMobile && styles.fieldLabelMobile, { color: theme.text.body }]}>이메일</Text>
         <TextInput
           style={[
             styles.textInput,
+            isMobile && styles.textInputMobile,
             {
               borderColor: theme.border.strong,
               color: theme.text.primary,
@@ -96,11 +120,12 @@ export function AccountSection({ user }: AccountSectionProps) {
       </View>
 
       {/* Editable: phone */}
-      <View style={styles.fieldRow}>
-        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>연락처</Text>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
+        <Text style={[styles.fieldLabel, isMobile && styles.fieldLabelMobile, { color: theme.text.body }]}>연락처</Text>
         <TextInput
           style={[
             styles.textInput,
+            isMobile && styles.textInputMobile,
             {
               borderColor: theme.border.strong,
               color: theme.text.primary,
@@ -118,16 +143,18 @@ export function AccountSection({ user }: AccountSectionProps) {
       <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
 
       {/* Password change row */}
-      <View style={styles.fieldRow}>
-        <Text style={[styles.fieldLabel, { color: theme.text.body }]}>비밀번호</Text>
-        <Text style={[styles.passwordDots, { color: theme.text.muted }]}>●●●●●●●●●</Text>
-        <TouchableOpacity
-          onPress={handlePasswordChange}
-          activeOpacity={0.8}
-          style={[styles.primaryButton, { backgroundColor: theme.brand.primary }]}
-        >
-          <Text style={[styles.primaryButtonText, { color: theme.text.onBrand }]}>변경하기</Text>
-        </TouchableOpacity>
+      <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
+        <Text style={[styles.fieldLabel, isMobile && styles.fieldLabelMobile, { color: theme.text.body }]}>비밀번호</Text>
+        <View style={isMobile ? styles.passwordRowMobile : styles.passwordRowInline}>
+          <Text style={[styles.passwordDots, isMobile && styles.passwordDotsMobile, { color: theme.text.muted }]}>●●●●●●●●●</Text>
+          <TouchableOpacity
+            onPress={handlePasswordChange}
+            activeOpacity={0.8}
+            style={[styles.primaryButton, { backgroundColor: theme.brand.primary }]}
+          >
+            <Text style={[styles.primaryButtonText, { color: theme.text.onBrand }]}>변경하기</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -175,6 +202,19 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 12,
   },
+  // 모바일: 라벨 위, 값/입력 아래
+  fieldRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'stretch',
+    gap: 6,
+    paddingVertical: 12,
+  },
+  // 모바일 — 라벨 + 안내문구를 같은 줄에 (라벨 옆 작게)
+  labelHintRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
   fieldLabel: {
     width: 108,
     fontSize: 14,
@@ -182,10 +222,17 @@ const styles = StyleSheet.create({
     fontFamily: WEB_FONT,
     flexShrink: 0,
   },
+  fieldLabelMobile: {
+    width: 'auto' as unknown as number,
+  },
   fieldValue: {
     flex: 1,
     fontSize: 14,
     fontFamily: WEB_FONT,
+  },
+  fieldValueMobile: {
+    flex: 0,
+    width: '100%' as unknown as number,
   },
   fieldHint: {
     fontSize: 11,
@@ -201,11 +248,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: WEB_FONT,
   },
+  textInputMobile: {
+    flex: 0,
+    width: '100%' as unknown as number,
+  },
   passwordDots: {
     flex: 1,
     fontSize: 14,
     fontFamily: WEB_FONT,
     letterSpacing: 2,
+  },
+  passwordDotsMobile: {
+    flex: 1,
+  },
+  // PC: 점+버튼이 라벨과 한 줄에 — passwordRowInline은 flex:1 row
+  passwordRowInline: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  // 모바일: 점+버튼 가로 (라벨 아래)
+  passwordRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   primaryButton: {
     paddingHorizontal: 16,

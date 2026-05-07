@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -13,9 +14,10 @@ interface ToggleRowProps {
 
 function ToggleRow({ label, value, onToggle, disabled = false }: ToggleRowProps) {
   const theme = useTheme();
+  const { isMobile } = useResponsive();
 
   return (
-    <View style={styles.fieldRow}>
+    <View style={[styles.fieldRow, isMobile && styles.fieldRowMobile]}>
       <Text style={[styles.fieldLabel, { color: theme.text.body }, disabled && { color: theme.text.subtle }]}>
         {label}
       </Text>
@@ -106,6 +108,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 12,
+  },
+  // 모바일: 라벨 위, 스위치 아래 (다른 sections와 동일 패턴)
+  fieldRowMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    justifyContent: 'flex-start',
+    gap: 6,
   },
   fieldLabel: {
     fontSize: 14,

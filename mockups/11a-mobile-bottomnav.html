@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infomind — 11a. 모바일 하단 탭바 안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Noto Sans KR', -apple-system, sans-serif;
+  font-weight: 300;
+  background: #D0D0D0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 0;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font-family: inherit; }
+svg { stroke: currentColor; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+
+/* ===== PC 폰 프레임 ===== */
+.phone-frame {
+  position: relative;
+  width: 375px;
+  height: 812px;
+  background: #fff;
+  border-radius: 48px;
+  box-shadow:
+    0 0 0 2px #555,
+    0 0 0 10px #1c1c1e,
+    0 0 0 12px #2c2c2e,
+    0 40px 100px rgba(0,0,0,0.55);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+/* 노치 */
+.phone-frame::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 126px;
+  height: 34px;
+  background: #1c1c1e;
+  border-radius: 20px;
+  z-index: 9999;
+}
+
+/* ===== 앱 루트 ===== */
+.app {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #F9F9F9;
+  overflow: hidden;
+}
+
+/* ===== TopHeader ===== */
+.top-header {
+  flex-shrink: 0;
+  padding-top: 54px; /* 노치 여백 */
+  height: 110px;
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 0;
+  padding-left: 16px;
+  padding-right: 16px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 200;
+}
+.header-inner {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 56px;
+  gap: 6px;
+}
+.icon-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(0,0,0,0.65);
+  transition: background 140ms;
+  flex-shrink: 0;
+}
+.icon-btn:hover { background: rgba(0,0,0,0.06); }
+.icon-btn:active { background: rgba(0,0,0,0.1); }
+
+.header-brand {
+  flex: 1;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: #000;
+  user-select: none;
+}
+.header-right { display: flex; align-items: center; gap: 2px; }
+
+.notif-wrap { position: relative; }
+.notif-badge {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 7px;
+  height: 7px;
+  background: #EF4444;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+}
+.avatar-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0A2463;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+/* ===== 메인 스크롤 영역 ===== */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 0 8px;
+}
+
+/* AI 환영 섹션 */
+.chat-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 36px 24px 28px;
+}
+.ai-orb {
+  width: 60px;
+  height: 60px;
+  background: #0A2463;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 18px;
+  box-shadow: 0 6px 20px rgba(10,36,99,0.28);
+}
+.welcome-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+.welcome-sub {
+  font-size: 13px;
+  color: rgba(0,0,0,0.48);
+  text-align: center;
+  line-height: 1.65;
+}
+
+/* 추천 프롬프트 */
+.section-block {
+  padding: 0 16px 16px;
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(0,0,0,0.32);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  padding-left: 2px;
+}
+.prompt-cards { display: flex; flex-direction: column; gap: 9px; }
+.prompt-card {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 14px;
+  padding: 13px 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+  transition: box-shadow 160ms, border-color 160ms, transform 160ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.prompt-card:hover {
+  border-color: rgba(10,36,99,0.22);
+  box-shadow: 0 4px 14px rgba(10,36,99,0.09);
+  transform: translateY(-1px);
+}
+.prompt-card:active { transform: translateY(0); }
+.prompt-emoji {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.p-blue { background: rgba(10,36,99,0.07); }
+.p-green { background: rgba(16,185,129,0.1); }
+.p-amber { background: rgba(245,158,11,0.1); }
+.prompt-body strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #000;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+.prompt-body span {
+  font-size: 12px;
+  color: rgba(0,0,0,0.48);
+  line-height: 1.5;
+}
+
+/* 최근 대화 */
+.recent-list { display: flex; flex-direction: column; gap: 0; }
+.recent-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.06);
+  margin-bottom: 7px;
+  cursor: pointer;
+  transition: background 120ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.recent-item:hover { background: rgba(10,36,99,0.03); }
+.recent-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.recent-text {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(0,0,0,0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-time { font-size: 11px; color: rgba(0,0,0,0.28); flex-shrink: 0; }
+
+/* ===== 채팅 입력바 ===== */
+.chat-input-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 10px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  position: relative;
+  z-index: 150;
+}
+.chat-input {
+  flex: 1;
+  height: 40px;
+  border: 1.5px solid rgba(0,0,0,0.1);
+  border-radius: 20px;
+  padding: 0 14px;
+  font-size: 14px;
+  background: #F9F9F9;
+  color: #000;
+  outline: none;
+  transition: border-color 150ms, background 150ms;
+}
+.chat-input:focus { border-color: rgba(10,36,99,0.32); background: #fff; }
+.chat-input::placeholder { color: rgba(0,0,0,0.32); }
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #0A2463;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+  transition: opacity 150ms;
+}
+.send-btn:hover { opacity: 0.85; }
+
+/* ===== 하단 탭바 ===== */
+.bottom-nav {
+  flex-shrink: 0;
+  height: 64px;
+  background: #fff;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding-bottom: 4px;
+  position: relative;
+  z-index: 300;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: rgba(0,0,0,0.36);
+  transition: color 160ms;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.tab-item.active { color: #0A2463; }
+.tab-item svg { width: 22px; height: 22px; }
+.tab-label { font-size: 10px; font-weight: 500; }
+/* 활성 표시점 */
+.tab-item.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 2.5px;
+  background: #0A2463;
+  border-radius: 0 0 3px 3px;
+}
+
+/* ===== LP 좌측 드로어 ===== */
+.lp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+.lp-overlay.open { pointer-events: auto; }
+.lp-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  transition: background 280ms ease;
+}
+.lp-overlay.open .lp-dim { background: rgba(0,0,0,0.38); }
+.lp-panel {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 300px;
+  background: #fff;
+  transform: translateX(-100%);
+  transition: transform 280ms cubic-bezier(0.16,1,0.3,1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 6px 0 24px rgba(0,0,0,0.14);
+}
+.lp-overlay.open .lp-panel { transform: translateX(0); }
+
+.lp-header {
+  padding: 54px 18px 14px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lp-brand { font-size: 19px; font-weight: 300; letter-spacing: 0.1em; color: #000; }
+.lp-close-btn {
+  width: 30px; height: 30px;
+  border: none; background: rgba(0,0,0,0.06);
+  border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(0,0,0,0.55);
+}
+.lp-user {
+  display: flex; align-items: center; gap: 11px;
+  padding: 14px 18px;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.lp-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%; background: #0A2463;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 13px; font-weight: 700;
+}
+.lp-user-name { font-size: 14px; font-weight: 600; color: #000; line-height: 1.3; }
+.lp-user-dept { font-size: 11px; color: rgba(0,0,0,0.45); margin-top: 2px; }
+
+.lp-nav { flex: 1; overflow-y: auto; padding: 10px 0; }
+.lp-sec-label {
+  font-size: 10px; font-weight: 700;
+  color: rgba(0,0,0,0.3);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 12px 18px 5px;
+}
+.lp-item {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 18px;
+  border: none; background: transparent;
+  cursor: pointer; width: 100%; text-align: left;
+  font-size: 14px; font-weight: 400;
+  color: rgba(0,0,0,0.72);
+  transition: background 110ms;
+  -webkit-tap-highlight-color: transparent;
+}
+.lp-item:hover { background: rgba(0,0,0,0.04); }
+.lp-item.active { color: #0A2463; background: rgba(10,36,99,0.06); font-weight: 600; }
+.lp-item svg { width: 17px; height: 17px; opacity: 0.65; flex-shrink: 0; }
+.lp-item.active svg { opacity: 1; }
+
+.lp-footer { border-top: 1px solid rgba(0,0,0,0.08); padding: 10px 0 20px; }
+
+/* ===== RP 우측 풀스크린 ===== */
+.rp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  pointer-events: none;
+}
+.rp-overlay.open { pointer-events: auto; }
+.rp-dim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0);
+  transition: background 280ms ease;
+}
+.rp-overlay.open .rp-dim { background: rgba(0,0,0,0.18); }
+.rp-panel {
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 100%;
+  background: #F9F9F9;
+  transform: translateX(100%);
+  transition: transform 280ms cubic-bezier(0.16,1,0.3,1);
+  display: flex; flex-direction: column;
+}
+.rp-overlay.open .rp-panel { transform: translateX(0); }
+
+.rp-header {
+  padding: 54px 18px 14px;
+  background: #fff;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.rp-title { font-size: 17px; font-weight: 600; color: #000; }
+.rp-close-btn {
+  width: 30px; height: 30px;
+  border: none; background: rgba(0,0,0,0.06);
+  border-radius: 8px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: rgba(0,0,0,0.55);
+}
+.rp-body { flex: 1; overflow-y: auto; padding: 14px 14px 32px; display: flex; flex-direction: column; gap: 11px; }
+.rp-widget {
+  background: #fff;
+  border-radius: 14px;
+  padding: 15px;
+  border: 1px solid rgba(0,0,0,0.06);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.04);
+}
+.rp-widget-tag {
+  font-size: 10px; font-weight: 700;
+  color: rgba(0,0,0,0.35);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.approval-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.approval-row:last-child { border-bottom: none; padding-bottom: 0; }
+.badge {
+  font-size: 10px; font-weight: 700;
+  padding: 2px 7px; border-radius: 6px; flex-shrink: 0;
+}
+.badge-pending { background: rgba(245,158,11,0.12); color: #B45309; }
+.badge-done { background: rgba(16,185,129,0.12); color: #059669; }
+.approval-name { flex: 1; font-size: 12px; color: rgba(0,0,0,0.72); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.approval-date { font-size: 11px; color: rgba(0,0,0,0.3); flex-shrink: 0; }
+
+.sched-item {
+  display: flex; gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+.sched-item:last-child { border-bottom: none; }
+.sched-time { font-size: 11px; font-weight: 700; color: #0A2463; flex-shrink: 0; width: 42px; }
+.sched-name { font-size: 12px; color: rgba(0,0,0,0.72); }
+
+.ai-btn {
+  margin-top: 10px; width: 100%;
+  padding: 9px; background: #0A2463;
+  color: #fff; border: none;
+  border-radius: 9px; font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  transition: opacity 150ms;
+}
+.ai-btn:hover { opacity: 0.88; }
+
+/* ===== 토스트 ===== */
+.toast {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.76);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 18px;
+  border-radius: 24px;
+  white-space: nowrap;
+  z-index: 9000;
+  opacity: 1;
+  transition: opacity 600ms ease;
+  pointer-events: none;
+}
+.toast.fade { opacity: 0; }
+</style>
+</head>
+<body>
+
+<div class="phone-frame">
+  <div class="app">
+
+    <!-- ① TopHeader -->
+    <header class="top-header">
+      <div class="header-inner">
+        <button class="icon-btn" id="hamburgerBtn">
+          <svg width="20" height="20" viewBox="0 0 20 20">
+            <line x1="3" y1="6" x2="17" y2="6" stroke-width="1.5"/>
+            <line x1="3" y1="10" x2="17" y2="10" stroke-width="1.5"/>
+            <line x1="3" y1="14" x2="17" y2="14" stroke-width="1.5"/>
+          </svg>
+        </button>
+        <span class="header-brand">Infomind</span>
+        <div class="header-right">
+          <div class="notif-wrap">
+            <button class="icon-btn">
+              <svg width="19" height="19" viewBox="0 0 19 19">
+                <path d="M9.5 2a5.5 5.5 0 0 1 5.5 5.5v3l1.4 2.5H2.6L4 10.5V7.5A5.5 5.5 0 0 1 9.5 2Z" stroke-width="1.4"/>
+                <path d="M7.5 15.5a2 2 0 0 0 4 0" stroke-width="1.4"/>
+              </svg>
+            </button>
+            <span class="notif-badge"></span>
+          </div>
+          <button class="icon-btn" id="rpToggleBtn">
+            <svg width="19" height="19" viewBox="0 0 19 19">
+              <rect x="2" y="2" width="6" height="6" rx="1.5" stroke-width="1.4"/>
+              <rect x="11" y="2" width="6" height="6" rx="1.5" stroke-width="1.4"/>
+              <rect x="2" y="11" width="6" height="6" rx="1.5" stroke-width="1.4"/>
+              <rect x="11" y="11" width="6" height="6" rx="1.5" stroke-width="1.4"/>
+            </svg>
+          </button>
+          <button class="avatar-btn">MK</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ② 메인 -->
+    <main class="main">
+      <div class="chat-welcome">
+        <div class="ai-orb">
+          <svg width="30" height="30" viewBox="0 0 30 30" stroke="#fff" stroke-width="1.7" fill="none">
+            <circle cx="15" cy="15" r="11"/>
+            <path d="M9.5 15c0-3.04 2.46-5.5 5.5-5.5s5.5 2.46 5.5 5.5"/>
+            <line x1="15" y1="15" x2="15" y2="19"/>
+          </svg>
+        </div>
+        <div class="welcome-title">안녕하세요, 김민기 님</div>
+        <div class="welcome-sub">오늘 무엇을 도와드릴까요?<br>질문하거나 업무를 요청해 보세요.</div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-label">추천 질문</div>
+        <div class="prompt-cards">
+          <div class="prompt-card">
+            <div class="prompt-emoji p-blue">📋</div>
+            <div class="prompt-body">
+              <strong>이번 주 결재 현황 요약</strong>
+              <span>대기 3건, 완료 5건 — 상세 내용을 확인해 드릴게요</span>
+            </div>
+          </div>
+          <div class="prompt-card">
+            <div class="prompt-emoji p-green">📝</div>
+            <div class="prompt-body">
+              <strong>주간보고 초안 작성</strong>
+              <span>이번 주 업무 내용을 정리해서 초안을 만들어 드릴게요</span>
+            </div>
+          </div>
+          <div class="prompt-card">
+            <div class="prompt-emoji p-amber">📅</div>
+            <div class="prompt-body">
+              <strong>오늘 일정 확인</strong>
+              <span>오후 2시 팀 미팅 외 2건의 일정이 있습니다</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-block">
+        <div class="section-label">최근 대화</div>
+        <div class="recent-list">
+          <div class="recent-item">
+            <div class="recent-dot" style="background:#0A2463;"></div>
+            <div class="recent-text">6월 프로젝트 예산 검토 관련해서 도움...</div>
+            <div class="recent-time">어제</div>
+          </div>
+          <div class="recent-item">
+            <div class="recent-dot" style="background:rgba(0,0,0,0.15);"></div>
+            <div class="recent-text">휴가 신청서 작성 양식 부탁드립니다</div>
+            <div class="recent-time">3일 전</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- ③ 채팅 입력바 -->
+    <div class="chat-input-bar">
+      <input class="chat-input" type="text" placeholder="Infomind에게 질문하세요…">
+      <button class="send-btn">
+        <svg width="17" height="17" viewBox="0 0 17 17" fill="none" stroke="#fff" stroke-width="1.8">
+          <path d="M2 15L15.5 8.5L2 2v5l9 1.5-9 1.5V15Z" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ④ 하단 탭바 -->
+    <nav class="bottom-nav">
+      <button class="tab-item active" data-tab="home">
+        <svg viewBox="0 0 22 22"><path d="M3 10L11 3l8 7V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V10Z" stroke-width="1.5"/><path d="M8 21v-7h6v7" stroke-width="1.5"/></svg>
+        <span class="tab-label">홈</span>
+      </button>
+      <button class="tab-item" data-tab="board">
+        <svg viewBox="0 0 22 22"><rect x="3" y="3" width="16" height="16" rx="2" stroke-width="1.5"/><line x1="7" y1="8" x2="15" y2="8" stroke-width="1.5"/><line x1="7" y1="11.5" x2="13" y2="11.5" stroke-width="1.5"/><line x1="7" y1="15" x2="10" y2="15" stroke-width="1.5"/></svg>
+        <span class="tab-label">게시판</span>
+      </button>
+      <button class="tab-item" data-tab="approval">
+        <svg viewBox="0 0 22 22"><path d="M6 2h10l4 4v15a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Z" stroke-width="1.5"/><polyline points="16,2 16,6 22,6" stroke-width="1.5"/><line x1="7" y1="11" x2="15" y2="11" stroke-width="1.5"/><line x1="7" y1="15" x2="11" y2="15" stroke-width="1.5"/></svg>
+        <span class="tab-label">결재</span>
+      </button>
+      <button class="tab-item" data-tab="report">
+        <svg viewBox="0 0 22 22"><rect x="3" y="4" width="16" height="16" rx="2" stroke-width="1.5"/><line x1="7" y1="2" x2="7" y2="6" stroke-width="1.5"/><line x1="15" y1="2" x2="15" y2="6" stroke-width="1.5"/><line x1="3" y1="10" x2="19" y2="10" stroke-width="1.5"/></svg>
+        <span class="tab-label">주간보고</span>
+      </button>
+      <button class="tab-item" data-tab="more">
+        <svg viewBox="0 0 22 22">
+          <circle cx="5" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="11" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+          <circle cx="17" cy="11" r="1.2" fill="currentColor" stroke="none"/>
+        </svg>
+        <span class="tab-label">더보기</span>
+      </button>
+    </nav>
+
+    <!-- LP 드로어 -->
+    <div class="lp-overlay" id="lpOverlay">
+      <div class="lp-dim" id="lpDim"></div>
+      <div class="lp-panel">
+        <div class="lp-header">
+          <span class="lp-brand">Infomind</span>
+          <button class="lp-close-btn" id="lpClose">
+            <svg width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="2" x2="12" y2="12" stroke-width="1.6"/><line x1="12" y1="2" x2="2" y2="12" stroke-width="1.6"/></svg>
+          </button>
+        </div>
+        <div class="lp-user">
+          <div class="lp-avatar">MK</div>
+          <div>
+            <div class="lp-user-name">김민기</div>
+            <div class="lp-user-dept">개발팀 · 시니어 개발자</div>
+          </div>
+        </div>
+        <nav class="lp-nav">
+          <div class="lp-sec-label">메인</div>
+          <button class="lp-item active">
+            <svg viewBox="0 0 17 17"><path d="M2 7.5L8.5 2l6.5 5.5V15a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5Z" stroke-width="1.4"/></svg>
+            홈 / AI 채팅
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><rect x="2" y="2" width="13" height="13" rx="2" stroke-width="1.4"/><line x1="5" y1="6" x2="12" y2="6" stroke-width="1.4"/><line x1="5" y1="9" x2="10" y2="9" stroke-width="1.4"/></svg>
+            게시판
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><path d="M5 1h8l3 3.5V15a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1Z" stroke-width="1.4"/></svg>
+            전자결재
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><rect x="2" y="3" width="13" height="12" rx="2" stroke-width="1.4"/><line x1="5" y1="1" x2="5" y2="5" stroke-width="1.4"/><line x1="12" y1="1" x2="12" y2="5" stroke-width="1.4"/><line x1="2" y1="8" x2="15" y2="8" stroke-width="1.4"/></svg>
+            주간보고
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><rect x="2" y="3" width="13" height="12" rx="2" stroke-width="1.4"/><line x1="5" y1="1" x2="5" y2="5" stroke-width="1.4"/><line x1="12" y1="1" x2="12" y2="5" stroke-width="1.4"/><line x1="2" y1="8" x2="15" y2="8" stroke-width="1.4"/></svg>
+            캘린더
+          </button>
+          <div class="lp-sec-label">조직</div>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><circle cx="8.5" cy="5.5" r="2.8" stroke-width="1.4"/><path d="M2.5 15c0-3.04 2.69-5.5 6-5.5s6 2.46 6 5.5" stroke-width="1.4"/></svg>
+            임직원 디렉토리
+          </button>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><path d="M2 4.5h13M2 8.5h13M2 12.5h8" stroke-width="1.4" stroke-linecap="round"/></svg>
+            공지사항
+          </button>
+          <div class="lp-sec-label">계정</div>
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><circle cx="8.5" cy="8.5" r="2" stroke-width="1.4"/><path d="M8.5 1v2M8.5 14v2M1 8.5h2M14 8.5h2M3.2 3.2l1.4 1.4M12.4 12.4l1.4 1.4M3.2 13.8l1.4-1.4M12.4 4.6l1.4-1.4" stroke-width="1.4" stroke-linecap="round"/></svg>
+            설정
+          </button>
+        </nav>
+        <div class="lp-footer">
+          <button class="lp-item">
+            <svg viewBox="0 0 17 17"><path d="M6 14H3a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h3" stroke-width="1.4"/><polyline points="10,11 14,8.5 10,6" stroke-width="1.4"/><line x1="14" y1="8.5" x2="5.5" y2="8.5" stroke-width="1.4"/></svg>
+            로그아웃
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RP 풀스크린 -->
+    <div class="rp-overlay" id="rpOverlay">
+      <div class="rp-dim" id="rpDim"></div>
+      <div class="rp-panel">
+        <div class="rp-header">
+          <span class="rp-title">대시보드</span>
+          <button class="rp-close-btn" id="rpClose">
+            <svg width="14" height="14" viewBox="0 0 14 14"><line x1="2" y1="2" x2="12" y2="12" stroke-width="1.6"/><line x1="12" y1="2" x2="2" y2="12" stroke-width="1.6"/></svg>
+          </button>
+        </div>
+        <div class="rp-body">
+          <div class="rp-widget">
+            <div class="rp-widget-tag">전자결재</div>
+            <div class="approval-row">
+              <span class="badge badge-pending">대기</span>
+              <span class="approval-name">2025년 6월 업무추진비 청구</span>
+              <span class="approval-date">오늘</span>
+            </div>
+            <div class="approval-row">
+              <span class="badge badge-pending">대기</span>
+              <span class="approval-name">외근 출장 신청 (부산)</span>
+              <span class="approval-date">어제</span>
+            </div>
+            <div class="approval-row">
+              <span class="badge badge-done">완료</span>
+              <span class="approval-name">5월 경비 정산서</span>
+              <span class="approval-date">5/28</span>
+            </div>
+          </div>
+          <div class="rp-widget">
+            <div class="rp-widget-tag">오늘 일정</div>
+            <div class="sched-item">
+              <span class="sched-time">10:00</span>
+              <span class="sched-name">주간 스탠드업 미팅</span>
+            </div>
+            <div class="sched-item">
+              <span class="sched-time">14:00</span>
+              <span class="sched-name">신규 기능 기획 검토</span>
+            </div>
+            <div class="sched-item">
+              <span class="sched-time">17:30</span>
+              <span class="sched-name">배포 전 QA 확인</span>
+            </div>
+          </div>
+          <div class="rp-widget">
+            <div class="rp-widget-tag">주간보고</div>
+            <div style="font-size:13px;font-weight:600;color:#000;margin-bottom:4px;">이번 주 보고서</div>
+            <div style="font-size:12px;color:rgba(0,0,0,0.48);line-height:1.55;">작성 마감: 금요일 오후 5시<br>AI가 초안 작성을 도와드릴게요.</div>
+            <button class="ai-btn">AI로 초안 작성</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 토스트 -->
+    <div class="toast" id="toast">하단 탭바 안 — Option A</div>
+
+  </div>
+</div>
+
+<script>
+// LP
+const lpOverlay = document.getElementById('lpOverlay');
+const lpDim     = document.getElementById('lpDim');
+const lpClose   = document.getElementById('lpClose');
+const hamburger = document.getElementById('hamburgerBtn');
+
+function openLP() { lpOverlay.classList.add('open'); }
+function closeLP() { lpOverlay.classList.remove('open'); }
+
+hamburger.addEventListener('click', openLP);
+lpClose.addEventListener('click', closeLP);
+lpDim.addEventListener('click', closeLP);
+
+document.querySelectorAll('.lp-item').forEach(item => {
+  item.addEventListener('click', function() {
+    document.querySelectorAll('.lp-item').forEach(i => i.classList.remove('active'));
+    this.classList.add('active');
+    setTimeout(closeLP, 180);
+  });
+});
+
+// RP
+const rpOverlay  = document.getElementById('rpOverlay');
+const rpDim      = document.getElementById('rpDim');
+const rpClose    = document.getElementById('rpClose');
+const rpToggle   = document.getElementById('rpToggleBtn');
+
+function openRP() { rpOverlay.classList.add('open'); }
+function closeRP() { rpOverlay.classList.remove('open'); }
+
+rpToggle.addEventListener('click', openRP);
+rpClose.addEventListener('click', closeRP);
+rpDim.addEventListener('click', closeRP);
+
+// ESC
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeLP(); closeRP(); }
+});
+
+// 탭 전환
+document.querySelectorAll('.tab-item').forEach(btn => {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('.tab-item').forEach(b => b.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+
+// 토스트 5초 후 fade
+setTimeout(() => {
+  document.getElementById('toast').classList.add('fade');
+}, 5000);
+</script>
+</body>
+</html>

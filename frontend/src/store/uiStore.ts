@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PanelId, RpTab } from '../types';
+import type { AssistantCard } from '../features/ai-assistant/types';
 
 // zustand v5의 persist 미들웨어가 import.meta를 사용하는데
 // Expo Web의 Hermes 엔진이 import.meta를 지원하지 않아 별도 구현.
@@ -8,6 +9,8 @@ const STORAGE_KEY = 'infomind-ui';
 
 export type SettingsCategory = 'account' | 'notification' | 'customize' | 'display';
 export type ThemePreference = 'light' | 'dark' | 'system';
+export type AssistantStage = 'collapsed' | 'medium' | 'full';
+export type AssistantMode = 'quickAction' | 'context';
 
 interface UiState {
   // State
@@ -21,6 +24,13 @@ interface UiState {
   settingsCategory: SettingsCategory;
   lastUserMessage: string | null;
   themePreference: ThemePreference;
+  assistantStage: AssistantStage;
+  assistantMode: AssistantMode;
+  chatResetCounter: number;
+  assistantContextCards: AssistantCard[];
+  assistantContextSeen: boolean;
+  isMobileMoreOpen: boolean;
+  isCustomizationOpen: boolean;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
@@ -38,6 +48,13 @@ interface UiState {
   setSettingsCategory: (category: SettingsCategory) => void;
   setLastUserMessage: (message: string | null) => void;
   setThemePreference: (pref: ThemePreference) => void;
+  setAssistantStage: (stage: AssistantStage) => void;
+  setAssistantMode: (mode: AssistantMode) => void;
+  setAssistantContext: (cards: AssistantCard[]) => void;
+  resetChat: () => void;
+  setMobileMoreOpen: (open: boolean) => void;
+  setActiveFullScreen: (panelId: PanelId | null) => void;
+  setCustomizationOpen: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -51,6 +68,13 @@ export const useUiStore = create<UiState>((set, get) => ({
   settingsCategory: 'account',
   lastUserMessage: null,
   themePreference: 'system',
+  assistantStage: 'medium',
+  assistantMode: 'quickAction',
+  chatResetCounter: 0,
+  assistantContextCards: [],
+  assistantContextSeen: false,
+  isMobileMoreOpen: false,
+  isCustomizationOpen: false,
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -117,6 +141,33 @@ export const useUiStore = create<UiState>((set, get) => ({
   setSettingsCategory: (category) => set({ settingsCategory: category }),
 
   setThemePreference: (pref) => set({ themePreference: pref }),
+
+  setAssistantStage: (stage) =>
+    set((s) => ({
+      assistantStage: stage,
+      ...(stage === 'medium' || stage === 'full' ? { assistantContextSeen: true } : {}),
+    })),
+
+  setMobileMoreOpen: (open) => set({ isMobileMoreOpen: open }),
+
+  setActiveFullScreen: (panelId) => set({ activeFullScreen: panelId }),
+
+  setCustomizationOpen: (open) => set({ isCustomizationOpen: open }),
+
+  setAssistantMode: (mode) => set({ assistantMode: mode }),
+
+  setAssistantContext: (cards) =>
+    set({ assistantContextCards: cards, assistantContextSeen: false }),
+
+  resetChat: () => {
+    set((s) => ({
+      lastUserMessage: null,
+      assistantMode: 'quickAction',
+      assistantContextCards: [],
+      assistantContextSeen: false,
+      chatResetCounter: s.chatResetCounter + 1,
+    }));
+  },
 }));
 
 // 비동기 hydrate (앱 시작 시 LocalStorage/AsyncStorage에서 상태 복원)
