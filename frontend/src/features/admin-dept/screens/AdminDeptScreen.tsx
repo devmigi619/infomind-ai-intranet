@@ -352,7 +352,11 @@ export function AdminDeptScreen() {
   // ─── 트리 패널 ───────────────────────────────────────────────────────────
 
   const renderTree = () => (
-    <View style={[styles.treePanel, { borderRightColor: theme.border.default, backgroundColor: theme.bg.surface }]}>
+    <View style={[
+      styles.treePanel,
+      isMobile && styles.treePanelMobile,
+      { borderRightColor: theme.border.default, backgroundColor: theme.bg.surface },
+    ]}>
       {/* 트리 헤더 */}
       <View style={[styles.treePanelHeader, { borderBottomColor: theme.border.subtle }]}>
         <Text style={[styles.treePanelTitle, { color: theme.text.primary, fontFamily: WEB_FONT }]}>
@@ -632,6 +636,11 @@ const styles = StyleSheet.create({
     width: 280,
     borderRightWidth: 1,
     flexDirection: 'column',
+  },
+  treePanelMobile: {
+    width: '100%',
+    flex: 1,
+    borderRightWidth: 0,
   },
   treePanelHeader: {
     flexDirection: 'row',

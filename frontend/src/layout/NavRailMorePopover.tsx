@@ -12,6 +12,8 @@ import {
   Shield,
   Tag,
   List,
+  GraduationCap,
+  Network,
   Settings,
   ChevronRight,
 } from 'lucide-react-native';
@@ -33,6 +35,8 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield,
   Tag,
   List,
+  GraduationCap,
+  Network,
   Settings,
 };
 
