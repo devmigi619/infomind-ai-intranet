@@ -14,7 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/posts")
@@ -84,7 +84,7 @@ public class PostController {
         private String authorName;
         private String category;
         private int viewCount;
-        private LocalDate createdAt;
+        private LocalDateTime createdAt;
     }
 
     @Getter
@@ -96,6 +96,6 @@ public class PostController {
         private String authorName;
         private String category;
         private int viewCount;
-        private LocalDate createdAt;
+        private LocalDateTime createdAt;
     }
 }

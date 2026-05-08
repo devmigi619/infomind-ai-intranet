@@ -179,7 +179,7 @@ public class ApprovalService {
         private ApprovalType type;
         private ApprovalStatus status;
         private String requesterName;
-        private LocalDate createdAt;
+        private LocalDateTime createdAt;
     }
 
     @Getter
@@ -191,7 +191,7 @@ public class ApprovalService {
         private ApprovalType type;
         private ApprovalStatus status;
         private String requesterName;
-        private LocalDate createdAt;
+        private LocalDateTime createdAt;
         private List<ApprovalLineDto> approvalLines;
     }
 

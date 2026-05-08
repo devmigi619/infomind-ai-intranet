@@ -10,14 +10,14 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @MappedSuperclass
 public abstract class BaseEntity {
 
     @Column(name = "CRT_AT", updatable = false)
-    private LocalDate crtAt;
+    private LocalDateTime crtAt;
 
     @Column(name = "CRT_BY", length = 100, updatable = false)
     private String crtBy;
@@ -26,7 +26,7 @@ public abstract class BaseEntity {
     private String crtIp;
 
     @Column(name = "UPD_AT")
-    private LocalDate updAt;
+    private LocalDateTime updAt;
 
     @Column(name = "UPD_BY", length = 100)
     private String updBy;
@@ -36,20 +36,20 @@ public abstract class BaseEntity {
 
     @PrePersist
     protected void onCreate() {
-        LocalDate today = LocalDate.now();
+        LocalDateTime now = LocalDateTime.now();
         String userId = resolveCurrentUserId();
         String ip = resolveCurrentIp();
-        this.crtAt = today;
+        this.crtAt = now;
         this.crtBy = userId;
         this.crtIp = ip;
-        this.updAt = today;
+        this.updAt = now;
         this.updBy = userId;
         this.updIp = ip;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        this.updAt = LocalDate.now();
+        this.updAt = LocalDateTime.now();
         this.updBy = resolveCurrentUserId();
         this.updIp = resolveCurrentIp();
     }
