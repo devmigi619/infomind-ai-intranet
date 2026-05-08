@@ -20,6 +20,8 @@ import {
   Shield,
   Tag,
   List,
+  GraduationCap,
+  Network,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useTheme } from '../../shared/hooks/useTheme';
@@ -39,6 +41,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Shield,
   Tag,
   List,
+  GraduationCap,
+  Network,
   Settings,
 };
 

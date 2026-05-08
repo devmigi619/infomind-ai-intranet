@@ -38,6 +38,8 @@ export const ALL_MENUS: MenuMeta[] = [
   { panel: 'admin-categories', label: '게시판 카테고리', iconName: 'Tag', pinnable: true, category: 'admin' },
   { panel: 'admin-approval-line', label: '결재선 템플릿', iconName: 'FileText', pinnable: true, category: 'admin' },
   { panel: 'admin-common-code', label: '공통코드 관리', iconName: 'List', pinnable: true, category: 'admin' },
+  { panel: 'admin-job-grade', label: '직급 관리', iconName: 'GraduationCap', pinnable: true, category: 'admin' },
+  { panel: 'admin-dept', label: '부서 관리', iconName: 'Network', pinnable: true, category: 'admin' },
   { panel: 'admin-system', label: '시스템 설정', iconName: 'Settings', pinnable: true, category: 'admin' },
 ];
 

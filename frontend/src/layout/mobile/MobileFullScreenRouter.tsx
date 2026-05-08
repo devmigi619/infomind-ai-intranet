@@ -8,6 +8,8 @@ import { WeeklyReportScreen } from '../../features/report/screens/WeeklyReportSc
 import { SettingsScreen } from '../../features/settings/screens/SettingsScreen';
 import { PlaceholderScreen } from '../../features/placeholder/screens/PlaceholderScreen';
 import { AdminCommonCodeScreen } from '../../features/admin-common-code/screens/AdminCommonCodeScreen';
+import { AdminJobGradeScreen } from '../../features/admin-job-grade/screens/AdminJobGradeScreen';
+import { AdminDeptScreen } from '../../features/admin-dept/screens/AdminDeptScreen';
 import { MobileMenuPanel } from './MobileMenuPanel';
 
 const PLACEHOLDER_TITLES: Record<string, string> = {
@@ -22,6 +24,8 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
   'admin-categories': '카테고리 관리',
   'admin-approval-line': '결재선 관리',
   'admin-common-code': '공통코드 관리',
+  'admin-job-grade': '직급 관리',
+  'admin-dept': '부서 관리',
   'admin-system': '시스템 설정',
 };
 
@@ -83,6 +87,10 @@ export function MobileFullScreenRouter() {
         return <SettingsScreen />;
       case 'admin-common-code':
         return <AdminCommonCodeScreen />;
+      case 'admin-job-grade':
+        return <AdminJobGradeScreen />;
+      case 'admin-dept':
+        return <AdminDeptScreen />;
       case 'menu-panel':
         return <MobileMenuPanel />;
       default:

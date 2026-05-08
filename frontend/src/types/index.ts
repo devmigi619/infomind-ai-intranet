@@ -13,6 +13,8 @@ export type PanelId =
   | 'admin-categories'
   | 'admin-approval-line'
   | 'admin-common-code'
+  | 'admin-job-grade'
+  | 'admin-dept'
   | 'admin-system'
   | 'settings'
   | 'menu-panel';

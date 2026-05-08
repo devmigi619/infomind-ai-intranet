@@ -22,6 +22,8 @@ import { WeeklyReportScreen } from './src/features/report/screens/WeeklyReportSc
 import { PlaceholderScreen } from './src/features/placeholder/screens/PlaceholderScreen';
 import { SettingsScreen } from './src/features/settings/screens/SettingsScreen';
 import { AdminCommonCodeScreen } from './src/features/admin-common-code/screens/AdminCommonCodeScreen';
+import { AdminJobGradeScreen } from './src/features/admin-job-grade/screens/AdminJobGradeScreen';
+import { AdminDeptScreen } from './src/features/admin-dept/screens/AdminDeptScreen';
 import type { PanelId } from './src/types';
 
 const queryClient = new QueryClient({
@@ -57,6 +59,8 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   'admin-categories': '게시판 카테고리',
   'admin-approval-line': '결재선 템플릿',
   'admin-common-code': '공통코드 관리',
+  'admin-job-grade': '직급 관리',
+  'admin-dept': '부서 관리',
   'admin-system': '시스템 설정',
   settings: '설정',
   'menu-panel': '메뉴',
@@ -176,6 +180,10 @@ function AppContent() {
         return <SettingsScreen />;
       case 'admin-common-code':
         return <AdminCommonCodeScreen />;
+      case 'admin-job-grade':
+        return <AdminJobGradeScreen />;
+      case 'admin-dept':
+        return <AdminDeptScreen />;
       default:
         return (
           <PlaceholderScreen title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen} />
