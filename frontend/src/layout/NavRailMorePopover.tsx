@@ -9,12 +9,16 @@ import {
   Car,
   Users,
   BookOpen,
+  Shield,
+  Tag,
+  List,
   Settings,
   ChevronRight,
 } from 'lucide-react-native';
 import type { PanelId } from '../types';
-import { ALL_MENUS } from '../shared/constants/menus';
+import { getMenusForMode } from '../shared/constants/menus';
 import { useTheme } from '../shared/hooks/useTheme';
+import { useUiStore } from '../store/uiStore';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const ICON_MAP: Record<string, React.ComponentType<any>> = {
@@ -26,6 +30,10 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Car,
   Users,
   BookOpen,
+  Shield,
+  Tag,
+  List,
+  Settings,
 };
 
 interface NavRailMorePopoverProps {
@@ -46,6 +54,7 @@ export function NavRailMorePopover({
   onCustomize,
 }: NavRailMorePopoverProps) {
   const theme = useTheme();
+  const isAdminMode = useUiStore((s) => s.isAdminMode);
 
   // ESC 키로 닫기 (웹 전용)
   useEffect(() => {
@@ -60,8 +69,10 @@ export function NavRailMorePopover({
 
   if (!isOpen) return null;
 
-  // 핀 되지 않은 메뉴들만 표시
-  const unpinnedMenus = ALL_MENUS.filter((m) => !pinnedMenus.includes(m.panel));
+  // 핀 되지 않은 메뉴들만 표시 (현재 모드에 맞는 풀에서)
+  const unpinnedMenus = getMenusForMode(isAdminMode).filter(
+    (m) => !pinnedMenus.includes(m.panel),
+  );
 
   return (
     <>

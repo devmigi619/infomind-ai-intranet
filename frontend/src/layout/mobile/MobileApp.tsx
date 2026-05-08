@@ -6,7 +6,6 @@ import { useUiStore } from '../../store/uiStore';
 import { MobileTopHeader } from './MobileTopHeader';
 import { MobileMainScreen } from './MobileMainScreen';
 import { MobileBottomTabBar } from './MobileBottomTabBar';
-import { MobileMoreModal } from './MobileMoreModal';
 import { MobileFullScreenRouter } from './MobileFullScreenRouter';
 import { NavRailCustomizationModal } from '../NavRailCustomizationModal';
 import type { User } from '../../features/auth/api';
@@ -19,8 +18,6 @@ interface MobileAppProps {
 
 export function MobileApp({ user, onLogout }: MobileAppProps) {
   const theme = useTheme();
-  const isMobileMoreOpen = useUiStore((s) => s.isMobileMoreOpen);
-  const setMobileMoreOpen = useUiStore((s) => s.setMobileMoreOpen);
   const openSettingsScreen = useUiStore((s) => s.openSettingsScreen);
   const isCustomizationOpen = useUiStore((s) => s.isCustomizationOpen);
   const setCustomizationOpen = useUiStore((s) => s.setCustomizationOpen);
@@ -49,12 +46,6 @@ export function MobileApp({ user, onLogout }: MobileAppProps) {
           {/* Bottom Tab Bar — always visible */}
           <MobileBottomTabBar />
         </View>
-
-        {/* More Modal — 최상위에서 렌더링 (탭바 위 풀 오버레이) */}
-        <MobileMoreModal
-          visible={isMobileMoreOpen}
-          onClose={() => setMobileMoreOpen(false)}
-        />
 
         {/* NavRail 맞춤설정 모달 — 모바일에서도 시트 형태로 표시 */}
         <NavRailCustomizationModal

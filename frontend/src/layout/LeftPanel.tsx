@@ -29,7 +29,6 @@ const PANEL_TITLES: Record<PanelId, string> = {
   contacts: '주소록',
   documents: '자료실',
   certificate: '증명서',
-  'admin-home': '관리자 홈',
   'admin-users': '사용자 관리',
   'admin-roles': '권한 관리',
   'admin-categories': '게시판 카테고리',
@@ -37,6 +36,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   'admin-common-code': '공통코드 관리',
   'admin-system': '시스템 설정',
   settings: '설정',
+  'menu-panel': '메뉴',
 };
 
 type PreviewSection = {
@@ -126,15 +126,6 @@ const PANEL_PREVIEW: Partial<Record<PanelId, PreviewSection[]>> = {
       cards: [
         { title: '아반떼 (12가 1234)', meta: '4/29 09:00 - 18:00' },
         { title: '카니발 (34나 5678)', meta: '5/2 종일' },
-      ],
-    },
-  ],
-  'admin-home': [
-    {
-      label: '시스템 현황',
-      cards: [
-        { title: '사용자 142명', meta: '오늘 신규 0' },
-        { title: '서버 정상', meta: '응답 시간 12ms' },
       ],
     },
   ],

@@ -10,7 +10,6 @@ import {
   Car,
   Users,
   BookOpen,
-  LayoutGrid,
   Shield,
   Tag,
   List,
@@ -31,6 +30,10 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Car,
   Users,
   BookOpen,
+  Shield,
+  Tag,
+  List,
+  Settings,
 };
 
 interface NavRailProps {
@@ -42,27 +45,9 @@ interface NavRailProps {
   onMoreClick: (anchorTop: number) => void;
 }
 
-type AdminNavModule = {
-  id: PanelId | 'home';
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  icon: React.ComponentType<any>;
-  label: string;
-};
-
-const adminModules: AdminNavModule[] = [
-  { id: 'admin-home', icon: LayoutGrid, label: '관리자 홈' },
-  { id: 'admin-users', icon: Users, label: '사용자 관리' },
-  { id: 'admin-roles', icon: Shield, label: '권한 관리' },
-  { id: 'admin-categories', icon: Tag, label: '게시판 카테고리' },
-  { id: 'admin-approval-line', icon: FileText, label: '결재선 템플릿' },
-  { id: 'admin-common-code', icon: List, label: '공통코드 관리' },
-  { id: 'admin-system', icon: Settings, label: '시스템 설정' },
-];
-
 export function NavRail({
   activePanel,
   activeFullScreen,
-  isAdminMode,
   pinnedMenus,
   onPanelClick,
   onMoreClick,
@@ -77,52 +62,7 @@ export function NavRail({
     });
   };
 
-  if (isAdminMode) {
-    return (
-      <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.bg.surface,
-            borderRightColor: theme.border.default,
-          },
-        ]}
-      >
-        {adminModules.map((mod, idx) => {
-          const Icon = mod.icon;
-          const isHomeButton = mod.id === 'admin-home';
-          const isActive = isHomeButton
-            ? isHomeActive
-            : activePanel === mod.id || activeFullScreen === mod.id;
-
-          return (
-            <React.Fragment key={mod.id}>
-              <TouchableOpacity
-                onPress={() => onPanelClick(isHomeButton ? 'home' : mod.id)}
-                style={[
-                  styles.iconButton,
-                  isActive && { backgroundColor: theme.brand.primaryTint },
-                ]}
-                activeOpacity={0.7}
-              >
-                {isActive && (
-                  <View
-                    style={[styles.activeIndicator, { backgroundColor: theme.brand.primary }]}
-                  />
-                )}
-                <Icon size={22} color={isActive ? theme.brand.primary : theme.text.muted} />
-              </TouchableOpacity>
-              {idx === 0 && (
-                <View style={[styles.divider, { backgroundColor: theme.border.default }]} />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </View>
-    );
-  }
-
-  // User mode: home + pinnedMenus + more button
+  // 일반/관리자 모드 모두 [홈 + 핀 + 더보기] 패턴으로 통일
   return (
     <View
       style={[

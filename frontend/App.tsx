@@ -10,7 +10,7 @@ import { NavRailCustomizationModal } from './src/layout/NavRailCustomizationModa
 import { LeftPanel } from './src/layout/LeftPanel';
 import { RightPanel } from './src/layout/RightPanel';
 import { MobileApp } from './src/layout/mobile/MobileApp';
-import { useUiStore } from './src/store/uiStore';
+import { useUiStore, selectPinnedForMode } from './src/store/uiStore';
 import { useCurrentUser, useLogin, useLogout } from './src/features/auth/api';
 import { usePushNotifications } from './src/shared/hooks/usePushNotifications';
 import { useResponsive } from './src/shared/hooks/useResponsive';
@@ -52,7 +52,6 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   contacts: '주소록',
   documents: '자료실',
   certificate: '증명서',
-  'admin-home': '관리자 홈',
   'admin-users': '사용자 관리',
   'admin-roles': '권한 관리',
   'admin-categories': '게시판 카테고리',
@@ -60,6 +59,7 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   'admin-common-code': '공통코드 관리',
   'admin-system': '시스템 설정',
   settings: '설정',
+  'menu-panel': '메뉴',
 };
 
 function AppContent() {
@@ -100,7 +100,6 @@ function AppContent() {
     rpTab,
     isAdminMode,
     hasUnreadAi,
-    pinnedMenus,
     isCustomizationOpen,
     setRpTab,
     handleNavClick,
@@ -113,6 +112,14 @@ function AppContent() {
     markAiUnread,
     setCustomizationOpen,
   } = useUiStore();
+  const pinnedMenus = useUiStore(selectPinnedForMode);
+
+  // 로그인된 사용자 전환 시 그 사용자 키에서 hydrate
+  useEffect(() => {
+    if (user?.userId) {
+      useUiStore.getState().hydrateFromStorage(user.userId);
+    }
+  }, [user?.userId]);
 
   const handleSettingsClick = () => openSettingsScreen();
 
@@ -122,6 +129,7 @@ function AppContent() {
 
   const handleLogout = async () => {
     await logoutMutation.mutateAsync();
+    useUiStore.getState().resetUiToDefaults();
   };
 
   const handleNavigate = (target: string) => {

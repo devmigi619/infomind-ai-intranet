@@ -2,10 +2,11 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PanelId, RpTab } from '../types';
 import type { AssistantCard } from '../features/ai-assistant/types';
+import { ALL_MENUS } from '../shared/constants/menus';
 
 // zustand v5의 persist 미들웨어가 import.meta를 사용하는데
 // Expo Web의 Hermes 엔진이 import.meta를 지원하지 않아 별도 구현.
-const STORAGE_KEY = 'infomind-ui';
+const storageKey = (userId: string) => `infomind-ui:${userId}`;
 
 export type SettingsCategory = 'account' | 'notification' | 'customize' | 'display';
 export type ThemePreference = 'light' | 'dark' | 'system';
@@ -20,7 +21,8 @@ interface UiState {
   rpTab: RpTab;
   isAdminMode: boolean;
   hasUnreadAi: boolean;
-  pinnedMenus: PanelId[];
+  pinnedMenusUser: PanelId[];
+  pinnedMenusAdmin: PanelId[];
   settingsCategory: SettingsCategory;
   lastUserMessage: string | null;
   themePreference: ThemePreference;
@@ -29,8 +31,8 @@ interface UiState {
   chatResetCounter: number;
   assistantContextCards: AssistantCard[];
   assistantContextSeen: boolean;
-  isMobileMoreOpen: boolean;
   isCustomizationOpen: boolean;
+  previousFullScreen: PanelId | null;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
@@ -43,7 +45,7 @@ interface UiState {
   setRpTab: (tab: RpTab) => void;
   markAiUnread: () => void;
   markAiRead: () => void;
-  togglePinnedMenu: (panel: PanelId) => void;
+  togglePinnedMenu: (panel: PanelId, maxCount: number) => void;
   reorderPinnedMenus: (from: number, to: number) => void;
   setSettingsCategory: (category: SettingsCategory) => void;
   setLastUserMessage: (message: string | null) => void;
@@ -52,10 +54,19 @@ interface UiState {
   setAssistantMode: (mode: AssistantMode) => void;
   setAssistantContext: (cards: AssistantCard[]) => void;
   resetChat: () => void;
-  setMobileMoreOpen: (open: boolean) => void;
   setActiveFullScreen: (panelId: PanelId | null) => void;
   setCustomizationOpen: (open: boolean) => void;
+  hydrateFromStorage: (userId: string) => Promise<void>;
+  resetUiToDefaults: () => void;
 }
+
+// 디폴트 값들 — resetUiToDefaults에서 재사용
+const DEFAULT_PINNED_USER: PanelId[] = ['board', 'approval', 'report'];
+const DEFAULT_PINNED_ADMIN: PanelId[] = ['admin-users', 'admin-roles', 'admin-categories'];
+const DEFAULT_THEME: ThemePreference = 'system';
+
+// 현재 hydrate 된 userId — null이면 자동 저장 비활성
+let currentUserId: string | null = null;
 
 export const useUiStore = create<UiState>((set, get) => ({
   activePanel: null,
@@ -64,17 +75,18 @@ export const useUiStore = create<UiState>((set, get) => ({
   rpTab: 'home',
   isAdminMode: false,
   hasUnreadAi: false,
-  pinnedMenus: ['board', 'approval', 'report', 'calendar'],
+  pinnedMenusUser: DEFAULT_PINNED_USER,
+  pinnedMenusAdmin: DEFAULT_PINNED_ADMIN,
   settingsCategory: 'account',
   lastUserMessage: null,
-  themePreference: 'system',
+  themePreference: DEFAULT_THEME,
   assistantStage: 'medium',
   assistantMode: 'quickAction',
   chatResetCounter: 0,
   assistantContextCards: [],
   assistantContextSeen: false,
-  isMobileMoreOpen: false,
   isCustomizationOpen: false,
+  previousFullScreen: null,
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -121,21 +133,27 @@ export const useUiStore = create<UiState>((set, get) => ({
   markAiRead: () => set({ hasUnreadAi: false }),
   setLastUserMessage: (message) => set({ lastUserMessage: message }),
 
-  togglePinnedMenu: (panel) =>
+  togglePinnedMenu: (panel, maxCount) =>
     set((s) => {
-      if (s.pinnedMenus.includes(panel)) {
-        return { pinnedMenus: s.pinnedMenus.filter((p) => p !== panel) };
+      const isAdmin = s.isAdminMode;
+      const current = isAdmin ? s.pinnedMenusAdmin : s.pinnedMenusUser;
+      if (current.includes(panel)) {
+        const next = current.filter((p) => p !== panel);
+        return isAdmin ? { pinnedMenusAdmin: next } : { pinnedMenusUser: next };
       }
-      if (s.pinnedMenus.length >= 7) return s;
-      return { pinnedMenus: [...s.pinnedMenus, panel] };
+      if (current.length >= maxCount) return s;
+      const next = [...current, panel];
+      return isAdmin ? { pinnedMenusAdmin: next } : { pinnedMenusUser: next };
     }),
 
   reorderPinnedMenus: (from, to) =>
     set((s) => {
-      const arr = [...s.pinnedMenus];
+      const isAdmin = s.isAdminMode;
+      const current = isAdmin ? s.pinnedMenusAdmin : s.pinnedMenusUser;
+      const arr = [...current];
       const [moved] = arr.splice(from, 1);
       arr.splice(to, 0, moved);
-      return { pinnedMenus: arr };
+      return isAdmin ? { pinnedMenusAdmin: arr } : { pinnedMenusUser: arr };
     }),
 
   setSettingsCategory: (category) => set({ settingsCategory: category }),
@@ -148,9 +166,21 @@ export const useUiStore = create<UiState>((set, get) => ({
       ...(stage === 'medium' || stage === 'full' ? { assistantContextSeen: true } : {}),
     })),
 
-  setMobileMoreOpen: (open) => set({ isMobileMoreOpen: open }),
-
-  setActiveFullScreen: (panelId) => set({ activeFullScreen: panelId }),
+  setActiveFullScreen: (panelId) =>
+    set((s) => {
+      // 메뉴 패널 진입 시 직전 위치 기억 (사용자가 어디 있었는지 시각 표시용)
+      if (panelId === 'menu-panel') {
+        return {
+          activeFullScreen: panelId,
+          previousFullScreen: s.activeFullScreen,
+        };
+      }
+      // 다른 풀뷰로 전환 또는 홈 복귀 시 직전 위치 리셋
+      return {
+        activeFullScreen: panelId,
+        previousFullScreen: null,
+      };
+    }),
 
   setCustomizationOpen: (open) => set({ isCustomizationOpen: open }),
 
@@ -168,49 +198,110 @@ export const useUiStore = create<UiState>((set, get) => ({
       chatResetCounter: s.chatResetCounter + 1,
     }));
   },
+
+  hydrateFromStorage: async (userId) => {
+    // 일단 이전 저장 트리거를 막기 위해 currentUserId를 비워둠
+    currentUserId = null;
+    try {
+      const stored = await AsyncStorage.getItem(storageKey(userId));
+      const next: Partial<UiState> = {
+        // 다른 사용자 데이터 잔재 방지: 못 읽은 필드는 디폴트로
+        pinnedMenusUser: DEFAULT_PINNED_USER,
+        pinnedMenusAdmin: DEFAULT_PINNED_ADMIN,
+        themePreference: DEFAULT_THEME,
+      };
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          // 옛 저장값에 폐기된 panelId('admin-home' 등)가 들어 있을 수 있어
+          // ALL_MENUS에 존재하는 panelId만 통과시키는 방어 필터.
+          const validPanels = new Set(ALL_MENUS.map((m) => m.panel));
+          if (Array.isArray(parsed?.pinnedMenusUser)) {
+            next.pinnedMenusUser = (parsed.pinnedMenusUser as string[])
+              .filter((p) => validPanels.has(p as PanelId)) as PanelId[];
+          }
+          if (Array.isArray(parsed?.pinnedMenusAdmin)) {
+            next.pinnedMenusAdmin = (parsed.pinnedMenusAdmin as string[])
+              .filter((p) => validPanels.has(p as PanelId)) as PanelId[];
+          }
+          if (
+            parsed?.themePreference &&
+            ['light', 'dark', 'system'].includes(parsed.themePreference)
+          ) {
+            next.themePreference = parsed.themePreference as ThemePreference;
+          }
+          // 옛 형태(단일 pinnedMenus 배열)는 호환 매핑하지 않고 디폴트 유지
+        } catch (_) {
+          // 깨진 JSON은 디폴트 유지
+        }
+      }
+      useUiStore.setState(next);
+    } catch (_) {
+      // AsyncStorage 접근 실패 — 디폴트 유지
+      useUiStore.setState({
+        pinnedMenusUser: DEFAULT_PINNED_USER,
+        pinnedMenusAdmin: DEFAULT_PINNED_ADMIN,
+        themePreference: DEFAULT_THEME,
+      });
+    }
+    // hydrate 완료 — 이후 변경은 자동 저장 대상
+    currentUserId = userId;
+  },
+
+  resetUiToDefaults: () => {
+    // AsyncStorage는 건드리지 않음 — 다음 같은 사용자 재로그인 시 hydrate로 복원됨
+    currentUserId = null;
+    set({
+      // hydrate 대상
+      pinnedMenusUser: DEFAULT_PINNED_USER,
+      pinnedMenusAdmin: DEFAULT_PINNED_ADMIN,
+      themePreference: DEFAULT_THEME,
+      // UI 일시 상태 — 합리적 디폴트
+      activePanel: null,
+      activeFullScreen: null,
+      isRightPanelOpen: true,
+      rpTab: 'home',
+      isAdminMode: false,
+      hasUnreadAi: false,
+      settingsCategory: 'account',
+      lastUserMessage: null,
+      assistantStage: 'medium',
+      assistantMode: 'quickAction',
+      assistantContextCards: [],
+      assistantContextSeen: false,
+      isCustomizationOpen: false,
+      previousFullScreen: null,
+    });
+  },
 }));
 
-// 비동기 hydrate (앱 시작 시 LocalStorage/AsyncStorage에서 상태 복원)
-AsyncStorage.getItem(STORAGE_KEY)
-  .then((stored) => {
-    if (!stored) return;
-    try {
-      const parsed = JSON.parse(stored);
-      const next: Partial<UiState> = {};
-      if (parsed?.pinnedMenus && Array.isArray(parsed.pinnedMenus)) {
-        next.pinnedMenus = parsed.pinnedMenus;
-      }
-      if (
-        parsed?.themePreference &&
-        ['light', 'dark', 'system'].includes(parsed.themePreference)
-      ) {
-        next.themePreference = parsed.themePreference as ThemePreference;
-      }
-      if (Object.keys(next).length > 0) {
-        useUiStore.setState(next);
-      }
-    } catch (_) {
-      // 깨진 JSON은 무시
-    }
-  })
-  .catch(() => {
-    // AsyncStorage 접근 실패는 무시 (디폴트 값 사용)
-  });
+// 셀렉터: 현재 모드의 핀 배열 반환
+export const selectPinnedForMode = (s: UiState): PanelId[] =>
+  s.isAdminMode ? s.pinnedMenusAdmin : s.pinnedMenusUser;
 
-// pinnedMenus / themePreference 변경 시 AsyncStorage에 저장
-let prevPinnedMenus = useUiStore.getState().pinnedMenus;
+// pinnedMenusUser/pinnedMenusAdmin/themePreference 변경 시 자동 저장
+let prevPinnedUser = useUiStore.getState().pinnedMenusUser;
+let prevPinnedAdmin = useUiStore.getState().pinnedMenusAdmin;
 let prevThemePreference = useUiStore.getState().themePreference;
 useUiStore.subscribe((state) => {
-  const pinChanged = state.pinnedMenus !== prevPinnedMenus;
+  const userPinChanged = state.pinnedMenusUser !== prevPinnedUser;
+  const adminPinChanged = state.pinnedMenusAdmin !== prevPinnedAdmin;
   const themeChanged = state.themePreference !== prevThemePreference;
-  if (pinChanged || themeChanged) {
-    prevPinnedMenus = state.pinnedMenus;
+  if (userPinChanged || adminPinChanged || themeChanged) {
+    prevPinnedUser = state.pinnedMenusUser;
+    prevPinnedAdmin = state.pinnedMenusAdmin;
     prevThemePreference = state.themePreference;
-    AsyncStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ pinnedMenus: state.pinnedMenus, themePreference: state.themePreference }),
-    ).catch(() => {
-      // 저장 실패는 조용히 무시
-    });
+    if (currentUserId) {
+      AsyncStorage.setItem(
+        storageKey(currentUserId),
+        JSON.stringify({
+          pinnedMenusUser: state.pinnedMenusUser,
+          pinnedMenusAdmin: state.pinnedMenusAdmin,
+          themePreference: state.themePreference,
+        }),
+      ).catch(() => {
+        // 저장 실패는 조용히 무시
+      });
+    }
   }
 });

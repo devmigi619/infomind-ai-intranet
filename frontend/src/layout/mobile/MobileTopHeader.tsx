@@ -14,6 +14,7 @@ interface MobileTopHeaderProps {
     department?: string;
     position?: string;
     role?: string;
+    userId?: string;
   };
   onLogout: () => void;
   onSettingsClick: () => void;
@@ -24,6 +25,10 @@ export function MobileTopHeader({ user, onLogout, onSettingsClick }: MobileTopHe
   const [notifOpen, setNotifOpen] = useState(false);
   const unreadCount = useUnreadNotificationCount();
   const goHome = useUiStore((s) => s.goHome);
+  const isAdminMode = useUiStore((s) => s.isAdminMode);
+  const toggleAdminMode = useUiStore((s) => s.toggleAdminMode);
+  // PC TopHeader와 동일하게 'admin' 계정에게만 토글 노출
+  const isAdmin = user?.userId === 'admin';
 
   return (
     <>
@@ -33,6 +38,9 @@ export function MobileTopHeader({ user, onLogout, onSettingsClick }: MobileTopHe
           {
             backgroundColor: theme.bg.surface,
             borderBottomColor: theme.border.default,
+            // PC와 동일하게 관리자 모드 진입 시 상단 2px 빨간 띠
+            borderTopWidth: theme.isAdmin ? 2 : 0,
+            borderTopColor: theme.isAdmin ? theme.brand.primary : 'transparent',
           },
         ]}
       >
@@ -41,10 +49,51 @@ export function MobileTopHeader({ user, onLogout, onSettingsClick }: MobileTopHe
           <Text style={[styles.brand, { color: theme.text.primary }]}>Infomind</Text>
         </TouchableOpacity>
 
+        {/* 관리자 배지 (PC와 동일) */}
+        {theme.isAdmin && (
+          <View style={[styles.adminBadge, { backgroundColor: theme.brand.primary }]}>
+            <Text style={[styles.adminBadgeText, { color: theme.text.onBrand }]}>관리자</Text>
+          </View>
+        )}
+
         <View style={styles.spacer} />
 
         {/* Right: actions */}
         <View style={styles.rightControls}>
+          {/* Admin mode toggle (ADMIN only) — PC와 동일한 라벨+스위치 패턴 */}
+          {isAdmin && (
+            <TouchableOpacity
+              onPress={toggleAdminMode}
+              activeOpacity={0.7}
+              style={styles.adminToggle}
+              accessibilityLabel="관리자 모드 토글"
+            >
+              <Text
+                style={[
+                  styles.adminLabel,
+                  { color: theme.text.muted },
+                  isAdminMode && { color: theme.brand.primary, fontWeight: '500' },
+                ]}
+              >
+                관리자 모드
+              </Text>
+              <View
+                style={[
+                  styles.switch,
+                  { backgroundColor: 'rgba(0,0,0,0.15)' },
+                  isAdminMode && { backgroundColor: theme.brand.primary },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.switchKnob,
+                    isAdminMode && styles.switchKnobActive,
+                  ]}
+                />
+              </View>
+            </TouchableOpacity>
+          )}
+
           {/* Notification bell */}
           <TouchableOpacity
             style={[
@@ -81,11 +130,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 16,
     paddingRight: 16,
+    gap: 8,
   },
   brand: {
     fontSize: 16,
     fontWeight: '500',
     letterSpacing: 16 * 0.07,
+    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  },
+  adminBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 4,
+    flexShrink: 0,
+  },
+  adminBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.04 * 11,
     fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
   },
   spacer: {
@@ -95,6 +157,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+  },
+  adminToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginRight: 8,
+  },
+  adminLabel: {
+    fontSize: 12,
+    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  },
+  switch: {
+    width: 32,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  switchKnob: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  switchKnobActive: {
+    transform: [{ translateX: 14 }],
   },
   iconButton: {
     width: 32,

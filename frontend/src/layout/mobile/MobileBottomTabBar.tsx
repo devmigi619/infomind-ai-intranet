@@ -10,10 +10,15 @@ import {
   Car,
   Users,
   BookOpen,
+  Shield,
+  Tag,
+  List,
+  Settings,
   MoreHorizontal,
 } from 'lucide-react-native';
 import { useTheme } from '../../shared/hooks/useTheme';
-import { useUiStore } from '../../store/uiStore';
+import { selectPinnedForMode, useUiStore } from '../../store/uiStore';
+import { ALL_MENUS } from '../../shared/constants/menus';
 import type { PanelId } from '../../types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,60 +31,28 @@ const ICON_MAP: Record<string, React.ComponentType<any>> = {
   Car,
   Users,
   BookOpen,
+  Shield,
+  Tag,
+  List,
+  Settings,
 };
 
-const ICON_NAME_MAP: Record<PanelId, string> = {
-  board: 'LayoutList',
-  approval: 'FileCheck',
-  report: 'FileText',
-  calendar: 'Calendar',
-  meeting: 'Building2',
-  vehicle: 'Car',
-  contacts: 'Users',
-  documents: 'BookOpen',
-  certificate: 'FileText',
-  'admin-home': 'LayoutList',
-  'admin-users': 'Users',
-  'admin-roles': 'FileText',
-  'admin-categories': 'FileText',
-  'admin-approval-line': 'FileText',
-  'admin-system': 'FileText',
-  settings: 'FileText',
-};
-
-const LABEL_MAP: Record<PanelId, string> = {
-  board: '게시판',
-  approval: '결재',
-  report: '주간보고',
-  calendar: '캘린더',
-  meeting: '회의실',
-  vehicle: '차량',
-  contacts: '주소록',
-  documents: '자료실',
-  certificate: '증명서',
-  'admin-home': '관리자 홈',
-  'admin-users': '사용자',
-  'admin-roles': '권한',
-  'admin-categories': '카테고리',
-  'admin-approval-line': '결재선',
-  'admin-system': '시스템',
-  settings: '설정',
-};
+// ALL_MENUS에서 라벨 매핑 빌드 (단일 출처)
+const LABEL_MAP: Record<string, string> = Object.fromEntries(
+  ALL_MENUS.map((m) => [m.panel, m.label]),
+);
 
 export function MobileBottomTabBar() {
   const theme = useTheme();
-  const pinnedMenus = useUiStore((s) => s.pinnedMenus);
+  const pinnedMenus = useUiStore(selectPinnedForMode);
   const activeFullScreen = useUiStore((s) => s.activeFullScreen);
-  const isMobileMoreOpen = useUiStore((s) => s.isMobileMoreOpen);
   const setActiveFullScreen = useUiStore((s) => s.setActiveFullScreen);
-  const setMobileMoreOpen = useUiStore((s) => s.setMobileMoreOpen);
 
   // First 3 pinned menus (홈 + 핀3 + 더보기 = 5슬롯)
   const tabMenus = pinnedMenus.slice(0, 3);
 
   const handleHomePress = () => {
     setActiveFullScreen(null);
-    setMobileMoreOpen(false);
   };
 
   const handleTabPress = (panelId: PanelId) => {
@@ -93,10 +66,24 @@ export function MobileBottomTabBar() {
   };
 
   const handleMorePress = () => {
-    setMobileMoreOpen(true);
+    // 메뉴 패널 풀뷰 토글 — 이미 열려있으면 홈으로
+    if (activeFullScreen === 'menu-panel') {
+      setActiveFullScreen(null);
+    } else {
+      setActiveFullScreen('menu-panel');
+    }
   };
 
-  const isHomeActive = activeFullScreen === null && !isMobileMoreOpen;
+  // 핀 안 된 메뉴(더보기 영역의 메뉴)에 들어와있는지 — 풀뷰 위치이지만 사용자에게는 "더보기 영역"
+  const isCurrentlyUnpinnedMenu = (panel: PanelId, pinned: PanelId[]): boolean => {
+    if (pinned.includes(panel)) return false;
+    return ALL_MENUS.some((m) => m.panel === panel);
+  };
+
+  const isHomeActive = activeFullScreen === null;
+  const isMoreActive =
+    activeFullScreen === 'menu-panel' ||
+    (activeFullScreen !== null && isCurrentlyUnpinnedMenu(activeFullScreen, pinnedMenus));
 
   return (
     <>
@@ -141,8 +128,8 @@ export function MobileBottomTabBar() {
         </TouchableOpacity>
 
         {tabMenus.map((panelId) => {
-          const iconName = ICON_NAME_MAP[panelId] ?? 'FileText';
-          const Icon = ICON_MAP[iconName] ?? FileText;
+          const meta = ALL_MENUS.find((m) => m.panel === panelId);
+          const Icon = meta ? ICON_MAP[meta.iconName] ?? FileText : FileText;
           const label = LABEL_MAP[panelId] ?? panelId;
           const isActive = activeFullScreen === panelId;
           const color = isActive ? theme.brand.primary : theme.text.muted;
@@ -171,10 +158,35 @@ export function MobileBottomTabBar() {
           );
         })}
 
-        {/* More button (fixed 5th slot) */}
-        <TouchableOpacity style={styles.tab} activeOpacity={0.7} onPress={handleMorePress}>
-          <MoreHorizontal size={22} color={theme.text.muted} />
-          <Text style={[styles.label, { color: theme.text.muted }]}>더보기</Text>
+        {/* More button (fixed 5th slot) — 메뉴 패널 풀뷰 또는 핀 안 된 메뉴 풀뷰일 때 active */}
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            isMoreActive && { backgroundColor: theme.brand.primaryTint },
+          ]}
+          activeOpacity={0.7}
+          onPress={handleMorePress}
+        >
+          {isMoreActive && (
+            <View
+              style={[
+                styles.activeIndicator,
+                { backgroundColor: theme.brand.primary },
+              ]}
+            />
+          )}
+          <MoreHorizontal
+            size={22}
+            color={isMoreActive ? theme.brand.primary : theme.text.muted}
+          />
+          <Text
+            style={[
+              styles.label,
+              { color: isMoreActive ? theme.brand.primary : theme.text.muted },
+            ]}
+          >
+            더보기
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -188,6 +200,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    // 모바일 화면 위계: NavRail은 레벨 2 시트(50)보다 위, 레벨 3 모달(200)보다 아래
+    zIndex: 100,
   },
   tab: {
     flex: 1,
