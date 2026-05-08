@@ -19,12 +19,21 @@ const authApi = {
     const res = await apiClient.post('/api/auth/login', { userId, password });
     const { token, refreshToken, user } = res.data.data;
     await AsyncStorage.setItem('token', token);
-    await AsyncStorage.setItem('refreshToken', refreshToken);
+    // refresh 함수와 일관: 모바일은 SecureStore, 웹은 AsyncStorage
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      await SecureStore.setItemAsync('refreshToken', refreshToken);
+    } else {
+      await AsyncStorage.setItem('refreshToken', refreshToken);
+    }
     await AsyncStorage.setItem('user', JSON.stringify(user));
     return user as User;
   },
   logout: async () => {
     await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
+    // 모바일은 SecureStore에 저장돼 있으니 같이 정리
+    if (Platform.OS === 'android' || Platform.OS === 'ios') {
+      await SecureStore.deleteItemAsync('refreshToken').catch(() => {});
+    }
   },
   getStoredUser: async (): Promise<User | null> => {
     const u = await AsyncStorage.getItem('user');
@@ -40,7 +49,16 @@ const authApi = {
     if (!refreshToken) throw new Error('No refresh token');
     const res = await apiClient.post('/api/auth/refresh', { refreshToken });
     const newToken = res.data.data.token;
+    const newRefreshToken = res.data.data.refreshToken;
     await AsyncStorage.setItem('token', newToken);
+    // Rolling refresh: 새 refresh token도 저장 (모바일은 SecureStore, 웹은 AsyncStorage)
+    if (newRefreshToken) {
+      if (Platform.OS === "android" || Platform.OS === "ios") {
+        await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+      } else {
+        await AsyncStorage.setItem('refreshToken', newRefreshToken);
+      }
+    }
     return newToken;
   },
 };

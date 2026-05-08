@@ -53,7 +53,16 @@ apiClient.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token');
         const res = await axios.post(`${BASE_URL}/api/auth/refresh`, { refreshToken });
         const newToken: string = res.data.data.token;
+        const newRefreshToken: string | undefined = res.data.data.refreshToken;
         await AsyncStorage.setItem('token', newToken);
+        // Rolling refresh: 새 refresh token도 저장 (모바일은 SecureStore, 웹은 AsyncStorage)
+        if (newRefreshToken) {
+          if (Platform.OS === "android" || Platform.OS === "ios") {
+            await SecureStore.setItemAsync('refreshToken', newRefreshToken);
+          } else {
+            await AsyncStorage.setItem('refreshToken', newRefreshToken);
+          }
+        }
         processQueue(null, newToken);
         original.headers.Authorization = `Bearer ${newToken}`;
         return apiClient(original);

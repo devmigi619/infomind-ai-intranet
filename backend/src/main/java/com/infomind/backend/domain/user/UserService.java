@@ -34,12 +34,12 @@ public class UserService {
         String accessToken = jwtProvider.generateToken(user.getUserId(), user.getUserSe());
         String refreshTokenStr = jwtProvider.generateRefreshToken(user.getUserId());
 
-        // 리프레시 토큰 DB 저장 (7일 유효)
+        // 리프레시 토큰 DB 저장 (JWT 만료와 동일한 기간)
         RefreshToken refreshToken = RefreshToken.builder()
                 .tkId(UUID.randomUUID().toString())
                 .userId(user.getUserId())
                 .tk(refreshTokenStr)
-                .tkExpDt(LocalDate.now().plusDays(7))
+                .tkExpDt(LocalDate.now().plusDays(jwtProvider.getRefreshExpiryDays()))
                 .rvkYn("N")
                 .ipAddr(resolveIp())
                 .build();
@@ -54,20 +54,46 @@ public class UserService {
 
     @Transactional
     public AuthController.RefreshResponse refresh(String refreshTokenStr) {
+        // 1. JWT 서명 검증
         if (!jwtProvider.validateToken(refreshTokenStr)) {
             throw new IllegalArgumentException("유효하지 않은 refresh token입니다.");
         }
 
-        // DB에서 미회수(RVK_YN=N) 토큰 확인
-        refreshTokenRepository.findByTkAndRvkYn(refreshTokenStr, "N")
+        // 2. DB에서 미회수(RVK_YN=N) 토큰 확인
+        RefreshToken stored = refreshTokenRepository.findByTkAndRvkYn(refreshTokenStr, "N")
                 .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 refresh token입니다."));
+
+        // 3. DB 만료일 검증
+        if (stored.getTkExpDt().isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("만료된 refresh token입니다.");
+        }
 
         String userId = jwtProvider.getUserId(refreshTokenStr);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
 
+        // 4. 새 access token + 새 refresh token 발급 (Rolling Refresh)
         String newAccessToken = jwtProvider.generateToken(user.getUserId(), user.getUserSe());
-        return AuthController.RefreshResponse.builder().token(newAccessToken).build();
+        String newRefreshToken = jwtProvider.generateRefreshToken(user.getUserId());
+
+        // 5. 기존 refresh token revoke
+        stored.revoke();
+
+        // 6. 새 refresh token DB 저장 (만료일도 미래로 갱신)
+        RefreshToken newRecord = RefreshToken.builder()
+                .tkId(UUID.randomUUID().toString())
+                .userId(user.getUserId())
+                .tk(newRefreshToken)
+                .tkExpDt(LocalDate.now().plusDays(jwtProvider.getRefreshExpiryDays()))
+                .rvkYn("N")
+                .ipAddr(resolveIp())
+                .build();
+        refreshTokenRepository.save(newRecord);
+
+        return AuthController.RefreshResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .build();
     }
 
     @Transactional

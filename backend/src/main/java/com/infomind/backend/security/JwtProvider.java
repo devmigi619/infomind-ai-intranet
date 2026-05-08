@@ -18,12 +18,19 @@ public class JwtProvider {
 
     private final SecretKey secretKey;
     private final long expiryHours;
+    private final long refreshExpiryDays;
 
     public JwtProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.expiry-hours}") long expiryHours) {
+            @Value("${jwt.expiry-hours}") long expiryHours,
+            @Value("${jwt.refresh-expiry-days}") long refreshExpiryDays) {
         this.secretKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.expiryHours = expiryHours;
+        this.refreshExpiryDays = refreshExpiryDays;
+    }
+
+    public long getRefreshExpiryDays() {
+        return refreshExpiryDays;
     }
 
     public String generateToken(String userId, String userSe) {
@@ -40,7 +47,7 @@ public class JwtProvider {
 
     public String generateRefreshToken(String userId) {
         Date now = new Date();
-        Date expiry = new Date(now.getTime() + 30L * 24 * 3600 * 1000);
+        Date expiry = new Date(now.getTime() + refreshExpiryDays * 24L * 3600 * 1000);
         return Jwts.builder()
                 .subject(userId)
                 .issuedAt(now)

@@ -59,5 +59,6 @@ public class AuthController {
     @Builder
     public static class RefreshResponse {
         private String token;
+        private String refreshToken;
     }
 }

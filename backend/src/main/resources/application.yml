@@ -18,3 +18,4 @@ server:
 jwt:
   secret: ${JWT_SECRET:local-dev-secret-key-must-be-at-least-32-characters}
   expiry-hours: ${JWT_EXPIRY_HOURS:8}
+  refresh-expiry-days: ${JWT_REFRESH_EXPIRY_DAYS:30}
