@@ -75,7 +75,7 @@
 ## 다음 단계
 
 ### ▶ 3단계 — LeftPanel 모듈별 퀵뷰
-- [ ] 게시판 LP (최근 글, 카테고리)
+- [x] 게시판 LP (공지사항 NTC 2 + 일반 3, 최대 5)
 - [ ] 전자결재 LP (대기/올린/완료)
 - [ ] 주간보고 LP (이번 주 / 지난 주)
 - [ ] 캘린더 LP (오늘 일정) — Phase 2 데이터 연동 전 placeholder
@@ -83,7 +83,7 @@
 - [ ] 차량 LP — placeholder
 
 ### 4단계 — 모듈별 풀뷰 레이아웃 다듬기
-- [ ] 게시판 풀뷰 (목록/상세/작성 레이아웃 정비)
+- [x] 게시판 풀뷰 (목록/상세/작성, 단일 컬럼 상태머신, NTC 핀, 대댓글, 모바일 카드/PC 테이블)
 - [ ] 전자결재 풀뷰 (결재함 구조 — 받은/올린/완료)
 - [ ] 주간보고 풀뷰
 
@@ -136,6 +136,7 @@
 - [x] 직급 관리 화면 (AdminJobGradeScreen, 백엔드 CRUD API, INT_JBGD)
 - [x] 부서 관리 화면 (AdminDeptScreen, 백엔드 CRUD API, INT_DEPT, 트리+우측상세, 계층 cascade 비활성화)
 - [x] 사용자 관리 화면 (AdminUsersScreen, 백엔드 CRUD API, INT_USER, 테이블/카드 UI, 계정 활성·비활성, 비밀번호 초기화)
+- [x] 게시판 관리 화면 (AdminBoardsScreen, 백엔드 CRUD API, INT_BRD, 활성·비활성 토글)
 - [ ] 권한 관리 + 관리자 화면 (현재 NavRail 관리자 모드 자리만 마련됨)
 - [ ] RAG (내규 문서 검색, AI 채팅에서 활용)
 - [ ] 다국어 (한국어 / 영어)

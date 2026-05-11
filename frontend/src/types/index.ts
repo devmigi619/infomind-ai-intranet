@@ -10,7 +10,7 @@ export type PanelId =
   | 'certificate'
   | 'admin-users'
   | 'admin-roles'
-  | 'admin-categories'
+  | 'admin-boards'
   | 'admin-approval-line'
   | 'admin-common-code'
   | 'admin-job-grade'

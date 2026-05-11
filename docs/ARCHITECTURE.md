@@ -132,8 +132,8 @@ Nginx 역할:
 | `INT_USER` | `User` | 사용자 계정. PK = `USER_ID` (String) |
 | `INT_RF_TK` | `RefreshToken` | 리프레시 토큰 저장. UUID PK |
 | `INT_PST` | `Post` | 게시글 |
-| `INT_PST_CMT` | — | 게시글 댓글 |
-| `INT_BRD` | `PostCategory` | 게시판 카테고리 |
+| `INT_PST_CMT` | `PostComment` | 게시글 댓글 (대댓글 2단계까지) |
+| `INT_BRD` | `Board` | 게시판 |
 | `INT_APV` | `Approval` | 전자결재 |
 | `INT_WKL_RPT` | `WeeklyReport` | 주간보고 |
 | `INT_COM_CODE` | `CommonCode` | 공통코드 (상위코드 + 하위코드) |
@@ -224,6 +224,51 @@ Nginx 역할:
 | principal 타입 | `String` — 전 Service/Controller 공통 |
 | 액세스 토큰 유효기간 | 8시간 (application.yml `jwt.expiry-hours`) |
 
+## Board 도메인
+
+다중 게시판 시스템. `Board`(게시판) ─ `Post`(글) ─ `PostComment`(댓글) 3계층.
+
+### 테이블 구조
+
+| 테이블 | 엔티티 | 키 | 비고 |
+|---|---|---|---|
+| `INT_BRD` | `Board` | `BRD_ID` (String) | 게시판. 관리자가 직접 코드 입력 (예: `NOTICE`, `FREE`) |
+| `INT_PST` | `Post` | `(BRD_ID, PST_SN)` 복합키 | 게시판별 시퀀스 |
+| `INT_PST_CMT` | `PostComment` | `(BRD_ID, PST_SN, CMT_SN)` 복합키 | 댓글/대댓글 (2단계까지) |
+
+JPA 매핑: `@IdClass(PostId)`, `@IdClass(PostCommentId)`로 복합키 처리.
+
+### 핵심 설계 결정
+
+- **`BRD_ID`**: 관리자 입력 코드 (의미 있는 영문 대문자) — `userId`/`deptCd` 등 다른 PK와 동일 컨벤션
+- **`BRD_SE`**: 공통코드 (`_SE` 규칙 — `useCodeList('BRD_SE')`로 옵션 조회)
+- **`DEPT_CD`**: 부서 한정 게시판일 때 부서 코드 (`null`이면 전체 공개)
+- **공지 핀**: `INT_PST.NTC_YN = 'Y'` — 백엔드가 `ntcYn DESC, pstSn DESC`로 정렬 반환 → 클라이언트 별도 정렬 불필요
+- **소프트 삭제**: `INT_BRD.USE_YN = 'N'` (게시판 비활성화), `INT_PST.DEL_YN = 'Y'` / `INT_PST_CMT.DEL_YN = 'Y'` (글·댓글)
+- **권한**: 글·댓글 수정은 작성자만, 삭제는 작성자 또는 admin
+
+### API 분리
+
+| 경로 | 대상 | 용도 |
+|---|---|---|
+| `GET /api/boards` | 인증 사용자 | 활성 게시판 목록 (`useYn='Y'`만) |
+| `GET /api/boards/{brdId}/posts` | 인증 사용자 | 게시판 글 목록 (공지 핀 정렬 적용) |
+| `POST /api/boards/{brdId}/posts` | 인증 사용자 | 글 작성 |
+| `DELETE /api/boards/{brdId}/posts/{pstSn}` | 작성자 또는 admin | 글 소프트 삭제 |
+| `GET /api/admin/boards` | ADMIN | 게시판 관리용 (활성+비활성) |
+| `POST /api/admin/boards` | ADMIN | 게시판 생성 |
+| `DELETE /api/admin/boards/{brdId}` | ADMIN | 게시판 비활성화 |
+| `PUT /api/admin/boards/{brdId}/enable` | ADMIN | 게시판 활성화 복원 |
+
+### LP 퀵뷰 규칙
+
+게시판 LP(`BoardQuickPanel`)는 공지사항 게시판의 글을 보여준다.
+- 상단: `NTC=Y` 글 2개 (📌)
+- 하단: 일반 글 3개
+- 총 최대 5개
+
+LP 헤더 "열기" 버튼 → `setBoardLpHandoff({ brdId, pstSn? })` + `setActiveFullScreen('board')` → 풀뷰가 핸드오프 컨텍스트를 받아 해당 게시판(또는 글)으로 자동 진입.
+
 ## Admin 도메인
 
 관리자 모드(`isAdminMode`)에서만 접근 가능한 메뉴들. 모든 API는 `/api/admin/**` 경로로 `ROLE_ADMIN` 필요.
@@ -234,6 +279,7 @@ Nginx 역할:
 | 직급 관리 | `/api/admin/job-grades` | `JobGrade` | 단순 목록, 소프트 삭제 (`use_yn=N`) |
 | 부서 관리 | `/api/admin/departments` | `Department` | `UP_DEPT_CD` 자기 참조 계층 트리, 비활성화 시 하위 부서 cascade |
 | 사용자 관리 | `/api/admin/users` | `User` | CRUD + 계정 활성/비활성, 비밀번호 초기화 |
+| 게시판 관리 | `/api/admin/boards` | `Board` | CRUD + `useYn` 활성/비활성 토글, 첨부/댓글 사용여부 플래그 |
 
 ### 부서 계층 구조
 

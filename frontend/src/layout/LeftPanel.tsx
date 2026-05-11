@@ -12,6 +12,7 @@ import {
 import { ArrowRight, X } from 'lucide-react-native';
 import type { PanelId } from '../types';
 import { useTheme } from '../shared/hooks/useTheme';
+import { BoardQuickPanel } from '../features/board/components/BoardQuickPanel';
 
 interface LeftPanelProps {
   activePanel: PanelId | null;
@@ -31,7 +32,7 @@ const PANEL_TITLES: Record<PanelId, string> = {
   certificate: '증명서',
   'admin-users': '사용자 관리',
   'admin-roles': '권한 관리',
-  'admin-categories': '게시판 카테고리',
+  'admin-boards': '게시판 관리',
   'admin-approval-line': '결재선 템플릿',
   'admin-common-code': '공통코드 관리',
   'admin-job-grade': '직급 관리',
@@ -78,22 +79,7 @@ const PANEL_PREVIEW: Partial<Record<PanelId, PreviewSection[]>> = {
       ],
     },
   ],
-  board: [
-    {
-      label: '공지',
-      cards: [
-        { title: '4월 사내 안내', meta: '인사팀 · 어제' },
-        { title: '보안 업데이트 공지', meta: 'IT팀 · 4/22' },
-      ],
-    },
-    {
-      label: '최근 게시글',
-      cards: [
-        { title: '점심 메뉴 추천 받아요', meta: '김개발 · 오늘' },
-        { title: 'Q&A: 휴가 신청 방법', meta: '신입사원 · 어제' },
-      ],
-    },
-  ],
+  // board는 BoardQuickPanel이 실데이터로 직접 렌더한다 (PANEL_PREVIEW 우회)
   report: [
     {
       label: '내 보고서',
@@ -186,6 +172,9 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
   const title = activePanel ? PANEL_TITLES[activePanel] : '';
   const sections = activePanel ? (PANEL_PREVIEW[activePanel] ?? PLACEHOLDER_SECTIONS) : [];
 
+  // 게시판은 자체 헤더(목록↔상세 토글 + 열기 버튼)를 그리므로 LP 표준 헤더를 우회한다.
+  const useCustomPanel = activePanel === 'board';
+
   return (
     <Animated.View
       style={[
@@ -198,6 +187,20 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
       ]}
     >
       <View style={styles.inner}>
+        {useCustomPanel ? (
+          <Animated.View
+            style={[
+              styles.contentWrap,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: translateAnim }],
+              },
+            ]}
+          >
+            {activePanel === 'board' && <BoardQuickPanel onClose={onClose} />}
+          </Animated.View>
+        ) : (
+          <>
         <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
           <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
           <View style={styles.actions}>
@@ -261,6 +264,8 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
             ))}
           </ScrollView>
         </Animated.View>
+          </>
+        )}
       </View>
     </Animated.View>
   );

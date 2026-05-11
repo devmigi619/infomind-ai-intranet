@@ -11,6 +11,7 @@ import { AdminCommonCodeScreen } from '../../features/admin-common-code/screens/
 import { AdminJobGradeScreen } from '../../features/admin-job-grade/screens/AdminJobGradeScreen';
 import { AdminDeptScreen } from '../../features/admin-dept/screens/AdminDeptScreen';
 import { AdminUsersScreen } from '../../features/admin-users/screens/AdminUsersScreen';
+import { AdminBoardsScreen } from '../../features/admin-boards/screens/AdminBoardsScreen';
 import { MobileMenuPanel } from './MobileMenuPanel';
 
 const PLACEHOLDER_TITLES: Record<string, string> = {
@@ -22,7 +23,7 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
   certificate: '증명서',
   'admin-users': '사용자 관리',
   'admin-roles': '권한 관리',
-  'admin-categories': '카테고리 관리',
+  'admin-boards': '게시판 관리',
   'admin-approval-line': '결재선 관리',
   'admin-common-code': '공통코드 관리',
   'admin-job-grade': '직급 관리',
@@ -94,6 +95,8 @@ export function MobileFullScreenRouter() {
         return <AdminDeptScreen />;
       case 'admin-users':
         return <AdminUsersScreen />;
+      case 'admin-boards':
+        return <AdminBoardsScreen />;
       case 'menu-panel':
         return <MobileMenuPanel />;
       default:

@@ -138,6 +138,32 @@ const gradeOptions = [
 ];
 ```
 
+## 확인 다이얼로그 (`useConfirm`)
+
+확인이 필요한 액션(삭제 등)은 **반드시** `useConfirm` 사용.
+
+```typescript
+import { useConfirm } from '../../../shared/hooks/useConfirm';
+
+function MyScreen() {
+  const confirm = useConfirm();
+
+  const handleDelete = async () => {
+    const ok = await confirm({
+      title: '삭제 확인',
+      message: '정말 삭제하시겠습니까?',
+      danger: true,
+    });
+    if (!ok) return;
+    await deleteSomething.mutateAsync(...);
+  };
+}
+```
+
+- `Alert.alert(title, msg, [buttons])` **사용 금지** — `react-native-web`에서 빈 함수(no-op)로 구현되어 있음. 콜백 무시 + 다이얼로그 자체가 안 뜸.
+- `ConfirmProvider`는 이미 `App.tsx` 루트에 마운트되어 있음 — 추가 설정 불필요.
+- 옵션: `{ title, message?, confirmText?, cancelText?, danger? }` → `Promise<boolean>`.
+
 ## 디자인 토큰
 
 새 코드는 `shared/constants/`의 토큰 사용 (colors, spacing, radius, typography, shadows 등).

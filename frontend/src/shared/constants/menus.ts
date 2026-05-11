@@ -35,7 +35,7 @@ export const ALL_MENUS: MenuMeta[] = [
   // 관리자 메뉴
   { panel: 'admin-users', label: '사용자 관리', iconName: 'Users', pinnable: true, category: 'admin' },
   { panel: 'admin-roles', label: '권한 관리', iconName: 'Shield', pinnable: true, category: 'admin' },
-  { panel: 'admin-categories', label: '게시판 카테고리', iconName: 'Tag', pinnable: true, category: 'admin' },
+  { panel: 'admin-boards', label: '게시판 관리', iconName: 'Tag', pinnable: true, category: 'admin' },
   { panel: 'admin-approval-line', label: '결재선 템플릿', iconName: 'FileText', pinnable: true, category: 'admin' },
   { panel: 'admin-common-code', label: '공통코드 관리', iconName: 'List', pinnable: true, category: 'admin' },
   { panel: 'admin-job-grade', label: '직급 관리', iconName: 'GraduationCap', pinnable: true, category: 'admin' },

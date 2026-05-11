@@ -13,6 +13,12 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 export type AssistantStage = 'collapsed' | 'medium' | 'full';
 export type AssistantMode = 'quickAction' | 'context';
 
+/** 게시판 LP → 풀뷰 컨텍스트 전달용 */
+export interface BoardLpHandoff {
+  brdId: string;
+  pstSn?: number;
+}
+
 interface UiState {
   // State
   activePanel: PanelId | null;
@@ -33,6 +39,7 @@ interface UiState {
   assistantContextSeen: boolean;
   isCustomizationOpen: boolean;
   previousFullScreen: PanelId | null;
+  boardLpHandoff: BoardLpHandoff | null;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
@@ -56,13 +63,14 @@ interface UiState {
   resetChat: () => void;
   setActiveFullScreen: (panelId: PanelId | null) => void;
   setCustomizationOpen: (open: boolean) => void;
+  setBoardLpHandoff: (handoff: BoardLpHandoff | null) => void;
   hydrateFromStorage: (userId: string) => Promise<void>;
   resetUiToDefaults: () => void;
 }
 
 // 디폴트 값들 — resetUiToDefaults에서 재사용
 const DEFAULT_PINNED_USER: PanelId[] = ['board', 'approval', 'report'];
-const DEFAULT_PINNED_ADMIN: PanelId[] = ['admin-users', 'admin-roles', 'admin-categories'];
+const DEFAULT_PINNED_ADMIN: PanelId[] = ['admin-users', 'admin-roles', 'admin-boards'];
 const DEFAULT_THEME: ThemePreference = 'system';
 
 // 현재 hydrate 된 userId — null이면 자동 저장 비활성
@@ -87,6 +95,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   assistantContextSeen: false,
   isCustomizationOpen: false,
   previousFullScreen: null,
+  boardLpHandoff: null,
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -94,7 +103,7 @@ export const useUiStore = create<UiState>((set, get) => ({
       return;
     }
     set((state) => ({
-        activeFullScreen : state.isAdminMode ? panel : null,
+        activeFullScreen : state.isAdminMode ? panel : state.activeFullScreen,
         activePanel: state.isAdminMode ? null : state.activePanel === panel ? null : panel,
     }));
   },
@@ -185,6 +194,8 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   setCustomizationOpen: (open) => set({ isCustomizationOpen: open }),
 
+  setBoardLpHandoff: (handoff) => set({ boardLpHandoff: handoff }),
+
   setAssistantMode: (mode) => set({ assistantMode: mode }),
 
   setAssistantContext: (cards) =>
@@ -272,6 +283,7 @@ export const useUiStore = create<UiState>((set, get) => ({
       assistantContextSeen: false,
       isCustomizationOpen: false,
       previousFullScreen: null,
+      boardLpHandoff: null,
     });
   },
 }));

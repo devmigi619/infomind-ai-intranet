@@ -3,99 +3,72 @@ package com.infomind.backend.domain.post;
 import com.infomind.backend.common.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.util.List;
 
 @RestController
-@RequestMapping("/api/posts")
+@RequestMapping("/api/boards/{brdId}/posts")
 @RequiredArgsConstructor
 public class PostController {
 
     private final PostService postService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<Page<PostSummaryDto>>> getPosts(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @RequestParam(required = false) String category) {
-        PageRequest pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "crtAt"));
-        return ResponseEntity.ok(ApiResponse.ok(postService.getPosts(category, pageable)));
+    public ResponseEntity<ApiResponse<List<PostService.PostDto>>> getList(
+            @PathVariable String brdId) {
+        return ResponseEntity.ok(ApiResponse.ok(postService.getList(brdId)));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<PostDetailDto>> getPost(@PathVariable Long id) {
-        return ResponseEntity.ok(ApiResponse.ok(postService.getPost(id)));
+    @GetMapping("/{pstSn}")
+    public ResponseEntity<ApiResponse<PostService.PostDto>> getOne(
+            @PathVariable String brdId,
+            @PathVariable Long pstSn) {
+        return ResponseEntity.ok(ApiResponse.ok(postService.getOne(brdId, pstSn)));
     }
 
     @PostMapping
-    public ResponseEntity<ApiResponse<PostDetailDto>> createPost(
-            Authentication authentication,
-            @Valid @RequestBody PostRequest request) {
-        String userId = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(ApiResponse.ok(postService.createPost(userId, request)));
+    public ResponseEntity<ApiResponse<PostService.PostDto>> create(
+            @PathVariable String brdId,
+            @Valid @RequestBody PostService.CreateRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(postService.create(brdId, request)));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<PostDetailDto>> updatePost(
-            @PathVariable Long id,
-            Authentication authentication,
-            @Valid @RequestBody PostRequest request) {
-        String userId = (String) authentication.getPrincipal();
-        return ResponseEntity.ok(ApiResponse.ok(postService.updatePost(id, userId, request)));
+    @PutMapping("/{pstSn}")
+    public ResponseEntity<ApiResponse<PostService.PostDto>> update(
+            @PathVariable String brdId,
+            @PathVariable Long pstSn,
+            @Valid @RequestBody PostService.UpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.ok(postService.update(brdId, pstSn, request)));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletePost(
-            @PathVariable Long id,
-            Authentication authentication) {
-        String userId = (String) authentication.getPrincipal();
-        String role = authentication.getAuthorities().stream()
-                .map(a -> a.getAuthority().replace("ROLE_", ""))
-                .findFirst().orElse("USER");
-        postService.deletePost(id, userId, role);
-        return ResponseEntity.noContent().build();
+    @DeleteMapping("/{pstSn}")
+    public ResponseEntity<ApiResponse<Void>> softDelete(
+            @PathVariable String brdId,
+            @PathVariable Long pstSn,
+            @Valid @RequestBody DeleteRequest request) {
+        postService.softDelete(brdId, pstSn, request.getUserId(), request.isAdmin());
+        return ResponseEntity.ok(ApiResponse.ok(null));
     }
 
+    @PostMapping("/{pstSn}/like")
+    public ResponseEntity<ApiResponse<PostService.PostDto>> incrementLike(
+            @PathVariable String brdId,
+            @PathVariable Long pstSn) {
+        return ResponseEntity.ok(ApiResponse.ok(postService.incrementLike(brdId, pstSn)));
+    }
+
+    /** 삭제 요청 페이로드 — userId, isAdmin (인증 통합 전 임시) */
     @Getter
-    public static class PostRequest {
-        @NotBlank
-        private String title;
-        @NotBlank
-        private String content;
-        @NotBlank
-        private String category;
-    }
+    public static class DeleteRequest {
+        @NotBlank private String userId;
+        private boolean admin;
 
-    @Getter
-    @Builder
-    public static class PostSummaryDto {
-        private Long id;
-        private String title;
-        private String authorName;
-        private String category;
-        private int viewCount;
-        private LocalDateTime createdAt;
-    }
-
-    @Getter
-    @Builder
-    public static class PostDetailDto {
-        private Long id;
-        private String title;
-        private String content;
-        private String authorName;
-        private String category;
-        private int viewCount;
-        private LocalDateTime createdAt;
+        public boolean isAdmin() {
+            return admin;
+        }
     }
 }

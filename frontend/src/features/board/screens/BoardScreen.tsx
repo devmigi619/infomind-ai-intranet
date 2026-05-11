@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -11,475 +11,1462 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
-import { useBoardList, useCreatePost, type Post } from '../api';
+import { useConfirm } from '../../../shared/hooks/useConfirm';
+import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
+import { useUiStore } from '../../../store/uiStore';
+import { useCurrentUser } from '../../auth/api';
+import { spacing } from '../../../shared/constants/spacing';
+import { radius } from '../../../shared/constants/radius';
+import { fontSize, fontWeight } from '../../../shared/constants/typography';
+import {
+  useBoards,
+  useBoardPosts,
+  usePostDetail,
+  useCreatePost,
+  useUpdatePost,
+  useDeletePost,
+  useLikePost,
+  usePostComments,
+  useCreateComment,
+  useDeleteComment,
+  type Post,
+  type PostComment,
+} from '../api';
 
-const TABS = [
-  { key: '', label: '전체' },
-  { key: 'NOTICE', label: '공지' },
-  { key: 'FREE', label: '자유' },
-  { key: 'QNA', label: 'QNA' },
-];
+const fontFamily = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
-const CATEGORIES = ['NOTICE', 'FREE', 'QNA'];
+type Mode = 'list' | 'detail' | 'write';
+type WriteMode = 'create' | 'edit';
 
-const CATEGORY_COLORS: Record<string, string> = {
-  NOTICE: '#0A2463',
-  FREE: '#10B981',
-  QNA: '#F59E0B',
-};
+// NTC 행/카드 강조 색 — PM 사양으로 고정
+const NTC_ROW_BG = 'rgba(220,38,38,0.03)';
+const NTC_BADGE_BG = '#DC2626';
+
+function formatDate(iso?: string): string {
+  if (!iso) return '';
+  // ISO LocalDateTime 형식 (예: 2026-05-11T14:23:00) — 앞 16자만
+  const d = iso.replace('T', ' ').slice(0, 16);
+  return d;
+}
 
 export function BoardScreen() {
-  const [activeCategory, setActiveCategory] = useState('');
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const theme = useTheme();
+  const { isMobile } = useResponsive();
+  const { data: currentUser } = useCurrentUser();
+  const isAdminMode = useUiStore((s) => s.isAdminMode);
+  const boardLpHandoff = useUiStore((s) => s.boardLpHandoff);
+  const setBoardLpHandoff = useUiStore((s) => s.setBoardLpHandoff);
+  const confirm = useConfirm();
 
-  // Write form state
-  const [isWriting, setIsWriting] = useState(false);
+  const currentUserId = currentUser?.userId ?? '';
+
+  const [mode, setMode] = useState<Mode>('list');
+  const [activeBrdId, setActiveBrdId] = useState<string | null>(null);
+  const [selectedPstSn, setSelectedPstSn] = useState<number | null>(null);
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  // Write form
+  const [writeMode, setWriteMode] = useState<WriteMode>('create');
   const [writeTitle, setWriteTitle] = useState('');
   const [writeContent, setWriteContent] = useState('');
-  const [writeCategory, setWriteCategory] = useState('FREE');
+  const [writeNotice, setWriteNotice] = useState(false);
 
-  const { data: posts = [], isLoading, error } = useBoardList(0, activeCategory);
+  const { data: boards = [], isLoading: boardsLoading } = useBoards();
+
+  // 첫 로드 시 첫 번째 게시판으로 초기화
+  useEffect(() => {
+    if (!activeBrdId && boards.length > 0) {
+      setActiveBrdId(boards[0].brdId);
+    }
+  }, [boards, activeBrdId]);
+
+  // LP 핸드오프 적용
+  useEffect(() => {
+    if (!boardLpHandoff) return;
+    setActiveBrdId(boardLpHandoff.brdId);
+    if (boardLpHandoff.pstSn != null) {
+      setSelectedPstSn(boardLpHandoff.pstSn);
+      setMode('detail');
+    } else {
+      setSelectedPstSn(null);
+      setMode('list');
+    }
+    setBoardLpHandoff(null);
+  }, [boardLpHandoff, setBoardLpHandoff]);
+
+  const { data: posts = [], isLoading: postsLoading, error: postsError } = useBoardPosts(activeBrdId);
+
+  const filteredPosts = useMemo(() => {
+    const kw = searchKeyword.trim().toLowerCase();
+    if (!kw) return posts;
+    return posts.filter(
+      (p) =>
+        p.pstTtl.toLowerCase().includes(kw) ||
+        (p.pstDesc ?? '').toLowerCase().includes(kw) ||
+        (p.userId ?? '').toLowerCase().includes(kw),
+    );
+  }, [posts, searchKeyword]);
+
+  const activeBoard = boards.find((b) => b.brdId === activeBrdId);
+
   const createPost = useCreatePost();
+  const updatePost = useUpdatePost();
+  const deletePost = useDeletePost();
 
-  const handleSave = async () => {
-    if (!writeTitle || !writeContent) {
+  const openWriteCreate = () => {
+    setWriteMode('create');
+    setWriteTitle('');
+    setWriteContent('');
+    setWriteNotice(false);
+    setMode('write');
+  };
+
+  const openWriteEdit = (post: Post) => {
+    setWriteMode('edit');
+    setWriteTitle(post.pstTtl);
+    setWriteContent(post.pstDesc);
+    setWriteNotice(post.ntcYn === 'Y');
+    setMode('write');
+  };
+
+  const handleSavePost = async () => {
+    if (!activeBrdId) return;
+    if (!writeTitle.trim() || !writeContent.trim()) {
       Alert.alert('입력 오류', '제목과 내용을 입력해주세요.');
       return;
     }
+    if (!currentUserId) {
+      Alert.alert('인증 오류', '로그인 정보를 확인할 수 없습니다.');
+      return;
+    }
     try {
-      await createPost.mutateAsync({
-        title: writeTitle,
-        content: writeContent,
-        category: writeCategory,
-      });
-      setWriteTitle('');
-      setWriteContent('');
-      setWriteCategory('FREE');
-      setIsWriting(false);
+      if (writeMode === 'create') {
+        await createPost.mutateAsync({
+          brdId: activeBrdId,
+          data: {
+            pstTtl: writeTitle.trim(),
+            pstDesc: writeContent.trim(),
+            userId: currentUserId,
+            ntcYn: writeNotice ? 'Y' : 'N',
+          },
+        });
+      } else if (selectedPstSn != null) {
+        await updatePost.mutateAsync({
+          brdId: activeBrdId,
+          pstSn: selectedPstSn,
+          data: {
+            pstTtl: writeTitle.trim(),
+            pstDesc: writeContent.trim(),
+            ntcYn: writeNotice ? 'Y' : 'N',
+          },
+        });
+      }
+      setMode(writeMode === 'edit' ? 'detail' : 'list');
     } catch {
       Alert.alert('저장 실패', '서버에 저장하지 못했습니다.');
     }
   };
 
-  if (selectedPost) {
+  const handleDeletePost = async (post: Post) => {
+    if (!activeBrdId) return;
+    const ok = await confirm({ title: '게시글 삭제', message: '정말 삭제하시겠습니까?', danger: true });
+    if (!ok) return;
+    try {
+      await deletePost.mutateAsync({
+        brdId: activeBrdId,
+        pstSn: post.pstSn,
+        data: { userId: currentUserId, admin: isAdminMode },
+      });
+      setMode('list');
+      setSelectedPstSn(null);
+    } catch {
+      Alert.alert('삭제 실패', '삭제 권한이 없거나 서버 오류입니다.');
+    }
+  };
+
+  // ─── 풀뷰 — Write 상태 ─────────────────────────────────────────────
+  if (mode === 'write') {
     return (
-      <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setSelectedPost(null)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backText}>← 목록으로</Text>
-        </TouchableOpacity>
-        <ScrollView style={styles.detail} contentContainerStyle={styles.detailContent}>
-          <View style={styles.detailHeader}>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: CATEGORY_COLORS[selectedPost.category] ?? '#666' },
-              ]}
-            >
-              <Text style={styles.badgeText}>{selectedPost.category}</Text>
-            </View>
-            <Text style={styles.detailTitle}>{selectedPost.title}</Text>
-            <Text style={styles.detailMeta}>
-              {selectedPost.authorName} · {selectedPost.createdAt} · 조회 {selectedPost.viewCount}
-            </Text>
-          </View>
-          <Text style={styles.detailBody}>{selectedPost.content}</Text>
-        </ScrollView>
-      </View>
+      <WriteForm
+        title={writeTitle}
+        content={writeContent}
+        notice={writeNotice}
+        isEdit={writeMode === 'edit'}
+        boardName={activeBoard?.brdNm ?? ''}
+        saving={createPost.isPending || updatePost.isPending}
+        onTitleChange={setWriteTitle}
+        onContentChange={setWriteContent}
+        onNoticeChange={setWriteNotice}
+        onSave={handleSavePost}
+        onCancel={() => setMode(writeMode === 'edit' ? 'detail' : 'list')}
+      />
     );
   }
 
-  if (isWriting) {
+  // ─── 풀뷰 — Detail 상태 ────────────────────────────────────────────
+  if (mode === 'detail' && activeBrdId && selectedPstSn != null) {
     return (
-      <View style={styles.container}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setIsWriting(false)}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.backText}>← 목록으로</Text>
-        </TouchableOpacity>
-        <ScrollView style={styles.form} contentContainerStyle={styles.formContent}>
-          <View style={styles.field}>
-            <Text style={styles.label}>제목 *</Text>
-            <TextInput
-              style={styles.input}
-              value={writeTitle}
-              onChangeText={setWriteTitle}
-              placeholder="제목을 입력하세요"
-              placeholderTextColor="rgba(0,0,0,0.3)"
-            />
-          </View>
+      <PostDetail
+        brdId={activeBrdId}
+        pstSn={selectedPstSn}
+        boardName={activeBoard?.brdNm ?? ''}
+        currentUserId={currentUserId}
+        isAdminMode={isAdminMode}
+        onBack={() => {
+          setMode('list');
+          setSelectedPstSn(null);
+        }}
+        onEdit={(post) => openWriteEdit(post)}
+        onDelete={(post) => handleDeletePost(post)}
+      />
+    );
+  }
 
-          <View style={styles.field}>
-            <Text style={styles.label}>카테고리</Text>
-            <View style={styles.categoryRow}>
-              {CATEGORIES.map((cat) => (
+  // ─── 풀뷰 — List 상태 ──────────────────────────────────────────────
+  return (
+    <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+      {/* 게시판 탭 */}
+      <View style={[styles.tabBar, { borderBottomColor: theme.border.default }]}>
+        {boardsLoading ? (
+          <ActivityIndicator color={theme.brand.primary} size="small" style={styles.tabLoader} />
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.tabScroll}
+          >
+            {boards.map((b) => {
+              const active = b.brdId === activeBrdId;
+              return (
                 <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.categoryButton,
-                    writeCategory === cat && { backgroundColor: CATEGORY_COLORS[cat] ?? '#0A2463' },
-                  ]}
-                  onPress={() => setWriteCategory(cat)}
+                  key={b.brdId}
+                  onPress={() => setActiveBrdId(b.brdId)}
                   activeOpacity={0.7}
+                  style={[
+                    styles.tab,
+                    active && { borderBottomColor: theme.brand.primary },
+                  ]}
                 >
                   <Text
                     style={[
-                      styles.categoryText,
-                      writeCategory === cat && styles.categoryTextActive,
+                      styles.tabText,
+                      { color: active ? theme.brand.primary : theme.text.muted },
+                      active && { fontWeight: fontWeight.semibold },
                     ]}
                   >
-                    {cat}
+                    {b.brdNm}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          <View style={styles.field}>
-            <Text style={styles.label}>내용 *</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={writeContent}
-              onChangeText={setWriteContent}
-              placeholder="내용을 입력하세요"
-              placeholderTextColor="rgba(0,0,0,0.3)"
-              multiline
-              numberOfLines={6}
-              textAlignVertical="top"
-            />
-          </View>
-
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSave}
-              activeOpacity={0.8}
-              disabled={createPost.isPending}
-            >
-              {createPost.isPending ? (
-                <ActivityIndicator color="#ffffff" size="small" />
-              ) : (
-                <Text style={styles.saveText}>저장</Text>
-              )}
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => setIsWriting(false)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.cancelText}>취소</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+              );
+            })}
+          </ScrollView>
+        )}
       </View>
-    );
-  }
 
-  return (
-    <View style={styles.container}>
-      {/* Category tabs + write button */}
-      <View style={styles.tabRow}>
-        <View style={styles.tabList}>
-          {TABS.map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, activeCategory === tab.key && styles.tabActive]}
-              onPress={() => setActiveCategory(tab.key)}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.tabText, activeCategory === tab.key && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+      {/* 도구바 */}
+      <View
+        style={[
+          styles.toolbar,
+          { borderBottomColor: theme.border.subtle, backgroundColor: theme.bg.surface },
+        ]}
+      >
+        <TextInput
+          style={[
+            styles.searchInput,
+            {
+              borderColor: theme.border.default,
+              color: theme.text.primary,
+              backgroundColor: theme.bg.surface,
+            },
+          ]}
+          value={searchKeyword}
+          onChangeText={setSearchKeyword}
+          placeholder="제목/내용/작성자 검색"
+          placeholderTextColor={theme.text.subtle}
+        />
         <TouchableOpacity
-          onPress={() => setIsWriting(true)}
+          onPress={openWriteCreate}
           activeOpacity={0.7}
-          style={styles.writeButton}
+          style={[styles.writeButton, { backgroundColor: theme.brand.primary }]}
+          disabled={!activeBrdId}
         >
-          <Text style={styles.writeButtonText}>작성</Text>
+          <Text style={[styles.writeButtonText, { color: theme.text.onBrand }]}>+ 글쓰기</Text>
         </TouchableOpacity>
       </View>
 
-      {isLoading ? (
+      {/* 목록 */}
+      {postsLoading ? (
         <View style={styles.center}>
-          <ActivityIndicator color="#0A2463" />
+          <ActivityIndicator color={theme.brand.primary} />
         </View>
-      ) : error ? (
+      ) : postsError ? (
         <View style={styles.center}>
-          <Text style={styles.errorText}>게시글을 불러오지 못했습니다.</Text>
+          <Text style={[styles.errorText, { color: theme.semantic.danger }]}>
+            게시글을 불러오지 못했습니다.
+          </Text>
         </View>
-      ) : (
+      ) : filteredPosts.length === 0 ? (
+        <View style={styles.center}>
+          <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+            {searchKeyword ? '검색 결과가 없습니다.' : '글이 없습니다.'}
+          </Text>
+        </View>
+      ) : isMobile ? (
+        // ─── 모바일: 카드 목록 ─────────────────────────
         <FlatList
-          data={posts}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={styles.item}
-              onPress={() => setSelectedPost(item)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.itemTop}>
-                <Text style={styles.itemTitle} numberOfLines={1}>
-                  {item.title}
+          data={filteredPosts}
+          keyExtractor={(item) => `${item.brdId}-${item.pstSn}`}
+          contentContainerStyle={styles.cardListContent}
+          renderItem={({ item }) => {
+            const isNotice = item.ntcYn === 'Y';
+            return (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedPstSn(item.pstSn);
+                  setMode('detail');
+                }}
+                activeOpacity={0.7}
+                style={[
+                  styles.card,
+                  {
+                    backgroundColor: isNotice ? NTC_ROW_BG : theme.bg.surface,
+                    borderColor: theme.border.subtle,
+                  },
+                ]}
+              >
+                {isNotice && (
+                  <View style={[styles.noticeBadge, { backgroundColor: NTC_BADGE_BG }]}>
+                    <Text style={styles.noticeBadgeText}>공지</Text>
+                  </View>
+                )}
+                <Text
+                  style={[styles.cardTitle, { color: theme.text.primary }]}
+                  numberOfLines={2}
+                >
+                  {item.pstTtl}
                 </Text>
-                <View
+                <Text style={[styles.cardMeta, { color: theme.text.muted }]}>
+                  {item.userId} · {formatDate(item.crtAt)} · 조회 {item.qryCnt} · 댓글 0
+                </Text>
+              </TouchableOpacity>
+            );
+          }}
+        />
+      ) : (
+        // ─── PC: 테이블 ───────────────────────────────
+        <View style={styles.tableWrap}>
+          <View
+            style={[
+              styles.tableHeader,
+              { borderBottomColor: theme.border.default, backgroundColor: theme.bg.surfaceAlt },
+            ]}
+          >
+            <Text style={[styles.thTag, { color: theme.text.muted }]}>구분</Text>
+            <Text style={[styles.thTitle, { color: theme.text.muted }]}>제목</Text>
+            <Text style={[styles.thAuthor, { color: theme.text.muted }]}>작성자</Text>
+            <Text style={[styles.thDate, { color: theme.text.muted }]}>작성일</Text>
+            <Text style={[styles.thNum, { color: theme.text.muted }]}>조회</Text>
+            <Text style={[styles.thNum, { color: theme.text.muted }]}>댓글</Text>
+          </View>
+          <FlatList
+            data={filteredPosts}
+            keyExtractor={(item) => `${item.brdId}-${item.pstSn}`}
+            renderItem={({ item }) => {
+              const isNotice = item.ntcYn === 'Y';
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedPstSn(item.pstSn);
+                    setMode('detail');
+                  }}
+                  activeOpacity={0.7}
                   style={[
-                    styles.badge,
-                    { backgroundColor: CATEGORY_COLORS[item.category] ?? '#666' },
+                    styles.row,
+                    {
+                      borderBottomColor: theme.border.subtle,
+                      backgroundColor: isNotice ? NTC_ROW_BG : 'transparent',
+                    },
                   ]}
                 >
-                  <Text style={styles.badgeText}>{item.category}</Text>
-                </View>
-              </View>
-              <View style={styles.itemBottom}>
-                <Text style={styles.itemMeta}>
-                  {item.authorName} · {item.createdAt}
-                </Text>
-                <Text style={styles.itemViews}>👁 {item.viewCount}</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-          ItemSeparatorComponent={() => <View style={styles.separator} />}
-          contentContainerStyle={styles.list}
-        />
+                  <View style={styles.thTag}>
+                    {isNotice ? (
+                      <View style={[styles.noticeBadgeSm, { backgroundColor: NTC_BADGE_BG }]}>
+                        <Text style={styles.noticeBadgeText}>공지</Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.cellText, { color: theme.text.subtle }]}>일반</Text>
+                    )}
+                  </View>
+                  <Text
+                    style={[
+                      styles.thTitle,
+                      styles.titleCell,
+                      { color: theme.text.primary, fontWeight: isNotice ? '600' : '500' },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {item.pstTtl}
+                  </Text>
+                  <Text style={[styles.thAuthor, styles.cellText, { color: theme.text.body }]}>
+                    {item.userId}
+                  </Text>
+                  <Text style={[styles.thDate, styles.cellText, { color: theme.text.muted }]}>
+                    {formatDate(item.crtAt)}
+                  </Text>
+                  <Text style={[styles.thNum, styles.cellText, { color: theme.text.muted }]}>
+                    {item.qryCnt}
+                  </Text>
+                  <Text style={[styles.thNum, styles.cellText, { color: theme.text.muted }]}>
+                    0
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
       )}
     </View>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// 글쓰기/수정 폼
+// ─────────────────────────────────────────────────────────────────────
+interface WriteFormProps {
+  title: string;
+  content: string;
+  notice: boolean;
+  isEdit: boolean;
+  boardName: string;
+  saving: boolean;
+  onTitleChange: (v: string) => void;
+  onContentChange: (v: string) => void;
+  onNoticeChange: (v: boolean) => void;
+  onSave: () => void;
+  onCancel: () => void;
+}
+
+function WriteForm({
+  title,
+  content,
+  notice,
+  isEdit,
+  boardName,
+  saving,
+  onTitleChange,
+  onContentChange,
+  onNoticeChange,
+  onSave,
+  onCancel,
+}: WriteFormProps) {
+  const theme = useTheme();
+  return (
+    <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+      <TouchableOpacity
+        onPress={onCancel}
+        activeOpacity={0.7}
+        style={[styles.backBar, { borderBottomColor: theme.border.subtle }]}
+      >
+        <Text style={[styles.backText, { color: theme.brand.primary }]}>
+          ← 취소
+        </Text>
+      </TouchableOpacity>
+      <ScrollView contentContainerStyle={styles.writeContent}>
+        <Text style={[styles.writeTitle, { color: theme.text.primary }]}>
+          {isEdit ? '글 수정' : '글 작성'} · {boardName}
+        </Text>
+
+        <View style={styles.field}>
+          <Text style={[styles.fieldLabel, { color: theme.text.muted }]}>제목 *</Text>
+          <TextInput
+            value={title}
+            onChangeText={onTitleChange}
+            placeholder="제목을 입력하세요"
+            placeholderTextColor={theme.text.subtle}
+            style={[
+              styles.input,
+              {
+                borderColor: theme.border.default,
+                color: theme.text.primary,
+                backgroundColor: theme.bg.surface,
+              },
+            ]}
+          />
+        </View>
+
+        <View style={styles.field}>
+          <Text style={[styles.fieldLabel, { color: theme.text.muted }]}>본문 *</Text>
+          <TextInput
+            value={content}
+            onChangeText={onContentChange}
+            placeholder="내용을 입력하세요"
+            placeholderTextColor={theme.text.subtle}
+            multiline
+            numberOfLines={10}
+            textAlignVertical="top"
+            style={[
+              styles.input,
+              styles.textArea,
+              {
+                borderColor: theme.border.default,
+                color: theme.text.primary,
+                backgroundColor: theme.bg.surface,
+              },
+            ]}
+          />
+        </View>
+
+        <TouchableOpacity
+          onPress={() => onNoticeChange(!notice)}
+          activeOpacity={0.7}
+          style={styles.checkboxRow}
+        >
+          <View
+            style={[
+              styles.checkbox,
+              {
+                borderColor: notice ? theme.brand.primary : theme.border.strong,
+                backgroundColor: notice ? theme.brand.primary : 'transparent',
+              },
+            ]}
+          >
+            {notice && <Text style={styles.checkboxMark}>✓</Text>}
+          </View>
+          <Text style={[styles.checkboxLabel, { color: theme.text.body }]}>
+            공지로 등록 (상단 고정)
+          </Text>
+        </TouchableOpacity>
+
+        <View style={styles.writeActions}>
+          <TouchableOpacity
+            onPress={onSave}
+            activeOpacity={0.8}
+            disabled={saving}
+            style={[
+              styles.primaryButton,
+              { backgroundColor: theme.brand.primary, opacity: saving ? 0.6 : 1 },
+            ]}
+          >
+            {saving ? (
+              <ActivityIndicator color={theme.text.onBrand} size="small" />
+            ) : (
+              <Text style={[styles.primaryButtonText, { color: theme.text.onBrand }]}>
+                {isEdit ? '수정 완료' : '등록'}
+              </Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={onCancel}
+            activeOpacity={0.8}
+            style={[
+              styles.secondaryButton,
+              { borderColor: theme.border.default },
+            ]}
+          >
+            <Text style={[styles.secondaryButtonText, { color: theme.text.body }]}>취소</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 게시글 상세
+// ─────────────────────────────────────────────────────────────────────
+interface PostDetailProps {
+  brdId: string;
+  pstSn: number;
+  boardName: string;
+  currentUserId: string;
+  isAdminMode: boolean;
+  onBack: () => void;
+  onEdit: (post: Post) => void;
+  onDelete: (post: Post) => void;
+}
+
+function PostDetail({
+  brdId,
+  pstSn,
+  boardName,
+  currentUserId,
+  isAdminMode,
+  onBack,
+  onEdit,
+  onDelete,
+}: PostDetailProps) {
+  const theme = useTheme();
+  const { data: post, isLoading, error } = usePostDetail(brdId, pstSn);
+  const likePost = useLikePost();
+
+  const canEdit = post?.userId === currentUserId;
+  const canDelete = canEdit || isAdminMode;
+
+  const handleLike = () => {
+    if (!post) return;
+    likePost.mutate({ brdId: post.brdId, pstSn: post.pstSn });
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+      <TouchableOpacity
+        onPress={onBack}
+        activeOpacity={0.7}
+        style={[styles.backBar, { borderBottomColor: theme.border.subtle }]}
+      >
+        <Text style={[styles.backText, { color: theme.brand.primary }]}>
+          ← 목록으로
+        </Text>
+      </TouchableOpacity>
+
+      {isLoading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={theme.brand.primary} />
+        </View>
+      ) : error || !post ? (
+        <View style={styles.center}>
+          <Text style={[styles.errorText, { color: theme.semantic.danger }]}>
+            게시글을 불러오지 못했습니다.
+          </Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.detailContent}>
+          {/* 헤더 */}
+          <View style={styles.detailHeader}>
+            <View style={styles.detailHeaderTop}>
+              <View
+                style={[
+                  styles.categoryTag,
+                  { backgroundColor: theme.brand.primaryTint },
+                ]}
+              >
+                <Text style={[styles.categoryTagText, { color: theme.brand.primary }]}>
+                  {post.ntcYn === 'Y' ? '공지' : boardName}
+                </Text>
+              </View>
+              <View style={styles.detailStats}>
+                <Text style={[styles.statText, { color: theme.text.muted }]}>
+                  조회 {post.qryCnt}
+                </Text>
+                <Text style={[styles.statText, { color: theme.text.muted }]}>
+                  좋아요 {post.likeNum}
+                </Text>
+              </View>
+            </View>
+            <Text style={[styles.detailTitleText, { color: theme.text.primary }]}>
+              {post.pstTtl}
+            </Text>
+            <View style={styles.detailMetaRow}>
+              <View
+                style={[
+                  styles.avatar,
+                  { backgroundColor: theme.brand.primaryTint },
+                ]}
+              >
+                <Text style={[styles.avatarText, { color: theme.brand.primary }]}>
+                  {(post.userId ?? '?').slice(0, 1).toUpperCase()}
+                </Text>
+              </View>
+              <View>
+                <Text style={[styles.detailAuthor, { color: theme.text.primary }]}>
+                  {post.userId}
+                </Text>
+                <Text style={[styles.detailDate, { color: theme.text.muted }]}>
+                  {formatDate(post.crtAt)}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* 본문 */}
+          <Text style={[styles.detailBody, { color: theme.text.body }]}>
+            {post.pstDesc}
+          </Text>
+
+          {/* 액션 row */}
+          <View style={[styles.actionRow, { borderTopColor: theme.border.subtle }]}>
+            <TouchableOpacity
+              onPress={handleLike}
+              activeOpacity={0.7}
+              disabled={likePost.isPending}
+              style={[
+                styles.actionButton,
+                { borderColor: theme.border.default },
+              ]}
+            >
+              <Text style={[styles.actionText, { color: theme.text.body }]}>
+                좋아요 {post.likeNum}
+              </Text>
+            </TouchableOpacity>
+            {canEdit && (
+              <TouchableOpacity
+                onPress={() => onEdit(post)}
+                activeOpacity={0.7}
+                style={[styles.actionButton, { borderColor: theme.border.default }]}
+              >
+                <Text style={[styles.actionText, { color: theme.text.body }]}>수정</Text>
+              </TouchableOpacity>
+            )}
+            {canDelete && (
+              <TouchableOpacity
+                onPress={() => onDelete(post)}
+                activeOpacity={0.7}
+                style={[styles.actionButton, { borderColor: theme.semantic.danger }]}
+              >
+                <Text style={[styles.actionText, { color: theme.semantic.danger }]}>삭제</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* 댓글 섹션 */}
+          <CommentsSection
+            brdId={post.brdId}
+            pstSn={post.pstSn}
+            currentUserId={currentUserId}
+            isAdminMode={isAdminMode}
+          />
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 댓글 섹션
+// ─────────────────────────────────────────────────────────────────────
+interface CommentsSectionProps {
+  brdId: string;
+  pstSn: number;
+  currentUserId: string;
+  isAdminMode: boolean;
+}
+
+interface CommentNode {
+  comment: PostComment;
+  replies: PostComment[];
+}
+
+function buildCommentTree(comments: PostComment[]): CommentNode[] {
+  // 트리 깊이 2단계만 가정 (cmt_lvl = 1 / 2)
+  const roots = comments.filter((c) => c.cmtLvl === 1);
+  return roots.map((root) => ({
+    comment: root,
+    replies: comments.filter((c) => c.cmtLvl === 2 && c.upCmtSn === root.cmtSn),
+  }));
+}
+
+function CommentsSection({
+  brdId,
+  pstSn,
+  currentUserId,
+  isAdminMode,
+}: CommentsSectionProps) {
+  const theme = useTheme();
+  const confirm = useConfirm();
+  const { data: comments = [], isLoading } = usePostComments(brdId, pstSn);
+  const createComment = useCreateComment();
+  const deleteComment = useDeleteComment();
+
+  const [newComment, setNewComment] = useState('');
+  const [replyTo, setReplyTo] = useState<PostComment | null>(null);
+  const [replyText, setReplyText] = useState('');
+
+  const tree = useMemo(() => buildCommentTree(comments), [comments]);
+
+  const handleSubmit = async () => {
+    if (!newComment.trim() || !currentUserId) return;
+    try {
+      await createComment.mutateAsync({
+        brdId,
+        pstSn,
+        data: {
+          cmtDesc: newComment.trim(),
+          userId: currentUserId,
+          cmtLvl: 1,
+        },
+      });
+      setNewComment('');
+    } catch {
+      Alert.alert('등록 실패', '댓글을 등록하지 못했습니다.');
+    }
+  };
+
+  const handleReply = async () => {
+    if (!replyTo || !replyText.trim() || !currentUserId) return;
+    try {
+      await createComment.mutateAsync({
+        brdId,
+        pstSn,
+        data: {
+          cmtDesc: replyText.trim(),
+          userId: currentUserId,
+          cmtLvl: 2,
+          upCmtSn: replyTo.cmtSn,
+        },
+      });
+      setReplyText('');
+      setReplyTo(null);
+    } catch {
+      Alert.alert('등록 실패', '답글을 등록하지 못했습니다.');
+    }
+  };
+
+  const handleDelete = async (cmt: PostComment) => {
+    const ok = await confirm({ title: '댓글 삭제', message: '댓글을 삭제하시겠습니까?', danger: true });
+    if (!ok) return;
+    try {
+      await deleteComment.mutateAsync({
+        brdId,
+        pstSn,
+        cmtSn: cmt.cmtSn,
+        data: { userId: currentUserId, admin: isAdminMode },
+      });
+    } catch {
+      Alert.alert('삭제 실패', '삭제 권한이 없거나 서버 오류입니다.');
+    }
+  };
+
+  return (
+    <View style={[styles.commentSection, { borderTopColor: theme.border.subtle }]}>
+      <Text style={[styles.commentSectionTitle, { color: theme.text.primary }]}>
+        댓글 {comments.length}
+      </Text>
+
+      {isLoading ? (
+        <ActivityIndicator color={theme.brand.primary} size="small" style={{ marginVertical: spacing.md }} />
+      ) : tree.length === 0 ? (
+        <Text style={[styles.emptyComments, { color: theme.text.muted }]}>
+          첫 댓글을 남겨주세요.
+        </Text>
+      ) : (
+        tree.map(({ comment, replies }) => (
+          <View key={`c-${comment.cmtSn}`}>
+            <CommentItem
+              comment={comment}
+              currentUserId={currentUserId}
+              isAdminMode={isAdminMode}
+              theme={theme}
+              onReply={() => setReplyTo(comment)}
+              onDelete={() => handleDelete(comment)}
+            />
+            {replies.map((r) => (
+              <View
+                key={`r-${r.cmtSn}`}
+                style={[
+                  styles.replyWrap,
+                  { borderLeftColor: theme.brand.primaryTint },
+                ]}
+              >
+                <View style={styles.replyHeader}>
+                  <Text style={[styles.replyArrow, { color: theme.text.muted }]}>↳</Text>
+                  <Text style={[styles.replyTo, { color: theme.text.muted }]}>
+                    @{comment.userId}에게
+                  </Text>
+                </View>
+                <CommentItem
+                  comment={r}
+                  currentUserId={currentUserId}
+                  isAdminMode={isAdminMode}
+                  theme={theme}
+                  onDelete={() => handleDelete(r)}
+                />
+              </View>
+            ))}
+            {replyTo?.cmtSn === comment.cmtSn && (
+              <View
+                style={[
+                  styles.replyInputWrap,
+                  { borderColor: theme.border.default, backgroundColor: theme.bg.surface },
+                ]}
+              >
+                <TextInput
+                  value={replyText}
+                  onChangeText={setReplyText}
+                  placeholder={`@${comment.userId}에게 답글`}
+                  placeholderTextColor={theme.text.subtle}
+                  multiline
+                  style={[styles.replyInput, { color: theme.text.primary }]}
+                />
+                <View style={styles.replyActions}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setReplyTo(null);
+                      setReplyText('');
+                    }}
+                    style={[
+                      styles.commentBtnSmSecondary,
+                      { borderColor: theme.border.default },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.commentBtnTextSecondary, { color: theme.text.muted }]}>
+                      취소
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleReply}
+                    disabled={createComment.isPending}
+                    style={[
+                      styles.commentBtnSmPrimary,
+                      { backgroundColor: theme.brand.primary },
+                    ]}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.commentBtnTextPrimary, { color: theme.text.onBrand }]}>
+                      답글 등록
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </View>
+        ))
+      )}
+
+      {/* 새 댓글 입력 */}
+      <View
+        style={[
+          styles.commentInputWrap,
+          { borderColor: theme.border.default, backgroundColor: theme.bg.surface },
+        ]}
+      >
+        <TextInput
+          value={newComment}
+          onChangeText={setNewComment}
+          placeholder="댓글을 입력하세요"
+          placeholderTextColor={theme.text.subtle}
+          multiline
+          style={[styles.commentInput, { color: theme.text.primary }]}
+        />
+        <TouchableOpacity
+          onPress={handleSubmit}
+          disabled={createComment.isPending || !newComment.trim()}
+          activeOpacity={0.7}
+          style={[
+            styles.commentSubmit,
+            {
+              backgroundColor: theme.brand.primary,
+              opacity: createComment.isPending || !newComment.trim() ? 0.5 : 1,
+            },
+          ]}
+        >
+          <Text style={[styles.commentSubmitText, { color: theme.text.onBrand }]}>
+            등록
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// 댓글 한 줄 컴포넌트
+// ─────────────────────────────────────────────────────────────────────
+interface CommentItemProps {
+  comment: PostComment;
+  currentUserId: string;
+  isAdminMode: boolean;
+  theme: ReturnType<typeof useTheme>;
+  onReply?: () => void;
+  onDelete: () => void;
+}
+
+function CommentItem({
+  comment,
+  currentUserId,
+  isAdminMode,
+  theme,
+  onReply,
+  onDelete,
+}: CommentItemProps) {
+  const canDelete = comment.userId === currentUserId || isAdminMode;
+  return (
+    <View style={[styles.commentItem, { borderBottomColor: theme.border.subtle }]}>
+      <View style={styles.commentHeader}>
+        <Text style={[styles.commentAuthor, { color: theme.text.primary }]}>
+          {comment.userId}
+        </Text>
+        <Text style={[styles.commentDate, { color: theme.text.muted }]}>
+          {formatDate(comment.crtAt)}
+        </Text>
+      </View>
+      <Text style={[styles.commentBody, { color: theme.text.body }]}>
+        {comment.cmtDesc}
+      </Text>
+      <View style={styles.commentActions}>
+        {onReply && (
+          <TouchableOpacity onPress={onReply} activeOpacity={0.7}>
+            <Text style={[styles.commentActionText, { color: theme.brand.primary }]}>
+              답글
+            </Text>
+          </TouchableOpacity>
+        )}
+        {canDelete && (
+          <TouchableOpacity onPress={onDelete} activeOpacity={0.7}>
+            <Text style={[styles.commentActionText, { color: theme.semantic.danger }]}>
+              삭제
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Styles
+// ─────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  tabRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  container: { flex: 1 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  errorText: { fontSize: fontSize.body, fontFamily },
+  emptyText: { fontSize: fontSize.body, fontFamily },
+
+  // ─ 탭 ─
+  tabBar: {
+    minHeight: 48,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
-    paddingHorizontal: 16,
+    justifyContent: 'center',
   },
-  tabList: {
-    flex: 1,
-    flexDirection: 'row',
+  tabLoader: { marginLeft: spacing.base },
+  tabScroll: {
+    paddingHorizontal: spacing.base,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabActive: {
-    borderBottomColor: '#0A2463',
-  },
   tabText: {
-    fontSize: 14,
-    color: 'rgba(0,0,0,0.45)',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+    fontSize: fontSize.body,
+    fontFamily,
   },
-  tabTextActive: {
-    color: '#0A2463',
-    fontWeight: '600',
+
+  // ─ 도구바 ─
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  searchInput: {
+    flex: 1,
+    height: 36,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    fontSize: fontSize.body,
+    fontFamily,
   },
   writeButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-  },
-  writeButtonText: {
-    fontSize: 14,
-    color: '#0A2463',
-    fontWeight: '600',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  center: {
-    flex: 1,
+    height: 36,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  errorText: {
-    fontSize: 14,
-    color: '#EF4444',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  writeButtonText: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
   },
-  list: {
-    paddingVertical: 8,
-  },
-  item: {
-    paddingHorizontal: 20,
-    paddingVertical: 14,
-  },
-  itemTop: {
+
+  // ─ PC 테이블 ─
+  tableWrap: { flex: 1 },
+  tableHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 4,
-  },
-  itemTitle: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#000000',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  itemBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  itemMeta: {
-    fontSize: 12,
-    color: 'rgba(0,0,0,0.45)',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  itemViews: {
-    fontSize: 12,
-    color: 'rgba(0,0,0,0.35)',
-  },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  badgeText: {
-    fontSize: 10,
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  separator: {
-    height: 1,
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    marginHorizontal: 20,
-  },
-  backButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
   },
-  backText: {
-    fontSize: 14,
-    color: '#0A2463',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
   },
-  detail: {
-    flex: 1,
+  thTag: { width: 80, alignItems: 'flex-start' },
+  thTitle: { flex: 1, paddingHorizontal: spacing.sm },
+  thAuthor: { width: 100 },
+  thDate: { width: 140 },
+  thNum: { width: 60, textAlign: 'right' },
+  titleCell: {
+    fontSize: fontSize.body,
+    fontFamily,
   },
-  detailContent: {
-    padding: 20,
+  cellText: {
+    fontSize: fontSize.small,
+    fontFamily,
   },
-  detailHeader: {
-    marginBottom: 20,
-    gap: 8,
-  },
-  detailTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  detailMeta: {
-    fontSize: 13,
-    color: 'rgba(0,0,0,0.45)',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  detailBody: {
-    fontSize: 15,
-    color: '#000000',
-    lineHeight: 24,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  form: {
-    flex: 1,
-  },
-  formContent: {
-    padding: 20,
-    gap: 16,
-  },
-  field: {
+
+  // ─ 모바일 카드 ─
+  cardListContent: { padding: spacing.md, gap: spacing.sm },
+  card: {
+    padding: spacing.base,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
     gap: 6,
   },
-  label: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: 'rgba(0,0,0,0.65)',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  cardTitle: {
+    fontSize: fontSize.bodyLg,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+  cardMeta: {
+    fontSize: fontSize.small,
+    fontFamily,
+  },
+
+  // ─ 공지 뱃지 ─
+  noticeBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radius.sm,
+  },
+  noticeBadgeSm: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.sm,
+    alignSelf: 'flex-start',
+  },
+  noticeBadgeText: {
+    fontSize: fontSize.caption,
+    color: '#FFFFFF',
+    fontWeight: fontWeight.bold,
+    fontFamily,
+  },
+
+  // ─ 뒤로가기 바 ─
+  backBar: {
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  backText: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+
+  // ─ 상세 ─
+  detailContent: {
+    padding: spacing.lg,
+    gap: spacing.base,
+  },
+  detailHeader: {
+    gap: spacing.md,
+    paddingBottom: spacing.base,
+  },
+  detailHeaderTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  categoryTag: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  categoryTagText: {
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+  detailStats: {
+    flexDirection: 'row',
+    gap: spacing.md,
+  },
+  statText: {
+    fontSize: fontSize.small,
+    fontFamily,
+  },
+  detailTitleText: {
+    fontSize: fontSize.title,
+    fontWeight: fontWeight.bold,
+    fontFamily,
+    lineHeight: fontSize.title * 1.4,
+  },
+  detailMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.bold,
+    fontFamily,
+  },
+  detailAuthor: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+  detailDate: {
+    fontSize: fontSize.small,
+    fontFamily,
+  },
+  detailBody: {
+    fontSize: fontSize.body,
+    lineHeight: fontSize.body * 1.8,
+    fontFamily,
+    paddingVertical: spacing.base,
+  },
+
+  // ─ 액션 row ─
+  actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingTop: spacing.base,
+    borderTopWidth: 1,
+  },
+  actionButton: {
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+  },
+  actionText: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+
+  // ─ 댓글 ─
+  commentSection: {
+    marginTop: spacing.lg,
+    paddingTop: spacing.base,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+  },
+  commentSectionTitle: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+    marginBottom: spacing.sm,
+  },
+  emptyComments: {
+    fontSize: fontSize.small,
+    fontFamily,
+    padding: spacing.md,
+    textAlign: 'center',
+  },
+  commentItem: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    gap: 4,
+  },
+  commentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  commentAuthor: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+  commentDate: {
+    fontSize: fontSize.caption,
+    fontFamily,
+  },
+  commentBody: {
+    fontSize: fontSize.body,
+    fontFamily,
+    lineHeight: fontSize.body * 1.5,
+  },
+  commentActions: {
+    flexDirection: 'row',
+    gap: spacing.base,
+    marginTop: 4,
+  },
+  commentActionText: {
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+
+  // ─ 답글 (대댓글) ─
+  replyWrap: {
+    marginLeft: 32,
+    borderLeftWidth: 2,
+    paddingLeft: spacing.md,
+  },
+  replyHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: spacing.sm,
+  },
+  replyArrow: {
+    fontSize: fontSize.body,
+  },
+  replyTo: {
+    fontSize: fontSize.caption,
+    fontFamily,
+  },
+  replyInputWrap: {
+    marginLeft: 32,
+    marginTop: spacing.sm,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.sm,
+  },
+  replyInput: {
+    minHeight: 56,
+    fontSize: fontSize.small,
+    fontFamily,
+    padding: spacing.sm,
+  },
+  replyActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  commentBtnSmPrimary: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+  },
+  commentBtnSmSecondary: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+  },
+  commentBtnTextPrimary: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+  commentBtnTextSecondary: {
+    fontSize: fontSize.small,
+    fontFamily,
+  },
+
+  // ─ 새 댓글 입력 ─
+  commentInputWrap: {
+    marginTop: spacing.base,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.sm,
+  },
+  commentInput: {
+    minHeight: 64,
+    fontSize: fontSize.body,
+    fontFamily,
+    padding: spacing.sm,
+  },
+  commentSubmit: {
+    alignSelf: 'flex-end',
+    paddingHorizontal: spacing.base,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    marginTop: spacing.sm,
+  },
+  commentSubmitText: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+
+  // ─ Write Form ─
+  writeContent: {
+    padding: spacing.lg,
+    gap: spacing.base,
+  },
+  writeTitle: {
+    fontSize: fontSize.heading,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+    marginBottom: spacing.md,
+  },
+  field: { gap: 6 },
+  fieldLabel: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.medium,
+    fontFamily,
   },
   input: {
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.12)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#000000',
-    backgroundColor: '#ffffff',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontSize: fontSize.body,
+    fontFamily,
   },
   textArea: {
-    minHeight: 120,
-    paddingTop: 10,
+    minHeight: 200,
+    paddingTop: spacing.sm,
   },
-  categoryRow: {
+  checkboxRow: {
     flexDirection: 'row',
-    gap: 8,
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.sm,
   },
-  categoryButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.12)',
-  },
-  categoryText: {
-    fontSize: 13,
-    color: 'rgba(0,0,0,0.55)',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  categoryTextActive: {
-    color: '#ffffff',
-    fontWeight: '600',
-  },
-  buttonRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 8,
-  },
-  saveButton: {
-    flex: 1,
-    height: 48,
-    backgroundColor: '#0A2463',
-    borderRadius: 8,
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1.5,
+    borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  saveText: {
-    fontSize: 15,
-    color: '#ffffff',
-    fontWeight: '500',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  checkboxMark: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: fontWeight.bold,
   },
-  cancelButton: {
+  checkboxLabel: {
+    fontSize: fontSize.body,
+    fontFamily,
+  },
+  writeActions: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: spacing.base,
+  },
+  primaryButton: {
     flex: 1,
-    height: 48,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.12)',
-    borderRadius: 8,
+    height: 44,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cancelText: {
-    fontSize: 15,
-    color: 'rgba(0,0,0,0.55)',
-    fontWeight: '500',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
+  primaryButtonText: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+  secondaryButton: {
+    flex: 1,
+    height: 44,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryButtonText: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.medium,
+    fontFamily,
   },
 });

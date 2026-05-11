@@ -25,6 +25,8 @@ import { AdminCommonCodeScreen } from './src/features/admin-common-code/screens/
 import { AdminJobGradeScreen } from './src/features/admin-job-grade/screens/AdminJobGradeScreen';
 import { AdminDeptScreen } from './src/features/admin-dept/screens/AdminDeptScreen';
 import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersScreen';
+import { AdminBoardsScreen } from './src/features/admin-boards/screens/AdminBoardsScreen';
+import { ConfirmProvider } from './src/shared/hooks/useConfirm';
 import type { PanelId } from './src/types';
 
 const queryClient = new QueryClient({
@@ -40,7 +42,9 @@ const queryClient = new QueryClient({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <ConfirmProvider>
+        <AppContent />
+      </ConfirmProvider>
     </QueryClientProvider>
   );
 }
@@ -57,7 +61,7 @@ const PLACEHOLDER_TITLES: Record<PanelId, string> = {
   certificate: '증명서',
   'admin-users': '사용자 관리',
   'admin-roles': '권한 관리',
-  'admin-categories': '게시판 카테고리',
+  'admin-boards': '게시판 관리',
   'admin-approval-line': '결재선 템플릿',
   'admin-common-code': '공통코드 관리',
   'admin-job-grade': '직급 관리',
@@ -187,6 +191,8 @@ function AppContent() {
         return <AdminDeptScreen />;
       case 'admin-users':
         return <AdminUsersScreen />;
+      case 'admin-boards':
+        return <AdminBoardsScreen />;
       default:
         return (
           <PlaceholderScreen title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen} />
