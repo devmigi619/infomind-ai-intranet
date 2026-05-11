@@ -81,6 +81,35 @@ Nginx 역할:
 
 **트레이드오프**: `JWT_SECRET`을 두 서비스에 환경변수로 주입해야 하며, Redis 토큰 블랙리스트 없이는 즉시 로그아웃 무효화 불가 (내부 시스템 + 8시간 만료로 감수).
 
+## 보안 (Spring Security)
+
+### 인가 규칙 (`SecurityConfig`)
+
+| URL 패턴 | 조건 |
+|---|---|
+| `POST /api/auth/login` | 인증 없이 허용 |
+| `/api/auth/refresh` | 인증 없이 허용 |
+| `/api/auth/logout` | 인증 없이 허용 |
+| `/actuator/health` | 인증 없이 허용 |
+| `/api/admin/**` | 유효 토큰 + `ROLE_ADMIN` 필요 |
+| 그 외 모든 요청 | 유효 토큰 필요 |
+
+### 인증 실패 처리
+
+- `AuthenticationEntryPoint` 커스텀 등록 — 인증 없는 요청에 **HTTP 401** + JSON 응답 반환
+- 기본값(403)이 아닌 401을 명시해 클라이언트 인터셉터의 토큰 재발급 흐름이 정상 동작하도록 보장
+
+```json
+{ "code": "UNAUTHORIZED", "message": "인증이 필요합니다." }
+```
+
+### 클라이언트 토큰 관리 (`frontend/src/shared/api/client.ts`)
+
+- **Request 인터셉터**: 모든 요청에 `Authorization: Bearer {token}` 자동 삽입
+- **Response 인터셉터**: 401 수신 시 리프레시 토큰으로 자동 재발급 후 원래 요청 재시도
+- 동시 다발 401 처리: `failedQueue`로 재발급 중 도착한 요청을 큐잉했다가 일괄 재시도
+- 플랫폼별 저장소: iOS/Android → `SecureStore` (리프레시), 웹 → `AsyncStorage`
+
 ## 데이터베이스
 
 ### 로컬
@@ -94,6 +123,23 @@ Nginx 역할:
 ### 운영기 (추후)
 - PostgreSQL 16 (Docker Compose)
 - 영구 볼륨 `postgres-data`
+
+### 주요 테이블 목록
+
+| 테이블 | 엔티티 | 설명 |
+|---|---|---|
+| `INT_USER` | `User` | 사용자 계정. PK = `USER_ID` (String) |
+| `INT_RF_TK` | `RefreshToken` | 리프레시 토큰 저장. UUID PK |
+| `INT_PST` | `Post` | 게시글 |
+| `INT_PST_CMT` | — | 게시글 댓글 |
+| `INT_BRD` | `PostCategory` | 게시판 카테고리 |
+| `INT_APV` | `Approval` | 전자결재 |
+| `INT_WKL_RPT` | `WeeklyReport` | 주간보고 |
+| `INT_COM_CODE` | `CommonCode` | 공통코드 (상위코드 + 하위코드) |
+| `INT_JBGD` | `JobGrade` | 직급. PK = `JBGD_CD` |
+| `INT_DEPT` | `Department` | 부서 (계층 구조, `UP_DEPT_CD` 자기 참조) |
+
+> `crt_at`, `upd_at` 컬럼 타입: `TIMESTAMP` (PostgreSQL DATE는 시분초 미지원으로 변경됨)
 
 ## BaseEntity — Audit 필드
 
@@ -109,6 +155,39 @@ Nginx 역할:
 | `updIp` | `UPD_IP` | true | 최종 수정 IP |
 
 > IP는 `RequestContextHolder` → `HttpServletRequest`에서 추출. 비 HTTP 컨텍스트(배치 등)에서는 `"unknown"`.
+
+## 로그 관리
+
+### 구성 파일
+
+| 파일 | 역할 |
+|---|---|
+| `resources/logback-spring.xml` | 콘솔 + 날짜별 파일 롤링 설정 |
+| `global/LoggingFilter.java` | HTTP 요청/응답 로그 (`OncePerRequestFilter`) |
+| `global/LoggingAspect.java` | Service 계층 실행 로그 (AOP `@Around`) |
+| `global/GlobalExceptionHandler.java` | 전역 예외 처리 + 에러 로그 (`@RestControllerAdvice`) |
+
+### 레이어별 방식
+
+| 레이어 | 구현 방식 | 기록 내용 |
+|---|---|---|
+| HTTP 요청/응답 | `OncePerRequestFilter` | 클라이언트 IP, 메서드, URI, 상태코드, 응답시간, userId |
+| Service 실행 | AOP `@Around` | 클래스/메서드명, 실행시간, 예외 |
+| 예외 처리 | `@RestControllerAdvice` | `@Valid` 실패→400 WARN, 비즈니스→400 WARN, 그 외→500 ERROR |
+
+### 로그 파일 (운영 환경)
+
+| 파일 | 내용 | 보관 |
+|---|---|---|
+| `logs/app.log` | 전체 로그 (날짜별 롤링, 50MB 분할) | 30일 / 500MB |
+| `logs/error.log` | ERROR 레벨만 | 60일 / 200MB |
+
+### 프로파일별 레벨
+
+| 프로파일 | `com.infomind` | SQL | 출력 |
+|---|---|---|---|
+| `local` | DEBUG | DEBUG | 콘솔만 |
+| 그 외 (운영) | INFO | WARN | 콘솔 + 파일 |
 
 ## User 도메인
 
@@ -138,6 +217,22 @@ Nginx 역할:
 | 커스텀 claim | `userSe` (권한, 구 `role` claim 대체) |
 | principal 타입 | `String` — 전 Service/Controller 공통 |
 | 액세스 토큰 유효기간 | 8시간 (application.yml `jwt.expiry-hours`) |
+
+## Admin 도메인
+
+관리자 모드(`isAdminMode`)에서만 접근 가능한 메뉴들. 모든 API는 `/api/admin/**` 경로로 `ROLE_ADMIN` 필요.
+
+| 메뉴 | API 경로 | 엔티티 | 주요 특징 |
+|---|---|---|---|
+| 공통코드 관리 | `/api/admin/common-codes` | `CommonCode` | 상위코드 + 하위코드 2단계 복합키 |
+| 직급 관리 | `/api/admin/job-grades` | `JobGrade` | 단순 목록, 소프트 삭제 (`use_yn=N`) |
+| 부서 관리 | `/api/admin/departments` | `Department` | `UP_DEPT_CD` 자기 참조 계층 트리, 비활성화 시 하위 부서 cascade |
+
+### 부서 계층 구조
+
+- `dept_lvl` : 서버에서 자동 계산 (최상위=1, 하위 생성 시 부모 lvl+1)
+- 비활성화: 해당 부서 + 모든 하위 부서 재귀적으로 `use_yn=N` 처리
+- 프론트엔드: 평면 리스트 → `buildTree()` 유틸로 트리 변환 후 렌더링
 
 ## AI / LLM
 
