@@ -24,6 +24,7 @@ import { SettingsScreen } from './src/features/settings/screens/SettingsScreen';
 import { AdminCommonCodeScreen } from './src/features/admin-common-code/screens/AdminCommonCodeScreen';
 import { AdminJobGradeScreen } from './src/features/admin-job-grade/screens/AdminJobGradeScreen';
 import { AdminDeptScreen } from './src/features/admin-dept/screens/AdminDeptScreen';
+import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersScreen';
 import type { PanelId } from './src/types';
 
 const queryClient = new QueryClient({
@@ -184,6 +185,8 @@ function AppContent() {
         return <AdminJobGradeScreen />;
       case 'admin-dept':
         return <AdminDeptScreen />;
+      case 'admin-users':
+        return <AdminUsersScreen />;
       default:
         return (
           <PlaceholderScreen title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen} />

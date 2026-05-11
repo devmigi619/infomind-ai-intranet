@@ -92,6 +92,7 @@ Nginx 역할:
 | `/api/auth/logout` | 인증 없이 허용 |
 | `/actuator/health` | 인증 없이 허용 |
 | `/api/admin/**` | 유효 토큰 + `ROLE_ADMIN` 필요 |
+| `/api/codes/**` | 유효 토큰 필요 (ADMIN 불필요 — 폼 콤보박스용) |
 | 그 외 모든 요청 | 유효 토큰 필요 |
 
 ### 인증 실패 처리
@@ -149,12 +150,14 @@ Nginx 역할:
 |---|---|---|---|
 | `crtAt` | `CRT_AT` | false | 생성일시 |
 | `crtBy` | `CRT_BY` | false | 생성자 (userId, 미인증 시 `"system"`) |
-| `crtIp` | `CRT_IP` | false | 생성 IP (`X-Forwarded-For` → `RemoteAddr` 순으로 추출) |
+| `crtIp` | `CRT_IP` | false | 생성 IP |
 | `updAt` | `UPD_AT` | true | 최종 수정일시 |
 | `updBy` | `UPD_BY` | true | 최종 수정자 |
 | `updIp` | `UPD_IP` | true | 최종 수정 IP |
 
-> IP는 `RequestContextHolder` → `HttpServletRequest`에서 추출. 비 HTTP 컨텍스트(배치 등)에서는 `"unknown"`.
+**IP 추출 우선순위**: `X-Forwarded-For` 첫 번째 값 → `RemoteAddr` 순. IPv6 루프백(`::1`, `0:0:0:0:0:0:0:1`)은 `127.0.0.1`로 정규화.
+
+> 비 HTTP 컨텍스트(배치 등)에서는 `"unknown"`.
 
 ## 로그 관리
 
@@ -201,7 +204,10 @@ Nginx 역할:
 ### 핵심 설계 결정
 
 - **PK 타입**: `Long id` → `String userId` (로그인 ID 그대로 PK)
-- **권한**: `Role` enum 제거 → `USER_SE` 컬럼(String)으로 대체 (`ADMIN`, `USER` 등)
+- **권한**: `Role` enum 제거 → `USER_SE` 컬럼(String)으로 대체 (`ADMIN`, `USER`)
+- **계정 비활성화**: `USER_SE = 'INVALID'` — `use_yn` 컬럼 미사용
+  - 비활성화 시 원래 권한 덮어씌워짐 → 재활성화 시 기본 `'USER'`로 복원
+  - `UserService.login()`에서 `INVALID` 차단 로직 적용
 - **FCM 토큰**: `INT_USER`에 미포함 — 별도 테이블 여부 추후 결정
 - **Refresh Token**: stateless → DB 저장으로 전환
   - 로그인 시 UUID로 `INT_RF_TK` INSERT
@@ -227,12 +233,54 @@ Nginx 역할:
 | 공통코드 관리 | `/api/admin/common-codes` | `CommonCode` | 상위코드 + 하위코드 2단계 복합키 |
 | 직급 관리 | `/api/admin/job-grades` | `JobGrade` | 단순 목록, 소프트 삭제 (`use_yn=N`) |
 | 부서 관리 | `/api/admin/departments` | `Department` | `UP_DEPT_CD` 자기 참조 계층 트리, 비활성화 시 하위 부서 cascade |
+| 사용자 관리 | `/api/admin/users` | `User` | CRUD + 계정 활성/비활성, 비밀번호 초기화 |
 
 ### 부서 계층 구조
 
 - `dept_lvl` : 서버에서 자동 계산 (최상위=1, 하위 생성 시 부모 lvl+1)
 - 비활성화: 해당 부서 + 모든 하위 부서 재귀적으로 `use_yn=N` 처리
 - 프론트엔드: 평면 리스트 → `buildTree()` 유틸로 트리 변환 후 렌더링
+
+## 공통코드 (INT_COM_CODE)
+
+### 구조
+
+`INT_COM_CODE` 테이블은 상위코드(카테고리)와 하위코드를 같은 테이블에 저장한다.
+
+| 구분 | 조건 | 예시 |
+|---|---|---|
+| 카테고리 행 | `UP_CD = CD` | `(USER_SE, USER_SE)` |
+| 하위코드 행 | `UP_CD ≠ CD` | `(USER_SE, ADMIN)`, `(USER_SE, USER)` |
+
+### `_SE` 컬럼 규칙
+
+**`_SE`로 끝나는 컬럼은 항상 공통코드에서 목록을 가져온다.**
+
+- 공통코드 관리 화면에서 관리자가 직접 등록/수정
+- API: `GET /api/codes/{upCd}` — `USE_YN='Y'`인 활성 코드만 반환 (인증 사용자 전체 접근)
+- Frontend 훅: `useCodeList(upCd)` → `{ value: string; label: string }[]`
+
+```ts
+// 사용 예
+const roleOptions = useCodeList('USER_SE');
+// → [{ value: 'ADMIN', label: '관리자' }, { value: 'USER', label: '일반' }]
+```
+
+### 현재 등록된 `_SE` 코드 그룹
+
+| `UP_CD` | 참조 컬럼 | 설명 |
+|---|---|---|
+| `USER_SE` | `INT_USER.USER_SE` | 사용자 구분 (ADMIN/USER) |
+
+> 추후 `_SE` 컬럼이 추가될 때마다 공통코드 관리 화면에서 해당 그룹을 등록한다.
+
+### 공통코드 API 경로 구분
+
+| 경로 | 대상 | 용도 |
+|---|---|---|
+| `GET /api/admin/common-codes` | ADMIN | 카테고리 목록 (관리 화면) |
+| `GET /api/admin/common-codes/{upCd}` | ADMIN | 특정 그룹 전체 코드 — 비활성 포함 (관리 화면) |
+| `GET /api/codes/{upCd}` | 인증 사용자 전체 | 활성(`USE_YN='Y'`) 코드만 — 폼 콤보박스용 |
 
 ## AI / LLM
 

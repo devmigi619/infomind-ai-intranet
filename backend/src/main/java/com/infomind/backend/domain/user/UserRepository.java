@@ -2,6 +2,17 @@ package com.infomind.backend.domain.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface UserRepository extends JpaRepository<User, String> {
-    // PK = userId(String), findById(userId)로 직접 조회
+
+    /** 이름 또는 아이디로 검색 (대소문자 무시) */
+    List<User> findByUserIdContainingIgnoreCaseOrUserNmContainingIgnoreCase(
+            String userId, String userNm);
+
+    /** 특정 user_se를 제외한 전체 목록 */
+    List<User> findByUserSeNot(String userSe);
+
+    /** 특정 user_se만 조회 */
+    List<User> findByUserSe(String userSe);
 }

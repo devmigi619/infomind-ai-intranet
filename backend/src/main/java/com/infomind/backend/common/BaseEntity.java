@@ -70,8 +70,15 @@ public abstract class BaseEntity {
                     (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
             if (attrs != null) {
                 String ip = attrs.getRequest().getHeader("X-Forwarded-For");
-                if (ip == null || ip.isBlank()) {
+                if (ip != null && !ip.isBlank()) {
+                    // 다중 IP("클라이언트, 프록시1, 프록시2") 중 첫 번째만 사용
+                    ip = ip.split(",")[0].trim();
+                } else {
                     ip = attrs.getRequest().getRemoteAddr();
+                }
+                // IPv6 루프백(::1) → IPv4로 정규화
+                if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
+                    ip = "127.0.0.1";
                 }
                 return ip;
             }

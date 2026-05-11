@@ -30,6 +30,9 @@ public class UserService {
         if (!passwordEncoder.matches(rawPassword, user.getPwd())) {
             throw new IllegalArgumentException("비밀번호가 올바르지 않습니다.");
         }
+        if ("INVALID".equals(user.getUserSe())) {
+            throw new IllegalArgumentException("비활성화된 계정입니다. 관리자에게 문의하세요.");
+        }
 
         String accessToken = jwtProvider.generateToken(user.getUserId(), user.getUserSe());
         String refreshTokenStr = jwtProvider.generateRefreshToken(user.getUserId());

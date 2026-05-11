@@ -28,6 +28,13 @@ public class CommonCodeService {
                 .stream().map(this::toDto).collect(Collectors.toList());
     }
 
+    /** 활성(USE_YN = 'Y') 코드 목록 — 폼 콤보박스 전용 */
+    @Transactional(readOnly = true)
+    public List<CommonCodeDto> getActiveCodes(String upCd) {
+        return commonCodeRepository.findActiveCodesByUpCd(upCd)
+                .stream().map(this::toDto).collect(Collectors.toList());
+    }
+
     @Transactional
     public CommonCodeDto createCode(CreateRequest req) {
         if (commonCodeRepository.existsById(new CommonCodeId(req.getUpCd(), req.getCd()))) {

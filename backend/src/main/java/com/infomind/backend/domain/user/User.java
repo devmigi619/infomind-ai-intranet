@@ -60,4 +60,19 @@ public class User extends BaseEntity {
 
     @Column(name = "RESG_YMD", length = 8)
     private String resgYmd;         // 퇴사일자 (YYYYMMDD)
+
+    public void update(String userNm, String userSe, String deptCd, String jbgdCd,
+                       String eml, String mtelno, String hireYmd) {
+        this.userNm  = userNm;
+        this.userSe  = userSe != null ? userSe : this.userSe;
+        this.deptCd  = deptCd;
+        this.jbgdCd  = jbgdCd;
+        this.eml     = eml;
+        this.mtelno  = mtelno;
+        this.hireYmd = hireYmd;
+    }
+
+    public void disable() { this.userSe = "INVALID"; }
+    public void enable()  { this.userSe = "USER"; }
+    public void resetPassword(String encodedPwd) { this.pwd = encodedPwd; }
 }

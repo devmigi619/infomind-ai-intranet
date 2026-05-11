@@ -135,6 +135,7 @@
 - [x] 공통코드 관리 화면 (AdminCommonCodeScreen, 백엔드 CRUD API)
 - [x] 직급 관리 화면 (AdminJobGradeScreen, 백엔드 CRUD API, INT_JBGD)
 - [x] 부서 관리 화면 (AdminDeptScreen, 백엔드 CRUD API, INT_DEPT, 트리+우측상세, 계층 cascade 비활성화)
+- [x] 사용자 관리 화면 (AdminUsersScreen, 백엔드 CRUD API, INT_USER, 테이블/카드 UI, 계정 활성·비활성, 비밀번호 초기화)
 - [ ] 권한 관리 + 관리자 화면 (현재 NavRail 관리자 모드 자리만 마련됨)
 - [ ] RAG (내규 문서 검색, AI 채팅에서 활용)
 - [ ] 다국어 (한국어 / 영어)

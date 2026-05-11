@@ -10,6 +10,7 @@ import { PlaceholderScreen } from '../../features/placeholder/screens/Placeholde
 import { AdminCommonCodeScreen } from '../../features/admin-common-code/screens/AdminCommonCodeScreen';
 import { AdminJobGradeScreen } from '../../features/admin-job-grade/screens/AdminJobGradeScreen';
 import { AdminDeptScreen } from '../../features/admin-dept/screens/AdminDeptScreen';
+import { AdminUsersScreen } from '../../features/admin-users/screens/AdminUsersScreen';
 import { MobileMenuPanel } from './MobileMenuPanel';
 
 const PLACEHOLDER_TITLES: Record<string, string> = {
@@ -91,6 +92,8 @@ export function MobileFullScreenRouter() {
         return <AdminJobGradeScreen />;
       case 'admin-dept':
         return <AdminDeptScreen />;
+      case 'admin-users':
+        return <AdminUsersScreen />;
       case 'menu-panel':
         return <MobileMenuPanel />;
       default:

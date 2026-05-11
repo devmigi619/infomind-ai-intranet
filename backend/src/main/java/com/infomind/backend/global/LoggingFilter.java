@@ -73,12 +73,18 @@ public class LoggingFilter extends OncePerRequestFilter {
         return "anonymous";
     }
 
-    /** X-Forwarded-For 헤더 우선, 없으면 RemoteAddr */
+    /** X-Forwarded-For 헤더 우선, 없으면 RemoteAddr. IPv6 루프백 정규화 */
     private String getClientIp(HttpServletRequest request) {
+        String ip;
         String xForwardedFor = request.getHeader("X-Forwarded-For");
         if (xForwardedFor != null && !xForwardedFor.isBlank()) {
-            return xForwardedFor.split(",")[0].trim();
+            ip = xForwardedFor.split(",")[0].trim();
+        } else {
+            ip = request.getRemoteAddr();
         }
-        return request.getRemoteAddr();
+        if ("::1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip)) {
+            ip = "127.0.0.1";
+        }
+        return ip;
     }
 }

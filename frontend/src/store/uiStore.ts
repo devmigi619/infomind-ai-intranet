@@ -94,7 +94,8 @@ export const useUiStore = create<UiState>((set, get) => ({
       return;
     }
     set((state) => ({
-      activePanel: state.activePanel === panel ? null : panel,
+        activeFullScreen : state.isAdminMode ? panel : null,
+        activePanel: state.isAdminMode ? null : state.activePanel === panel ? null : panel,
     }));
   },
 
