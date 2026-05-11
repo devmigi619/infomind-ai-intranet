@@ -75,13 +75,76 @@ export const useCreateMy = () => {
 export { myApi };
 ```
 
+## 드롭다운 (선택 필드)
+
+### 공통 컴포넌트: `AppDropdown`
+
+드롭다운이 필요한 모든 곳에서 `shared/components/AppDropdown.tsx`를 사용한다.
+React Native 기본 `<select>` 또는 커스텀 모달 구현 **금지**.
+
+```typescript
+import { AppDropdown } from '../../../shared/components/AppDropdown';
+
+<AppDropdown
+  label="레이블"        // 선택 사항
+  required              // 필수 표시 * (선택 사항)
+  value={form.field}
+  onChange={v => setForm(f => ({ ...f, field: v }))}
+  options={myOptions}   // { value: string; label: string }[]
+  placeholder="선택"    // 기본값 "선택"
+  search                // 항목이 많을 때 검색창 활성화 (선택 사항)
+/>
+```
+
+- 라이브러리: `react-native-element-dropdown`
+- 테마(border, background, brand 색상) 자동 적용
+- Web / iOS / Android 모두 동작
+
+### `_SE` 컬럼 — 공통코드에서 목록 가져오기
+
+**`_SE`로 끝나는 컬럼**의 선택 옵션은 항상 공통코드(INT_COM_CODE)에서 가져온다.
+하드코딩 금지.
+
+```typescript
+import { useCodeList } from '../../../shared/hooks/useCodeList';
+
+// _SE 컬럼명 대문자를 그대로 upCd로 전달
+const roleOptions = useCodeList('USER_SE');
+// → [{ value: 'ADMIN', label: '관리자' }, { value: 'USER', label: '일반' }]
+```
+
+- API: `GET /api/codes/{upCd}` — `USE_YN='Y'`인 활성 코드만 반환
+- staleTime 10분 캐시 적용 (공통코드는 자주 변경되지 않음)
+- 코드 데이터는 관리자가 **공통코드 관리** 화면에서 직접 등록
+
+### 부서 / 직급 옵션
+
+부서와 직급은 공통코드가 아닌 각자의 전용 API를 사용한다.
+
+```typescript
+import { useDepartments } from '../../admin-dept/api';
+import { useJobGrades }   from '../../admin-job-grade/api';
+
+const { data: depts  = [] } = useDepartments();
+const { data: grades = [] } = useJobGrades();
+
+const deptOptions = [
+  { label: '없음', value: '' },
+  ...depts.filter(d => d.useYn === 'Y').map(d => ({ label: d.deptNm, value: d.deptCd })),
+];
+const gradeOptions = [
+  { label: '없음', value: '' },
+  ...grades.filter(g => g.useYn === 'Y').map(g => ({ label: g.jbgdNm, value: g.jbgdCd })),
+];
+```
+
 ## 디자인 토큰
 
 새 코드는 `shared/constants/`의 토큰 사용 (colors, spacing, radius, typography, shadows 등).
 기존 컴포넌트의 하드코딩 값은 점진적으로 마이그레이션.
 
 ```typescript
-import { colors } from '../../shared/constants/colors';
+import { colors }  from '../../shared/constants/colors';
 import { spacing } from '../../shared/constants/spacing';
 ```
 

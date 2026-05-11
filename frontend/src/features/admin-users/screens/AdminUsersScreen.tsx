@@ -11,12 +11,12 @@ import {
   Modal,
   useWindowDimensions,
   Platform,
-  FlatList,
 } from 'react-native';
-import { Plus, X, Pencil, EyeOff, Eye, Search, KeyRound, ChevronDown, Check } from 'lucide-react-native';
+import { Plus, X, Pencil, EyeOff, Eye, Search, KeyRound } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { useCodeList } from '../../../shared/hooks/useCodeList';
+import { AppDropdown } from '../../../shared/components/AppDropdown';
 import {
   useAdminUsers,
   useCreateUser,
@@ -34,14 +34,6 @@ import { useJobGrades } from '../../admin-job-grade/api';
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
 type ModalMode = 'create' | 'edit' | 'reset-password' | null;
-
-interface SelectOption { label: string; value: string; }
-interface NativePickerState {
-  options: SelectOption[];
-  value: string;
-  onChange: (v: string) => void;
-  title: string;
-}
 
 interface CreateForm {
   userId: string; userNm: string; pwd: string; userSe: string;
@@ -88,11 +80,11 @@ export function AdminUsersScreen() {
   const { data: grades = [] } = useJobGrades();
   const roleOptions = useCodeList('USER_SE');
 
-  const createUser   = useCreateUser();
-  const updateUser   = useUpdateUser();
-  const resetPwd     = useResetPassword();
-  const disableUser  = useDisableUser();
-  const enableUser   = useEnableUser();
+  const createUser  = useCreateUser();
+  const updateUser  = useUpdateUser();
+  const resetPwd    = useResetPassword();
+  const disableUser = useDisableUser();
+  const enableUser  = useEnableUser();
 
   const [modalMode, setModalMode]       = useState<ModalMode>(null);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -100,19 +92,16 @@ export function AdminUsersScreen() {
   const [editForm, setEditForm]         = useState<EditForm>(EMPTY_EDIT);
   const [newPwd, setNewPwd]             = useState('');
 
-  // Native 전용 피커 상태
-  const [nativePicker, setNativePicker] = useState<NativePickerState | null>(null);
-
   const modalWidth = Math.min(480, width - 32);
   const isSaving   = createUser.isPending || updateUser.isPending || resetPwd.isPending;
 
   // ─── 옵션 목록 ────────────────────────────────────────────────────────────
 
-  const deptOptions: SelectOption[] = [
+  const deptOptions = [
     { label: '없음', value: '' },
     ...depts.filter(d => d.useYn === 'Y').map(d => ({ label: d.deptNm, value: d.deptCd })),
   ];
-  const gradeOptions: SelectOption[] = [
+  const gradeOptions = [
     { label: '없음', value: '' },
     ...grades.filter(g => g.useYn === 'Y').map(g => ({ label: g.jbgdNm, value: g.jbgdCd })),
   ];
@@ -154,14 +143,14 @@ export function AdminUsersScreen() {
     if (!createForm.pwd.trim())    return Alert.alert('오류', '비밀번호를 입력해주세요.');
     try {
       const req: CreateUserRequest = {
-        userId: createForm.userId.trim(),
-        userNm: createForm.userNm.trim(),
-        pwd:    createForm.pwd,
-        userSe: createForm.userSe || 'USER',
-        deptCd: createForm.deptCd || undefined,
-        jbgdCd: createForm.jbgdCd || undefined,
-        eml:    createForm.eml || undefined,
-        mtelno: createForm.mtelno || undefined,
+        userId:  createForm.userId.trim(),
+        userNm:  createForm.userNm.trim(),
+        pwd:     createForm.pwd,
+        userSe:  createForm.userSe || 'USER',
+        deptCd:  createForm.deptCd || undefined,
+        jbgdCd:  createForm.jbgdCd || undefined,
+        eml:     createForm.eml || undefined,
+        mtelno:  createForm.mtelno || undefined,
         hireYmd: createForm.hireYmd || undefined,
       };
       await createUser.mutateAsync(req);
@@ -173,12 +162,12 @@ export function AdminUsersScreen() {
     if (!editForm.userNm.trim()) return Alert.alert('오류', '이름을 입력해주세요.');
     try {
       const req: UpdateUserRequest = {
-        userNm: editForm.userNm.trim(),
-        userSe: editForm.userSe || undefined,
-        deptCd: editForm.deptCd || undefined,
-        jbgdCd: editForm.jbgdCd || undefined,
-        eml:    editForm.eml || undefined,
-        mtelno: editForm.mtelno || undefined,
+        userNm:  editForm.userNm.trim(),
+        userSe:  editForm.userSe || undefined,
+        deptCd:  editForm.deptCd || undefined,
+        jbgdCd:  editForm.jbgdCd || undefined,
+        eml:     editForm.eml || undefined,
+        mtelno:  editForm.mtelno || undefined,
         hireYmd: editForm.hireYmd || undefined,
       };
       await updateUser.mutateAsync({ userId: selectedUser!.userId, data: req });
@@ -238,114 +227,6 @@ export function AdminUsersScreen() {
     </View>
   );
 
-  // ─── 콤보박스 ─────────────────────────────────────────────────────────────
-  // Web: 네이티브 <select> / Native: 커스텀 모달 피커
-
-  const renderComboBox = (
-    label: string,
-    value: string,
-    onChange: (v: string) => void,
-    options: SelectOption[],
-    required?: boolean,
-  ) => {
-    const selectedLabel = options.find(o => o.value === value)?.label ?? options[0]?.label ?? '';
-
-    return (
-      <View style={styles.field}>
-        <Text style={[styles.label, { color: theme.text.subtle, fontFamily: WEB_FONT }]}>
-          {label}{required && <Text style={{ color: '#EF4444' }}> *</Text>}
-        </Text>
-
-        {Platform.OS === 'web'
-          ? /* ── Web: 네이티브 select ─────────────────────────────────────── */
-            React.createElement(
-              'select',
-              {
-                value,
-                onChange: (e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value),
-                style: {
-                  height: 40,
-                  border: `1px solid ${theme.border.default}`,
-                  borderRadius: 8,
-                  paddingLeft: 12,
-                  paddingRight: 32,
-                  fontSize: 13,
-                  color: theme.text.primary,
-                  backgroundColor: theme.bg.surface,
-                  outline: 'none',
-                  cursor: 'pointer',
-                  fontFamily: WEB_FONT ?? 'inherit',
-                  width: '100%',
-                  appearance: 'auto',
-                } as React.CSSProperties,
-              },
-              options.map(opt =>
-                React.createElement('option', { key: opt.value, value: opt.value }, opt.label),
-              ),
-            )
-          : /* ── Native: 커스텀 버튼 → 모달 피커 ─────────────────────────── */
-            <TouchableOpacity
-              style={[styles.comboBtn, { borderColor: theme.border.default, backgroundColor: theme.bg.surface }]}
-              onPress={() => setNativePicker({ options, value, onChange, title: label })}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.comboBtnText, { color: theme.text.primary, fontFamily: WEB_FONT }]}>
-                {selectedLabel}
-              </Text>
-              <ChevronDown size={14} color={theme.text.muted} />
-            </TouchableOpacity>
-        }
-      </View>
-    );
-  };
-
-  // ─── Native 피커 모달 ─────────────────────────────────────────────────────
-
-  const renderNativePicker = () => {
-    if (!nativePicker) return null;
-    return (
-      <Modal visible transparent animationType="fade">
-        <TouchableOpacity style={styles.overlay} activeOpacity={1}
-          onPress={() => setNativePicker(null)}>
-          <View style={[styles.pickerBox, { backgroundColor: theme.bg.surface, width: Math.min(320, width - 48) }]}>
-            <View style={[styles.pickerHeader, { borderBottomColor: theme.border.subtle }]}>
-              <Text style={[styles.pickerTitle, { color: theme.text.primary, fontFamily: WEB_FONT }]}>
-                {nativePicker.title}
-              </Text>
-              <TouchableOpacity onPress={() => setNativePicker(null)} activeOpacity={0.7}>
-                <X size={16} color={theme.text.muted} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={nativePicker.options}
-              keyExtractor={o => o.value}
-              style={styles.pickerList}
-              renderItem={({ item }) => {
-                const isSelected = item.value === nativePicker.value;
-                return (
-                  <TouchableOpacity
-                    style={[styles.pickerItem, isSelected && { backgroundColor: theme.brand.primaryTint }]}
-                    onPress={() => { nativePicker.onChange(item.value); setNativePicker(null); }}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={[styles.pickerItemText, {
-                      color: isSelected ? theme.brand.primary : theme.text.primary,
-                      fontWeight: isSelected ? '600' : '400',
-                      fontFamily: WEB_FONT,
-                    }]}>
-                      {item.label}
-                    </Text>
-                    {isSelected && <Check size={14} color={theme.brand.primary} />}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </View>
-        </TouchableOpacity>
-      </Modal>
-    );
-  };
-
   // ─── 모달 ─────────────────────────────────────────────────────────────────
 
   const renderModal = () => {
@@ -372,20 +253,49 @@ export function AdminUsersScreen() {
               {/* ── 등록 폼 ── */}
               {modalMode === 'create' && (
                 <>
-                  {renderField('아이디', createForm.userId, v => setCreateForm(f => ({ ...f, userId: v })), { required: true, placeholder: '로그인 아이디' })}
-                  {renderField('이름', createForm.userNm, v => setCreateForm(f => ({ ...f, userNm: v })), { required: true })}
-                  {renderField('비밀번호', createForm.pwd, v => setCreateForm(f => ({ ...f, pwd: v })), { required: true, secureTextEntry: true })}
-                  {renderComboBox('권한', createForm.userSe, v => setCreateForm(f => ({ ...f, userSe: v })), roleOptions)}
-                  {renderComboBox('부서', createForm.deptCd, v => setCreateForm(f => ({ ...f, deptCd: v })), deptOptions)}
-                  {renderComboBox('직급', createForm.jbgdCd, v => setCreateForm(f => ({ ...f, jbgdCd: v })), gradeOptions)}
-                  {renderField('이메일', createForm.eml, v => setCreateForm(f => ({ ...f, eml: v })), { placeholder: 'example@company.com' })}
-                  {renderField('휴대폰', createForm.mtelno, v => setCreateForm(f => ({ ...f, mtelno: v })), { placeholder: '010-0000-0000' })}
-                  {renderField('입사일', createForm.hireYmd, v => setCreateForm(f => ({ ...f, hireYmd: v })), { placeholder: 'YYYYMMDD' })}
+                  {renderField('아이디', createForm.userId,
+                    v => setCreateForm(f => ({ ...f, userId: v })),
+                    { required: true, placeholder: '로그인 아이디' })}
+                  {renderField('이름', createForm.userNm,
+                    v => setCreateForm(f => ({ ...f, userNm: v })),
+                    { required: true })}
+                  {renderField('비밀번호', createForm.pwd,
+                    v => setCreateForm(f => ({ ...f, pwd: v })),
+                    { required: true, secureTextEntry: true })}
+                  <AppDropdown
+                    label="권한"
+                    value={createForm.userSe}
+                    onChange={v => setCreateForm(f => ({ ...f, userSe: v }))}
+                    options={roleOptions}
+                  />
+                  <AppDropdown
+                    label="부서"
+                    value={createForm.deptCd}
+                    onChange={v => setCreateForm(f => ({ ...f, deptCd: v }))}
+                    options={deptOptions}
+                    search={deptOptions.length > 6}
+                  />
+                  <AppDropdown
+                    label="직급"
+                    value={createForm.jbgdCd}
+                    onChange={v => setCreateForm(f => ({ ...f, jbgdCd: v }))}
+                    options={gradeOptions}
+                  />
+                  {renderField('이메일', createForm.eml,
+                    v => setCreateForm(f => ({ ...f, eml: v })),
+                    { placeholder: 'example@company.com' })}
+                  {renderField('휴대폰', createForm.mtelno,
+                    v => setCreateForm(f => ({ ...f, mtelno: v })),
+                    { placeholder: '010-0000-0000' })}
+                  {renderField('입사일', createForm.hireYmd,
+                    v => setCreateForm(f => ({ ...f, hireYmd: v })),
+                    { placeholder: 'YYYYMMDD' })}
                   <TouchableOpacity onPress={handleCreate} disabled={isSaving}
                     style={[styles.primaryBtn, { backgroundColor: theme.brand.primary }, isSaving && styles.btnDisabled]}
                     activeOpacity={0.8}>
-                    {isSaving ? <ActivityIndicator size="small" color="#fff" /> :
-                      <Text style={[styles.primaryBtnText, { fontFamily: WEB_FONT }]}>등록</Text>}
+                    {isSaving
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text style={[styles.primaryBtnText, { fontFamily: WEB_FONT }]}>등록</Text>}
                   </TouchableOpacity>
                 </>
               )}
@@ -394,22 +304,47 @@ export function AdminUsersScreen() {
               {modalMode === 'edit' && (
                 <>
                   {renderField('아이디', selectedUser?.userId ?? '', () => {}, { readOnly: true })}
-                  {renderField('이름', editForm.userNm, v => setEditForm(f => ({ ...f, userNm: v })), { required: true })}
-                  {renderComboBox('권한', editForm.userSe, v => setEditForm(f => ({ ...f, userSe: v })), roleOptions)}
-                  {renderComboBox('부서', editForm.deptCd, v => setEditForm(f => ({ ...f, deptCd: v })), deptOptions)}
-                  {renderComboBox('직급', editForm.jbgdCd, v => setEditForm(f => ({ ...f, jbgdCd: v })), gradeOptions)}
-                  {renderField('이메일', editForm.eml, v => setEditForm(f => ({ ...f, eml: v })))}
-                  {renderField('휴대폰', editForm.mtelno, v => setEditForm(f => ({ ...f, mtelno: v })))}
-                  {renderField('입사일', editForm.hireYmd, v => setEditForm(f => ({ ...f, hireYmd: v })), { placeholder: 'YYYYMMDD' })}
+                  {renderField('이름', editForm.userNm,
+                    v => setEditForm(f => ({ ...f, userNm: v })),
+                    { required: true })}
+                  <AppDropdown
+                    label="권한"
+                    value={editForm.userSe}
+                    onChange={v => setEditForm(f => ({ ...f, userSe: v }))}
+                    options={roleOptions}
+                  />
+                  <AppDropdown
+                    label="부서"
+                    value={editForm.deptCd}
+                    onChange={v => setEditForm(f => ({ ...f, deptCd: v }))}
+                    options={deptOptions}
+                    search={deptOptions.length > 6}
+                  />
+                  <AppDropdown
+                    label="직급"
+                    value={editForm.jbgdCd}
+                    onChange={v => setEditForm(f => ({ ...f, jbgdCd: v }))}
+                    options={gradeOptions}
+                  />
+                  {renderField('이메일', editForm.eml,
+                    v => setEditForm(f => ({ ...f, eml: v })))}
+                  {renderField('휴대폰', editForm.mtelno,
+                    v => setEditForm(f => ({ ...f, mtelno: v })))}
+                  {renderField('입사일', editForm.hireYmd,
+                    v => setEditForm(f => ({ ...f, hireYmd: v })),
+                    { placeholder: 'YYYYMMDD' })}
                   <TouchableOpacity onPress={handleUpdate} disabled={isSaving}
                     style={[styles.primaryBtn, { backgroundColor: theme.brand.primary }, isSaving && styles.btnDisabled]}
                     activeOpacity={0.8}>
-                    {isSaving ? <ActivityIndicator size="small" color="#fff" /> :
-                      <Text style={[styles.primaryBtnText, { fontFamily: WEB_FONT }]}>저장</Text>}
+                    {isSaving
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text style={[styles.primaryBtnText, { fontFamily: WEB_FONT }]}>저장</Text>}
                   </TouchableOpacity>
                   <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
-                  <TouchableOpacity onPress={() => { closeModal(); openResetPwd(selectedUser!); }}
-                    style={[styles.secondaryBtn, { borderColor: theme.border.default }]} activeOpacity={0.7}>
+                  <TouchableOpacity
+                    onPress={() => { closeModal(); openResetPwd(selectedUser!); }}
+                    style={[styles.secondaryBtn, { borderColor: theme.border.default }]}
+                    activeOpacity={0.7}>
                     <KeyRound size={14} color={theme.text.body} />
                     <Text style={[styles.secondaryBtnText, { color: theme.text.body, fontFamily: WEB_FONT }]}>
                       비밀번호 초기화
@@ -422,18 +357,21 @@ export function AdminUsersScreen() {
               {modalMode === 'reset-password' && (
                 <>
                   {renderField('대상', selectedUser?.userNm ?? '', () => {}, { readOnly: true })}
-                  {renderField('새 비밀번호', newPwd, setNewPwd, { required: true, secureTextEntry: true, placeholder: '새 비밀번호 입력' })}
+                  {renderField('새 비밀번호', newPwd, setNewPwd,
+                    { required: true, secureTextEntry: true, placeholder: '새 비밀번호 입력' })}
                   <TouchableOpacity onPress={handleResetPwd} disabled={isSaving}
                     style={[styles.primaryBtn, { backgroundColor: theme.brand.primary }, isSaving && styles.btnDisabled]}
                     activeOpacity={0.8}>
-                    {isSaving ? <ActivityIndicator size="small" color="#fff" /> :
-                      <Text style={[styles.primaryBtnText, { fontFamily: WEB_FONT }]}>초기화</Text>}
+                    {isSaving
+                      ? <ActivityIndicator size="small" color="#fff" />
+                      : <Text style={[styles.primaryBtnText, { fontFamily: WEB_FONT }]}>초기화</Text>}
                   </TouchableOpacity>
                 </>
               )}
 
               <TouchableOpacity onPress={closeModal}
-                style={[styles.cancelBtn, { borderColor: theme.border.default }]} activeOpacity={0.7}>
+                style={[styles.cancelBtn, { borderColor: theme.border.default }]}
+                activeOpacity={0.7}>
                 <Text style={[styles.cancelBtnText, { color: theme.text.body, fontFamily: WEB_FONT }]}>취소</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -503,14 +441,11 @@ export function AdminUsersScreen() {
 
   // ─── 데스크탑 테이블 ──────────────────────────────────────────────────────
 
-  const deptName = (cd: string | null) =>
-    cd ? (depts.find(d => d.deptCd === cd)?.deptNm ?? cd) : '-';
-  const gradeName = (cd: string | null) =>
-    cd ? (grades.find(g => g.jbgdCd === cd)?.jbgdNm ?? cd) : '-';
+  const deptName  = (cd: string | null) => cd ? (depts.find(d => d.deptCd === cd)?.deptNm ?? cd) : '-';
+  const gradeName = (cd: string | null) => cd ? (grades.find(g => g.jbgdCd === cd)?.jbgdNm ?? cd) : '-';
 
   const renderTable = () => (
     <ScrollView style={styles.tableScroll} showsVerticalScrollIndicator={false}>
-      {/* 헤더 행 */}
       <View style={[styles.tableHeader, { backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.default }]}>
         {['아이디', '이름', '부서', '직급', '권한', '관리'].map((h, i) => (
           <Text key={h} style={[styles.th, { color: theme.text.subtle, fontFamily: WEB_FONT,
@@ -532,9 +467,9 @@ export function AdminUsersScreen() {
             { borderBottomColor: theme.border.subtle },
             idx % 2 === 1 && { backgroundColor: theme.bg.surfaceAlt }]}>
             <Text style={[styles.td, { flex: 1.2, color: theme.text.primary, fontFamily: WEB_FONT }]} numberOfLines={1}>{u.userId}</Text>
-            <Text style={[styles.td, { flex: 1, color: theme.text.primary, fontFamily: WEB_FONT }]} numberOfLines={1}>{u.userNm ?? '-'}</Text>
-            <Text style={[styles.td, { flex: 1, color: theme.text.body, fontFamily: WEB_FONT }]} numberOfLines={1}>{deptName(u.deptCd)}</Text>
-            <Text style={[styles.td, { flex: 0.8, color: theme.text.body, fontFamily: WEB_FONT }]} numberOfLines={1}>{gradeName(u.jbgdCd)}</Text>
+            <Text style={[styles.td, { flex: 1,   color: theme.text.primary, fontFamily: WEB_FONT }]} numberOfLines={1}>{u.userNm ?? '-'}</Text>
+            <Text style={[styles.td, { flex: 1,   color: theme.text.body,    fontFamily: WEB_FONT }]} numberOfLines={1}>{deptName(u.deptCd)}</Text>
+            <Text style={[styles.td, { flex: 0.8, color: theme.text.body,    fontFamily: WEB_FONT }]} numberOfLines={1}>{gradeName(u.jbgdCd)}</Text>
             <View style={[styles.td, { flex: 0.8 }]}>
               <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                 <Text style={[styles.badgeText, { color: badge.text, fontFamily: WEB_FONT }]}>{badge.label}</Text>
@@ -547,7 +482,7 @@ export function AdminUsersScreen() {
     </ScrollView>
   );
 
-  // ─── 모바일 카드 ─────────────────────────────────────────────────────────
+  // ─── 모바일 카드 ──────────────────────────────────────────────────────────
 
   const renderCards = () => (
     <ScrollView style={styles.cardScroll} contentContainerStyle={styles.cardContent}
@@ -568,7 +503,7 @@ export function AdminUsersScreen() {
             <View style={styles.cardTop}>
               <View style={styles.cardInfo}>
                 <Text style={[styles.cardName, { color: theme.text.primary, fontFamily: WEB_FONT }]}>{u.userNm ?? '-'}</Text>
-                <Text style={[styles.cardId, { color: theme.text.muted, fontFamily: WEB_FONT }]}>{u.userId}</Text>
+                <Text style={[styles.cardId,   { color: theme.text.muted,   fontFamily: WEB_FONT }]}>{u.userId}</Text>
               </View>
               <View style={[styles.badge, { backgroundColor: badge.bg }]}>
                 <Text style={[styles.badgeText, { color: badge.text, fontFamily: WEB_FONT }]}>{badge.label}</Text>
@@ -586,7 +521,7 @@ export function AdminUsersScreen() {
     </ScrollView>
   );
 
-  // ─── 렌더 ────────────────────────────────────────────────────────────────
+  // ─── 렌더 ─────────────────────────────────────────────────────────────────
 
   return (
     <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
@@ -608,16 +543,13 @@ export function AdminUsersScreen() {
       {/* 목록 */}
       {isMobile ? renderCards() : renderTable()}
 
-      {/* 폼 모달 */}
+      {/* 모달 */}
       {renderModal()}
-
-      {/* Native 피커 모달 */}
-      {renderNativePicker()}
     </View>
   );
 }
 
-// ─── 스타일 ──────────────────────────────────────────────────────────────────
+// ─── 스타일 ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -665,58 +597,32 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   cardInfo: { gap: 2 },
   cardName: { fontSize: 14, fontWeight: '600' },
-  cardId: { fontSize: 12 },
+  cardId:   { fontSize: 12 },
   cardMeta: { fontSize: 12 },
   cardActions: { flexDirection: 'row', gap: 8, marginTop: 4 },
 
   // 배지
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  badge:     { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
   badgeText: { fontSize: 11, fontWeight: '600' },
 
   // 관리 버튼
   actionRow: { flexDirection: 'row', gap: 6 },
-  iconBtn: { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
+  iconBtn:   { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
 
   // 모달
-  overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center', justifyContent: 'center',
-  },
+  overlay:  { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', alignItems: 'center', justifyContent: 'center' },
   modalBox: { borderRadius: 16, overflow: 'hidden', maxHeight: '85%' },
   modalHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1,
   },
   modalTitle: { fontSize: 15, fontWeight: '600' },
-  modalBody: { padding: 20, gap: 14 },
+  modalBody:  { padding: 20, gap: 14 },
 
   // 폼
   field: { gap: 6 },
   label: { fontSize: 12, fontWeight: '500' },
   input: { height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, fontSize: 13 },
-
-  // 콤보박스 (Native 전용 버튼)
-  comboBtn: {
-    height: 40, borderWidth: 1, borderRadius: 8,
-    paddingHorizontal: 12, flexDirection: 'row',
-    alignItems: 'center', justifyContent: 'space-between',
-  },
-  comboBtnText: { fontSize: 13 },
-
-  // Native 피커 모달
-  pickerBox: { borderRadius: 14, overflow: 'hidden', maxHeight: 360 },
-  pickerHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1,
-  },
-  pickerTitle: { fontSize: 14, fontWeight: '600' },
-  pickerList: { maxHeight: 300 },
-  pickerItem: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 13,
-  },
-  pickerItemText: { fontSize: 14 },
-
   divider: { height: 1, marginVertical: 4 },
 
   // 버튼
@@ -724,7 +630,7 @@ const styles = StyleSheet.create({
     height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 4,
   },
   primaryBtnText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-  btnDisabled: { opacity: 0.6 },
+  btnDisabled:    { opacity: 0.6 },
   secondaryBtn: {
     height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, flexDirection: 'row', gap: 6,
@@ -736,6 +642,6 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 14 },
 
   // 기타
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
+  centered:  { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40 },
   emptyText: { fontSize: 13 },
 });
