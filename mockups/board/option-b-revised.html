@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>게시판 풀뷰 — Option B': 탭 + 좌우 분할 (LP 자동 닫힘)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #0A2463;
+    --brand-tint: rgba(10, 36, 99, 0.08);
+    --brand-light: #1E88E5;
+    --bg-app: #F5F6F8;
+    --bg-surface: #FFFFFF;
+    --bg-alt: #FAFAFA;
+    --border: rgba(0,0,0,0.08);
+    --border-subtle: rgba(0,0,0,0.05);
+    --text-primary: #000000;
+    --text-body: rgba(0,0,0,0.65);
+    --text-muted: rgba(0,0,0,0.45);
+    --semantic-notice: #DC2626;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-app); color: var(--text-primary); }
+
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  .topheader { height: 48px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; }
+  .brand { font-size: 18px; font-weight: 300; letter-spacing: 2px; }
+  .search-stub { flex: 1; max-width: 480px; height: 32px; border: 1px solid var(--border); border-radius: 16px; opacity: 0.5; display: flex; align-items: center; padding: 0 14px; font-size: 12px; color: var(--text-muted); }
+  .right-controls { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .icon-btn.active { background: var(--brand-tint); color: var(--brand); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
+
+  .body-wrap { flex: 1; display: flex; overflow: hidden; }
+  .navrail { width: 64px; background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; }
+  .navrail-item { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); cursor: pointer; position: relative; }
+  .navrail-item.active { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+  .navrail-item.active::before { content: ''; position: absolute; left: -8px; top: 12px; bottom: 12px; width: 2px; background: var(--brand); border-radius: 2px; }
+
+  /* LP is auto-closed (not rendered) — 그 자리에 풀뷰 확장 */
+  /* RP는 사용자 제어 — 여기선 열려 있다고 가정 */
+
+  /* Fullview */
+  .fullview { flex: 1; display: flex; flex-direction: column; background: var(--bg-surface); overflow: hidden; }
+
+  /* Top: Board tabs */
+  .board-tabs { display: flex; align-items: center; padding: 0 20px; border-bottom: 1px solid var(--border); background: var(--bg-surface); overflow-x: auto; }
+  .board-tab { padding: 13px 18px; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; font-weight: 500; display: flex; align-items: center; gap: 6px; }
+  .board-tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+  .count { font-size: 10px; background: var(--brand-tint); color: var(--brand); padding: 1px 6px; border-radius: 10px; font-weight: 500; }
+  .board-tab:not(.active) .count { background: rgba(0,0,0,0.05); color: var(--text-muted); }
+  .new-dot { width: 6px; height: 6px; background: var(--semantic-notice); border-radius: 50%; }
+
+  /* Toolbar */
+  .toolbar { padding: 10px 20px; display: flex; gap: 8px; align-items: center; border-bottom: 1px solid var(--border-subtle); background: var(--bg-alt); }
+  .search-input { flex: 1; max-width: 280px; height: 30px; border: 1px solid var(--border); border-radius: 6px; padding: 0 10px; font-size: 12px; font-family: inherit; background: white; }
+  .filter-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: white; font-size: 12px; cursor: pointer; font-family: inherit; color: var(--text-body); }
+  .write-btn { margin-left: auto; background: var(--brand); color: white; padding: 7px 16px; border-radius: 6px; font-size: 12px; cursor: pointer; border: none; font-weight: 500; font-family: inherit; }
+
+  /* Main: Left list + Right detail */
+  .main { flex: 1; display: flex; overflow: hidden; }
+
+  /* Left: Post list */
+  .post-list { width: 380px; border-right: 1px solid var(--border); overflow-y: auto; flex-shrink: 0; }
+  .post-item { padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); cursor: pointer; }
+  .post-item:hover { background: rgba(0,0,0,0.02); }
+  .post-item.active { background: var(--brand-tint); }
+  .post-item-top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .post-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .post-badge.notice { background: var(--semantic-notice); color: white; }
+  .post-title { font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--text-primary); margin-bottom: 4px; }
+  .post-item.active .post-title { color: var(--brand); font-weight: 600; }
+  .post-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; }
+  .post-meta .dot { color: var(--border); }
+
+  /* Right: Detail */
+  .detail { flex: 1; overflow-y: auto; min-width: 0; }
+  .detail-header { padding: 24px 28px 20px; border-bottom: 1px solid var(--border); }
+  .detail-title { font-size: 19px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; }
+  .detail-meta-row { display: flex; align-items: center; gap: 12px; }
+  .detail-author { display: flex; align-items: center; gap: 8px; }
+  .detail-author .avatar { background: linear-gradient(135deg, var(--brand), var(--brand-light)); width: 32px; height: 32px; font-size: 13px; }
+  .detail-info-name { font-size: 13px; font-weight: 500; }
+  .detail-info-date { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .detail-stats { margin-left: auto; display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); }
+
+  .detail-body { padding: 24px 28px; font-size: 14px; line-height: 1.8; color: var(--text-body); border-bottom: 1px solid var(--border); }
+
+  .detail-actions { padding: 16px 28px; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+  .action-btn { padding: 7px 14px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; background: white; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 4px; }
+  .action-btn:hover { border-color: var(--brand); color: var(--brand); }
+
+  /* Comments */
+  .comments { padding: 20px 28px; background: var(--bg-alt); }
+  .comments-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .comment { background: white; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 12px 16px; margin-bottom: 8px; }
+  .comment.reply { margin-left: 32px; }
+  .comment-header { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+  .comment-author { font-size: 12px; font-weight: 600; }
+  .comment-date { font-size: 11px; color: var(--text-muted); }
+  .comment-body { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+  .comment-reply-btn { font-size: 11px; color: var(--text-muted); cursor: pointer; margin-left: auto; }
+
+  .comment-input-wrap { background: white; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 12px; }
+  .comment-input { width: 100%; min-height: 44px; border: none; outline: none; resize: vertical; font-family: inherit; font-size: 13px; }
+  .comment-submit-row { display: flex; justify-content: flex-end; margin-top: 8px; }
+  .comment-submit { padding: 6px 14px; background: var(--brand); color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 500; }
+
+  /* RP (Right Panel - user toggled, here open) */
+  .rp { width: 360px; border-left: 1px solid var(--border); background: var(--bg-surface); display: flex; flex-direction: column; flex-shrink: 0; }
+  .rp-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .rp-tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+  .rp-tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+  .rp-body { flex: 1; padding: 16px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; text-align: center; }
+
+  /* Annotation */
+  .annotation { position: fixed; top: 60px; left: 80px; background: white; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 11px; color: var(--text-muted); box-shadow: 0 2px 8px rgba(0,0,0,0.06); max-width: 280px; line-height: 1.5; }
+  .annotation strong { color: var(--brand); }
+  .option-label { position: fixed; top: 12px; right: 380px; background: var(--brand); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; z-index: 100; }
+</style>
+</head>
+<body>
+<div class="option-label">Option B' (수정안): 탭 + 좌우 분할</div>
+
+<div class="app">
+  <header class="topheader">
+    <div class="brand">Infomind</div>
+    <div class="search-stub">🔍 통합검색 준비 중...</div>
+    <div class="right-controls">
+      <div class="icon-btn">🔔</div>
+      <div class="icon-btn active" title="RP 열림">📎</div>
+      <div class="avatar">민</div>
+    </div>
+  </header>
+
+  <div class="body-wrap">
+    <nav class="navrail">
+      <div class="navrail-item">🏠</div>
+      <div class="navrail-item active">📋<br><span style="font-size:9px">게시판</span></div>
+      <div class="navrail-item">📝</div>
+      <div class="navrail-item">📊</div>
+      <div class="navrail-item">⋯</div>
+    </nav>
+
+    <!-- LP는 자동 닫힘 (렌더 안 함) -->
+
+    <!-- Fullview -->
+    <div class="fullview">
+      <!-- Board tabs -->
+      <div class="board-tabs">
+        <div class="board-tab">📢 공지 <span class="count">12</span> <span class="new-dot"></span></div>
+        <div class="board-tab active">💬 자유 <span class="count">87</span> <span class="new-dot"></span></div>
+        <div class="board-tab">❓ QNA <span class="count">34</span></div>
+        <div class="board-tab">⚙️ 개발팀 <span class="count">21</span> <span class="new-dot"></span></div>
+        <div class="board-tab">👥 인사팀 <span class="count">8</span></div>
+      </div>
+
+      <!-- Toolbar -->
+      <div class="toolbar">
+        <input class="search-input" type="text" placeholder="제목, 내용 검색...">
+        <button class="filter-btn">필터 ▾</button>
+        <button class="filter-btn">최신순 ▾</button>
+        <button class="write-btn">+ 글쓰기</button>
+      </div>
+
+      <!-- Main: List + Detail -->
+      <div class="main">
+        <!-- Left: Post list -->
+        <div class="post-list">
+          <div class="post-item">
+            <div class="post-item-top"><span class="post-badge notice">공지</span></div>
+            <div class="post-title">사무실 이전 안내 (5/15)</div>
+            <div class="post-meta">민기 <span class="dot">·</span> 2일 전 <span class="dot">·</span> 👁 142 <span class="dot">·</span> 💬 12</div>
+          </div>
+          <div class="post-item active">
+            <div class="post-title">신규 입사자 환영회 일정 공유</div>
+            <div class="post-meta">혁준 <span class="dot">·</span> 1시간 전 <span class="dot">·</span> 👁 47 <span class="dot">·</span> 💬 5</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">사내 동호회 모집합니다 (테니스/등산)</div>
+            <div class="post-meta">지은 <span class="dot">·</span> 3시간 전 <span class="dot">·</span> 👁 23 <span class="dot">·</span> 💬 2</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">점심 추천 부탁드려요 (강남역 근처)</div>
+            <div class="post-meta">현우 <span class="dot">·</span> 어제 <span class="dot">·</span> 👁 89 <span class="dot">·</span> 💬 18</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">회식 메뉴 투표 부탁드립니다</div>
+            <div class="post-meta">민기 <span class="dot">·</span> 어제 <span class="dot">·</span> 👁 56 <span class="dot">·</span> 💬 9</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">주말에 운동하실 분?</div>
+            <div class="post-meta">수진 <span class="dot">·</span> 2일 전 <span class="dot">·</span> 👁 34 <span class="dot">·</span> 💬 4</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">회의실 예약 시스템 개선 제안</div>
+            <div class="post-meta">하준 <span class="dot">·</span> 3일 전 <span class="dot">·</span> 👁 67 <span class="dot">·</span> 💬 11</div>
+          </div>
+        </div>
+
+        <!-- Right: Detail + Comments -->
+        <div class="detail">
+          <div class="detail-header">
+            <div class="detail-title">신규 입사자 환영회 일정 공유</div>
+            <div class="detail-meta-row">
+              <div class="detail-author">
+                <div class="avatar">혁</div>
+                <div>
+                  <div class="detail-info-name">혁준</div>
+                  <div class="detail-info-date">2026-05-11 11:32</div>
+                </div>
+              </div>
+              <div class="detail-stats">
+                <span>👁 47</span>
+                <span>👍 8</span>
+                <span>💬 5</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="detail-body">
+            <p>안녕하세요, 이번 달 신규 입사하신 두 분을 환영하기 위한 자리를 마련했습니다.</p><br>
+            <p><strong>일정</strong>: 5월 17일(금) 18:30</p>
+            <p><strong>장소</strong>: 강남역 5번 출구 "면식수행"</p>
+            <p><strong>회비</strong>: 1인 25,000원</p><br>
+            <p>참석 가능하신 분들은 댓글로 알려주세요. 음식 알레르기 있으신 분도 꼭 댓글 부탁드립니다.</p>
+          </div>
+
+          <div class="detail-actions">
+            <button class="action-btn">👍 좋아요 8</button>
+            <button class="action-btn">🔖 북마크</button>
+            <button class="action-btn">✏️ 수정</button>
+            <button class="action-btn">🗑️ 삭제</button>
+          </div>
+
+          <div class="comments">
+            <div class="comments-title">💬 댓글 5개</div>
+
+            <div class="comment">
+              <div class="comment-header">
+                <span class="comment-author">민기</span>
+                <span class="comment-date">10분 전</span>
+                <span class="comment-reply-btn">답글</span>
+              </div>
+              <div class="comment-body">참석합니다! 음식 알레르기는 없어요.</div>
+            </div>
+            <div class="comment reply">
+              <div class="comment-header">
+                <span class="comment-author">혁준</span>
+                <span class="comment-date">5분 전</span>
+              </div>
+              <div class="comment-body">확인했습니다 👍</div>
+            </div>
+            <div class="comment">
+              <div class="comment-header">
+                <span class="comment-author">지은</span>
+                <span class="comment-date">8분 전</span>
+                <span class="comment-reply-btn">답글</span>
+              </div>
+              <div class="comment-body">저는 견과류 알레르기가 있어요. 견과 들어간 메뉴 빼주실 수 있나요?</div>
+            </div>
+            <div class="comment">
+              <div class="comment-header">
+                <span class="comment-author">현우</span>
+                <span class="comment-date">3분 전</span>
+                <span class="comment-reply-btn">답글</span>
+              </div>
+              <div class="comment-body">저도 참석합니다!</div>
+            </div>
+
+            <div class="comment-input-wrap">
+              <textarea class="comment-input" placeholder="댓글을 입력하세요..."></textarea>
+              <div class="comment-submit-row">
+                <button class="comment-submit">등록</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RP (사용자가 열어둔 상태) -->
+    <aside class="rp">
+      <div class="rp-tabs">
+        <div class="rp-tab active">🏠 홈</div>
+        <div class="rp-tab">✨ AI</div>
+      </div>
+      <div class="rp-body">RP 영역<br>(사용자가 직접 닫을 수 있음)</div>
+    </aside>
+  </div>
+</div>
+
+<div class="annotation">
+  💡 <strong>LP는 자동으로 닫힘</strong> (게시판 풀뷰 진입 시).<br>
+  글 클릭 시 우측 영역만 갱신 (슬라이드 X).<br>
+  RP는 사용자가 직접 토글.
+</div>
+</body>
+</html>

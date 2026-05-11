@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>게시판 풀뷰 — Option A: 메일/슬랙 스타일 3분할</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #0A2463;
+    --brand-tint: rgba(10, 36, 99, 0.08);
+    --brand-light: #1E88E5;
+    --bg-app: #F5F6F8;
+    --bg-surface: #FFFFFF;
+    --bg-alt: #FAFAFA;
+    --border: rgba(0,0,0,0.08);
+    --border-subtle: rgba(0,0,0,0.05);
+    --text-primary: #000000;
+    --text-body: rgba(0,0,0,0.65);
+    --text-muted: rgba(0,0,0,0.45);
+    --text-subtle: rgba(0,0,0,0.35);
+    --semantic-notice: #DC2626;
+    --semantic-qna: #F59E0B;
+    --semantic-free: #10B981;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-app); color: var(--text-primary); }
+
+  /* Layout */
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  .topheader { height: 48px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; }
+  .brand { font-size: 18px; font-weight: 300; letter-spacing: 2px; }
+  .search-stub { flex: 1; max-width: 480px; height: 32px; border: 1px solid var(--border); border-radius: 16px; opacity: 0.5; display: flex; align-items: center; padding: 0 14px; font-size: 12px; color: var(--text-muted); }
+  .right-controls { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
+
+  .body-wrap { flex: 1; display: flex; overflow: hidden; }
+  .navrail { width: 64px; background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; }
+  .navrail-item { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); cursor: pointer; }
+  .navrail-item.active { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+
+  /* Fullview — 3 columns */
+  .fullview { flex: 1; display: flex; background: var(--bg-surface); overflow: hidden; }
+
+  /* Column 1: Board list */
+  .col-boards { width: 220px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-alt); }
+  .col-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .col-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
+  .col-action { color: var(--brand); font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .col-action:hover { background: var(--brand-tint); }
+  .board-item { padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); cursor: pointer; }
+  .board-item:hover { background: rgba(0,0,0,0.02); }
+  .board-item.active { background: var(--brand-tint); border-left: 3px solid var(--brand); padding-left: 13px; }
+  .board-name { font-size: 13px; font-weight: 500; }
+  .board-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .board-item.active .board-name { color: var(--brand); font-weight: 600; }
+
+  /* Column 2: Post list */
+  .col-posts { width: 380px; border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+  .col-posts-header { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .write-btn { background: var(--brand); color: white; padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; border: none; font-weight: 500; }
+  .post-search { padding: 10px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .post-search input { width: 100%; height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; font-family: inherit; }
+  .post-list { flex: 1; overflow-y: auto; }
+  .post-item { padding: 12px 20px; border-bottom: 1px solid var(--border-subtle); cursor: pointer; }
+  .post-item:hover { background: rgba(0,0,0,0.02); }
+  .post-item.active { background: var(--brand-tint); }
+  .post-item-top { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .post-badge { font-size: 10px; padding: 1px 6px; border-radius: 3px; font-weight: 600; }
+  .post-badge.notice { background: var(--semantic-notice); color: white; }
+  .post-title { font-size: 13px; font-weight: 500; line-height: 1.4; color: var(--text-primary); }
+  .post-item.active .post-title { color: var(--brand); font-weight: 600; }
+  .post-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 8px; margin-top: 4px; }
+  .post-meta .dot { color: var(--border); }
+
+  /* Column 3: Detail + Comments */
+  .col-detail { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  .detail-header { padding: 20px 24px; border-bottom: 1px solid var(--border); }
+  .detail-tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px; background: var(--brand-tint); color: var(--brand); font-weight: 500; margin-bottom: 8px; }
+  .detail-title { font-size: 18px; font-weight: 600; line-height: 1.4; margin-bottom: 12px; }
+  .detail-meta { display: flex; align-items: center; gap: 12px; }
+  .detail-author { display: flex; align-items: center; gap: 8px; }
+  .detail-author .avatar { background: linear-gradient(135deg, var(--brand), var(--brand-light)); }
+  .detail-info { font-size: 12px; }
+  .detail-info-name { color: var(--text-primary); font-weight: 500; }
+  .detail-info-date { color: var(--text-muted); font-size: 11px; }
+  .detail-stats { margin-left: auto; display: flex; gap: 12px; font-size: 12px; color: var(--text-muted); }
+  .detail-body { padding: 24px; flex: 1; overflow-y: auto; font-size: 14px; line-height: 1.7; color: var(--text-body); }
+  .detail-actions { padding: 16px 24px; border-top: 1px solid var(--border); display: flex; gap: 8px; }
+  .action-btn { padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: white; cursor: pointer; font-family: inherit; }
+  .action-btn.primary { background: var(--brand); color: white; border-color: var(--brand); }
+
+  /* Comments */
+  .comments { border-top: 1px solid var(--border); padding: 20px 24px; max-height: 280px; overflow-y: auto; background: var(--bg-alt); }
+  .comments-title { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+  .comment { background: white; border: 1px solid var(--border-subtle); border-radius: 8px; padding: 10px 14px; margin-bottom: 8px; }
+  .comment.reply { margin-left: 32px; }
+  .comment-header { display: flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+  .comment-author { font-size: 12px; font-weight: 600; }
+  .comment-date { font-size: 11px; color: var(--text-muted); }
+  .comment-body { font-size: 13px; color: var(--text-body); line-height: 1.5; }
+
+  /* Label tag */
+  .option-label { position: fixed; top: 12px; right: 12px; background: var(--brand); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; z-index: 100; }
+</style>
+</head>
+<body>
+<div class="option-label">Option A: 메일/슬랙 스타일 3분할</div>
+
+<div class="app">
+  <!-- Top Header -->
+  <header class="topheader">
+    <div class="brand">Infomind</div>
+    <div class="search-stub">🔍 통합검색 준비 중...</div>
+    <div class="right-controls">
+      <div class="icon-btn">🔔</div>
+      <div class="icon-btn">📎</div>
+      <div class="avatar">민</div>
+    </div>
+  </header>
+
+  <div class="body-wrap">
+    <!-- NavRail -->
+    <nav class="navrail">
+      <div class="navrail-item">🏠</div>
+      <div class="navrail-item active">📋<br><span style="font-size:9px">게시판</span></div>
+      <div class="navrail-item">📝</div>
+      <div class="navrail-item">📊</div>
+      <div class="navrail-item">⋯</div>
+    </nav>
+
+    <!-- Fullview: 3 columns -->
+    <div class="fullview">
+      <!-- Col 1: Board list -->
+      <div class="col-boards">
+        <div class="col-header">
+          <div class="col-title">게시판</div>
+        </div>
+        <div class="board-item">
+          <div class="board-name">📢 공지사항</div>
+          <div class="board-meta">12개 글 · 신규 3</div>
+        </div>
+        <div class="board-item active">
+          <div class="board-name">💬 자유게시판</div>
+          <div class="board-meta">87개 글 · 신규 8</div>
+        </div>
+        <div class="board-item">
+          <div class="board-name">❓ QNA</div>
+          <div class="board-meta">34개 글</div>
+        </div>
+        <div class="board-item">
+          <div class="board-name">⚙️ 개발팀</div>
+          <div class="board-meta">21개 글 · 신규 2</div>
+        </div>
+        <div class="board-item">
+          <div class="board-name">👥 인사팀</div>
+          <div class="board-meta">8개 글</div>
+        </div>
+      </div>
+
+      <!-- Col 2: Post list -->
+      <div class="col-posts">
+        <div class="col-posts-header">
+          <div class="col-title">자유게시판</div>
+          <button class="write-btn">+ 글쓰기</button>
+        </div>
+        <div class="post-search">
+          <input type="text" placeholder="제목, 내용 검색...">
+        </div>
+        <div class="post-list">
+          <div class="post-item">
+            <div class="post-item-top">
+              <span class="post-badge notice">공지</span>
+            </div>
+            <div class="post-title">사무실 이전 안내 (5/15)</div>
+            <div class="post-meta">민기 <span class="dot">·</span> 2일 전 <span class="dot">·</span> 👁 142 <span class="dot">·</span> 💬 12</div>
+          </div>
+          <div class="post-item active">
+            <div class="post-title">신규 입사자 환영회 일정 공유</div>
+            <div class="post-meta">혁준 <span class="dot">·</span> 1시간 전 <span class="dot">·</span> 👁 47 <span class="dot">·</span> 💬 5</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">사내 동호회 모집합니다 (테니스/등산)</div>
+            <div class="post-meta">지은 <span class="dot">·</span> 3시간 전 <span class="dot">·</span> 👁 23 <span class="dot">·</span> 💬 2</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">점심 추천 부탁드려요 (강남역 근처)</div>
+            <div class="post-meta">현우 <span class="dot">·</span> 어제 <span class="dot">·</span> 👁 89 <span class="dot">·</span> 💬 18</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">회식 메뉴 투표 부탁드립니다</div>
+            <div class="post-meta">민기 <span class="dot">·</span> 어제 <span class="dot">·</span> 👁 56 <span class="dot">·</span> 💬 9</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">주말에 운동하실 분?</div>
+            <div class="post-meta">수진 <span class="dot">·</span> 2일 전 <span class="dot">·</span> 👁 34 <span class="dot">·</span> 💬 4</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Col 3: Detail + Comments -->
+      <div class="col-detail">
+        <div class="detail-header">
+          <div class="detail-title">신규 입사자 환영회 일정 공유</div>
+          <div class="detail-meta">
+            <div class="detail-author">
+              <div class="avatar">혁</div>
+              <div class="detail-info">
+                <div class="detail-info-name">혁준</div>
+                <div class="detail-info-date">2026-05-11 11:32</div>
+              </div>
+            </div>
+            <div class="detail-stats">
+              <span>👁 47</span>
+              <span>👍 8</span>
+              <span>💬 5</span>
+            </div>
+          </div>
+        </div>
+        <div class="detail-body">
+          <p>안녕하세요, 이번 달 신규 입사하신 두 분을 환영하기 위한 자리를 마련했습니다.</p><br>
+          <p><strong>일정</strong>: 5월 17일(금) 18:30</p>
+          <p><strong>장소</strong>: 강남역 5번 출구 "면식수행"</p>
+          <p><strong>회비</strong>: 1인 25,000원</p><br>
+          <p>참석 가능하신 분들은 댓글로 알려주세요. 음식 알레르기 있으신 분도 꼭 댓글 부탁드립니다.</p>
+        </div>
+        <div class="detail-actions">
+          <button class="action-btn">👍 좋아요</button>
+          <button class="action-btn">🔖 북마크</button>
+          <button class="action-btn primary">댓글 작성</button>
+        </div>
+
+        <!-- Comments -->
+        <div class="comments">
+          <div class="comments-title">댓글 5개</div>
+          <div class="comment">
+            <div class="comment-header">
+              <span class="comment-author">민기</span>
+              <span class="comment-date">10분 전</span>
+            </div>
+            <div class="comment-body">참석합니다! 음식 알레르기는 없어요.</div>
+          </div>
+          <div class="comment reply">
+            <div class="comment-header">
+              <span class="comment-author">혁준</span>
+              <span class="comment-date">5분 전</span>
+            </div>
+            <div class="comment-body">확인했습니다 👍</div>
+          </div>
+          <div class="comment">
+            <div class="comment-header">
+              <span class="comment-author">지은</span>
+              <span class="comment-date">8분 전</span>
+            </div>
+            <div class="comment-body">저는 견과류 알레르기가 있어요. 견과 들어간 메뉴 빼주실 수 있나요?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

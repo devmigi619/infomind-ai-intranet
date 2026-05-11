@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>게시판 퀵뷰 (LP) — 공지 3개 vs 게시판별 2개</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #0A2463;
+    --brand-tint: rgba(10, 36, 99, 0.08);
+    --brand-light: #1E88E5;
+    --bg-app: #F5F6F8;
+    --bg-surface: #FFFFFF;
+    --bg-alt: #FAFAFA;
+    --border: rgba(0,0,0,0.08);
+    --border-subtle: rgba(0,0,0,0.05);
+    --text-primary: #000000;
+    --text-body: rgba(0,0,0,0.65);
+    --text-muted: rgba(0,0,0,0.45);
+    --semantic-notice: #DC2626;
+    --board-free: #10B981;
+    --board-qna: #F59E0B;
+    --board-dev: #1E88E5;
+    --board-hr: #8B5CF6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', sans-serif; background: var(--bg-app); color: var(--text-primary); }
+
+  .app { display: flex; flex-direction: column; height: 100vh; }
+  .topheader { height: 48px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 20px; gap: 16px; }
+  .brand { font-size: 18px; font-weight: 300; letter-spacing: 2px; }
+  .search-stub { flex: 1; max-width: 480px; height: 32px; border: 1px solid var(--border); border-radius: 16px; opacity: 0.5; display: flex; align-items: center; padding: 0 14px; font-size: 12px; color: var(--text-muted); }
+  .right-controls { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .icon-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .icon-btn.active { background: var(--brand-tint); color: var(--brand); }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; }
+
+  .body-wrap { flex: 1; display: flex; overflow: hidden; }
+  .navrail { width: 64px; background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 4px; flex-shrink: 0; }
+  .navrail-item { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-muted); cursor: pointer; position: relative; }
+  .navrail-item.active { background: var(--brand-tint); color: var(--brand); font-weight: 600; }
+  .navrail-item.active::before { content: ''; position: absolute; left: -8px; top: 12px; bottom: 12px; width: 2px; background: var(--brand); border-radius: 2px; }
+
+  /* LP — 퀵뷰 */
+  .lp { width: 280px; border-right: 1px solid var(--border); background: var(--bg-surface); display: flex; flex-direction: column; flex-shrink: 0; overflow: hidden; }
+  .lp-header { padding: 14px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .lp-title { font-size: 14px; font-weight: 600; }
+  .lp-body { flex: 1; overflow-y: auto; }
+  .lp.hidden { display: none; }
+
+  /* ── 버전 1: 공지 3개 ────────────────────────── */
+  .lp-notice .notice-section { padding: 12px 16px; }
+  .lp-notice .section-label { font-size: 11px; font-weight: 600; color: var(--text-muted); letter-spacing: 0.4px; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+  .lp-notice .notice-icon { color: var(--semantic-notice); }
+  .lp-notice .notice-item { padding: 10px 0; border-bottom: 1px solid var(--border-subtle); cursor: pointer; }
+  .lp-notice .notice-item:last-child { border-bottom: none; }
+  .lp-notice .notice-item:hover { background: rgba(0,0,0,0.02); margin: 0 -16px; padding: 10px 16px; }
+  .lp-notice .notice-title { font-size: 13px; font-weight: 500; line-height: 1.4; margin-bottom: 4px; }
+  .lp-notice .notice-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: 6px; align-items: center; }
+  .lp-notice .notice-dot { color: var(--border); }
+
+  /* ── 버전 2: 게시판별 최근 2개 ─────────────────── */
+  .lp-boards .board-section { padding: 12px 16px; border-bottom: 1px solid var(--border-subtle); }
+  .lp-boards .board-section:last-child { border-bottom: none; }
+  .lp-boards .board-header { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; cursor: pointer; }
+  .lp-boards .board-icon { width: 18px; height: 18px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .lp-boards .board-name { font-size: 13px; font-weight: 600; flex: 1; }
+  .lp-boards .board-count { font-size: 11px; color: var(--text-muted); }
+  .lp-boards .new-dot { width: 6px; height: 6px; background: var(--semantic-notice); border-radius: 50%; }
+  .lp-boards .post-item { padding: 6px 0 6px 24px; cursor: pointer; }
+  .lp-boards .post-item:hover { background: rgba(0,0,0,0.02); margin: 0 -16px; padding-left: 40px; padding-right: 16px; }
+  .lp-boards .post-title { font-size: 12px; line-height: 1.4; margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+  .lp-boards .post-meta { font-size: 10px; color: var(--text-muted); }
+
+  /* 본 영역 — 빈 또는 홈 */
+  .main { flex: 1; background: var(--bg-alt); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; }
+
+  /* RP */
+  .rp { width: 360px; border-left: 1px solid var(--border); background: var(--bg-surface); display: flex; flex-direction: column; flex-shrink: 0; }
+  .rp-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .rp-tab { flex: 1; padding: 12px; text-align: center; font-size: 13px; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; }
+  .rp-tab.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+  .rp-body { flex: 1; padding: 16px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+
+  /* 토글 바 */
+  .toggle-bar { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--brand); color: white; padding: 10px 20px; border-radius: 30px; font-size: 13px; box-shadow: 0 4px 16px rgba(10,36,99,0.25); display: flex; gap: 10px; align-items: center; z-index: 100; }
+  .toggle-btn { background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 5px 12px; border-radius: 16px; font-size: 12px; cursor: pointer; font-family: inherit; }
+  .toggle-btn.active { background: white; color: var(--brand); font-weight: 600; }
+
+  .option-label { position: fixed; top: 12px; right: 380px; background: var(--brand); color: white; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; z-index: 100; }
+</style>
+</head>
+<body>
+<div class="option-label" id="optionLabel">버전 1: 공지 3개</div>
+
+<div class="app">
+  <header class="topheader">
+    <div class="brand">Infomind</div>
+    <div class="search-stub">🔍 통합검색 준비 중...</div>
+    <div class="right-controls">
+      <div class="icon-btn">🔔</div>
+      <div class="icon-btn active">📎</div>
+      <div class="avatar">민</div>
+    </div>
+  </header>
+
+  <div class="body-wrap">
+    <nav class="navrail">
+      <div class="navrail-item">🏠</div>
+      <div class="navrail-item active">📋<br><span style="font-size:9px">게시판</span></div>
+      <div class="navrail-item">📝</div>
+      <div class="navrail-item">📊</div>
+      <div class="navrail-item">⋯</div>
+    </nav>
+
+    <!-- ── LP 버전 1: 공지 3개 ── -->
+    <aside class="lp lp-notice" id="lp-notice">
+      <div class="lp-header">
+        <div class="lp-title">게시판</div>
+      </div>
+      <div class="lp-body">
+        <div class="notice-section">
+          <div class="section-label">
+            <span class="notice-icon">📢</span> 공지사항
+          </div>
+          <div class="notice-item">
+            <div class="notice-title">사무실 이전 안내 (5/15)</div>
+            <div class="notice-meta">
+              <span>민기</span>
+              <span class="notice-dot">·</span>
+              <span>2일 전</span>
+              <span class="notice-dot">·</span>
+              <span>👁 142</span>
+            </div>
+          </div>
+          <div class="notice-item">
+            <div class="notice-title">5월 휴무일 공지</div>
+            <div class="notice-meta">
+              <span>인사팀</span>
+              <span class="notice-dot">·</span>
+              <span>5일 전</span>
+              <span class="notice-dot">·</span>
+              <span>👁 89</span>
+            </div>
+          </div>
+          <div class="notice-item">
+            <div class="notice-title">사내 보안교육 안내 (필수)</div>
+            <div class="notice-meta">
+              <span>IT팀</span>
+              <span class="notice-dot">·</span>
+              <span>1주 전</span>
+              <span class="notice-dot">·</span>
+              <span>👁 67</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── LP 버전 2: 게시판별 최근 2개 ── -->
+    <aside class="lp lp-boards hidden" id="lp-boards">
+      <div class="lp-header">
+        <div class="lp-title">게시판</div>
+      </div>
+      <div class="lp-body">
+        <!-- 공지사항 -->
+        <div class="board-section">
+          <div class="board-header">
+            <div class="board-icon" style="background: rgba(220,38,38,0.1);">📢</div>
+            <div class="board-name">공지사항</div>
+            <div class="board-count">12</div>
+            <div class="new-dot"></div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">사무실 이전 안내 (5/15)</div>
+            <div class="post-meta">민기 · 2일 전</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">5월 휴무일 공지</div>
+            <div class="post-meta">인사팀 · 5일 전</div>
+          </div>
+        </div>
+
+        <!-- 자유게시판 -->
+        <div class="board-section">
+          <div class="board-header">
+            <div class="board-icon" style="background: rgba(16,185,129,0.1);">💬</div>
+            <div class="board-name">자유게시판</div>
+            <div class="board-count">87</div>
+            <div class="new-dot"></div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">신규 입사자 환영회 일정 공유</div>
+            <div class="post-meta">혁준 · 1시간 전</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">사내 동호회 모집합니다</div>
+            <div class="post-meta">지은 · 3시간 전</div>
+          </div>
+        </div>
+
+        <!-- QNA -->
+        <div class="board-section">
+          <div class="board-header">
+            <div class="board-icon" style="background: rgba(245,158,11,0.1);">❓</div>
+            <div class="board-name">QNA</div>
+            <div class="board-count">34</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">연차 신청 시스템 사용법?</div>
+            <div class="post-meta">민기 · 어제</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">사내 와이파이 연결 안 됨</div>
+            <div class="post-meta">현우 · 3일 전</div>
+          </div>
+        </div>
+
+        <!-- 개발팀 -->
+        <div class="board-section">
+          <div class="board-header">
+            <div class="board-icon" style="background: rgba(30,136,229,0.1);">⚙️</div>
+            <div class="board-name">개발팀</div>
+            <div class="board-count">21</div>
+            <div class="new-dot"></div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">React Native vs Flutter 비교</div>
+            <div class="post-meta">하준 · 5시간 전</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">코드 리뷰 가이드라인</div>
+            <div class="post-meta">민기 · 2일 전</div>
+          </div>
+        </div>
+
+        <!-- 인사팀 -->
+        <div class="board-section">
+          <div class="board-header">
+            <div class="board-icon" style="background: rgba(139,92,246,0.1);">👥</div>
+            <div class="board-name">인사팀</div>
+            <div class="board-count">8</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">신규 채용 계획 (Q3)</div>
+            <div class="post-meta">수진 · 3일 전</div>
+          </div>
+          <div class="post-item">
+            <div class="post-title">복리후생 개편안 검토</div>
+            <div class="post-meta">인사팀 · 1주 전</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 본 영역 (퀵뷰만 열림, 풀뷰 진입 전) -->
+    <div class="main">사용자가 아직 풀뷰에 진입하지 않은 상태<br>(LP만 열림)</div>
+
+    <!-- RP -->
+    <aside class="rp">
+      <div class="rp-tabs">
+        <div class="rp-tab active">🏠 홈</div>
+        <div class="rp-tab">✨ AI</div>
+      </div>
+      <div class="rp-body">RP 영역</div>
+    </aside>
+  </div>
+</div>
+
+<!-- 토글 -->
+<div class="toggle-bar">
+  <span>LP 버전:</span>
+  <button class="toggle-btn active" id="btn-notice" onclick="showNotice()">📢 공지 3개</button>
+  <button class="toggle-btn" id="btn-boards" onclick="showBoards()">📂 게시판별 2개</button>
+</div>
+
+<script>
+  function showNotice() {
+    document.getElementById('lp-notice').classList.remove('hidden');
+    document.getElementById('lp-boards').classList.add('hidden');
+    document.getElementById('btn-notice').classList.add('active');
+    document.getElementById('btn-boards').classList.remove('active');
+    document.getElementById('optionLabel').textContent = '버전 1: 공지 3개';
+  }
+  function showBoards() {
+    document.getElementById('lp-notice').classList.add('hidden');
+    document.getElementById('lp-boards').classList.remove('hidden');
+    document.getElementById('btn-notice').classList.remove('active');
+    document.getElementById('btn-boards').classList.add('active');
+    document.getElementById('optionLabel').textContent = '버전 2: 게시판별 최근 2개';
+  }
+</script>
+</body>
+</html>
