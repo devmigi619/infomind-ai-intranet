@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Platform, StyleSheet, useWindowDimensions } from 'react-native';
 import { useUiStore } from '../../store/uiStore';
 import { useTheme } from '../../shared/hooks/useTheme';
+import { useMenuList } from '../../shared/hooks/useMenuList';
 import { BoardScreen } from '../../features/board/screens/BoardScreen';
 import { ApprovalScreen } from '../../features/approval/screens/ApprovalScreen';
 import { WeeklyReportScreen } from '../../features/report/screens/WeeklyReportScreen';
@@ -14,21 +15,18 @@ import { AdminUsersScreen } from '../../features/admin-users/screens/AdminUsersS
 import { AdminBoardsScreen } from '../../features/admin-boards/screens/AdminBoardsScreen';
 import { MobileMenuPanel } from './MobileMenuPanel';
 
-const PLACEHOLDER_TITLES: Record<string, string> = {
-  calendar: '캘린더',
-  meeting: '회의실',
-  vehicle: '차량 예약',
-  contacts: '주소록',
-  documents: '자료실',
-  certificate: '증명서',
-  users: '사용자 관리',
-  roles: '권한 관리',
-  boards: '게시판 관리',
-  'approval-line': '결재선 관리',
-  'common-code': '공통코드 관리',
-  'job-grade': '직급 관리',
-  dept: '부서 관리',
-  system: '시스템 설정',
+/** panelId → 실제 화면 컴포넌트 맵 (구현 완료된 패널만 등록) */
+const SCREEN_MAP: Record<string, React.ReactElement> = {
+  board: <BoardScreen />,
+  approval: <ApprovalScreen />,
+  report: <WeeklyReportScreen />,
+  settings: <SettingsScreen />,
+  'common-code': <AdminCommonCodeScreen />,
+  'job-grade': <AdminJobGradeScreen />,
+  dept: <AdminDeptScreen />,
+  users: <AdminUsersScreen />,
+  boards: <AdminBoardsScreen />,
+  'menu-panel': <MobileMenuPanel />,
 };
 
 const BOTTOM_TAB_HEIGHT = 64;
@@ -38,6 +36,7 @@ export function MobileFullScreenRouter() {
   const activeFullScreen = useUiStore((s) => s.activeFullScreen);
   const theme = useTheme();
   const { height: screenHeight } = useWindowDimensions();
+  const menus = useMenuList();
 
   const visible = activeFullScreen !== null;
   const [mounted, setMounted] = useState(visible);
@@ -78,34 +77,13 @@ export function MobileFullScreenRouter() {
 
   const renderContent = () => {
     if (!renderedScreen) return null;
-    switch (renderedScreen) {
-      case 'board':
-        return <BoardScreen />;
-      case 'approval':
-        return <ApprovalScreen />;
-      case 'report':
-        return <WeeklyReportScreen />;
-      case 'settings':
-        return <SettingsScreen />;
-      case 'common-code':
-        return <AdminCommonCodeScreen />;
-      case 'job-grade':
-        return <AdminJobGradeScreen />;
-      case 'dept':
-        return <AdminDeptScreen />;
-      case 'users':
-        return <AdminUsersScreen />;
-      case 'boards':
-        return <AdminBoardsScreen />;
-      case 'menu-panel':
-        return <MobileMenuPanel />;
-      default:
-        return (
-          <PlaceholderScreen
-            title={PLACEHOLDER_TITLES[renderedScreen] ?? renderedScreen}
-          />
-        );
-    }
+
+    const screen = SCREEN_MAP[renderedScreen];
+    if (screen) return screen;
+
+    // 구현 전 패널 — DB의 menuNm을 타이틀로 사용
+    const title = menus.find((m) => m.panel === renderedScreen)?.label ?? renderedScreen;
+    return <PlaceholderScreen title={title} />;
   };
 
   return (

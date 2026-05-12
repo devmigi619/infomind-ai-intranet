@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -11,6 +11,7 @@ import { LeftPanel } from './src/layout/LeftPanel';
 import { RightPanel } from './src/layout/RightPanel';
 import { MobileApp } from './src/layout/mobile/MobileApp';
 import { useUiStore, selectPinnedForMode } from './src/store/uiStore';
+import { useMenuList } from './src/shared/hooks/useMenuList';
 import { useCurrentUser, useLogin, useLogout } from './src/features/auth/api';
 import { usePushNotifications } from './src/shared/hooks/usePushNotifications';
 import { useResponsive } from './src/shared/hooks/useResponsive';
@@ -49,32 +50,24 @@ export default function App() {
   );
 }
 
-const PLACEHOLDER_TITLES: Record<PanelId, string> = {
-  board: '게시판',
-  approval: '전자결재',
-  report: '주간보고',
-  calendar: '캘린더',
-  meeting: '회의실',
-  vehicle: '차량 예약',
-  contacts: '주소록',
-  documents: '자료실',
-  certificate: '증명서',
-  users: '사용자 관리',
-  roles: '권한 관리',
-  boards: '게시판 관리',
-  'approval-line': '결재선 템플릿',
-  'common-code': '공통코드 관리',
-  'job-grade': '직급 관리',
-  dept: '부서 관리',
-  system: '시스템 설정',
-  settings: '설정',
-  'menu-panel': '메뉴',
+/** panelId → 실제 화면 컴포넌트 맵 (구현 완료된 패널만 등록) */
+const SCREEN_MAP: Record<string, React.ReactElement> = {
+  board: <BoardScreen />,
+  approval: <ApprovalScreen />,
+  report: <WeeklyReportScreen />,
+  settings: <SettingsScreen />,
+  'common-code': <AdminCommonCodeScreen />,
+  'job-grade': <AdminJobGradeScreen />,
+  dept: <AdminDeptScreen />,
+  users: <AdminUsersScreen />,
+  boards: <AdminBoardsScreen />,
 };
 
 function AppContent() {
   const [morePopoverOpen, setMorePopoverOpen] = useState(false);
   const [moreAnchorTop, setMoreAnchorTop] = useState(0);
   const { isMobile } = useResponsive();
+  const menus = useMenuList();
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -174,30 +167,12 @@ function AppContent() {
         />
       );
     }
-    switch (activeFullScreen) {
-      case 'board':
-        return <BoardScreen />;
-      case 'approval':
-        return <ApprovalScreen />;
-      case 'report':
-        return <WeeklyReportScreen />;
-      case 'settings':
-        return <SettingsScreen />;
-      case 'common-code':
-        return <AdminCommonCodeScreen />;
-      case 'job-grade':
-        return <AdminJobGradeScreen />;
-      case 'dept':
-        return <AdminDeptScreen />;
-      case 'users':
-        return <AdminUsersScreen />;
-      case 'boards':
-        return <AdminBoardsScreen />;
-      default:
-        return (
-          <PlaceholderScreen title={PLACEHOLDER_TITLES[activeFullScreen] ?? activeFullScreen} />
-        );
-    }
+    const screen = SCREEN_MAP[activeFullScreen];
+    if (screen) return screen;
+
+    // 구현 전 패널 — DB의 menuNm을 타이틀로 사용
+    const title = menus.find((m) => m.panel === activeFullScreen)?.label ?? activeFullScreen;
+    return <PlaceholderScreen title={title} />;
   };
 
   if (isLoading) {
@@ -297,7 +272,7 @@ function AppContent() {
             isOpen={isRightPanelOpen}
             rpTab={rpTab}
             onTabChange={setRpTab}
-            userId={user?.id ?? ''}
+            userName={user?.name ?? ''}
             hasUnreadAi={hasUnreadAi}
           />
         </View>

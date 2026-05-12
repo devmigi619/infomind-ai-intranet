@@ -93,6 +93,7 @@ Nginx 역할:
 | `/actuator/health` | 인증 없이 허용 |
 | `/api/admin/**` | 유효 토큰 + `ROLE_ADMIN` 필요 |
 | `/api/codes/**` | 유효 토큰 필요 (ADMIN 불필요 — 폼 콤보박스용) |
+| `/api/menus` | 유효 토큰 필요 (ADMIN 불필요 — NavRail 메뉴 목록) |
 | 그 외 모든 요청 | 유효 토큰 필요 |
 
 ### 인증 실패 처리
@@ -139,6 +140,7 @@ Nginx 역할:
 | `INT_COM_CODE` | `CommonCode` | 공통코드 (상위코드 + 하위코드) |
 | `INT_JBGD` | `JobGrade` | 직급. PK = `JBGD_CD` |
 | `INT_DEPT` | `Department` | 부서 (계층 구조, `UP_DEPT_CD` 자기 참조) |
+| `INT_MENU` | `Menu` | 메뉴 목록. PK = `MENU_ID` (panelId와 동일) |
 
 > `crt_at`, `upd_at` 컬럼 타입: `TIMESTAMP` (PostgreSQL DATE는 시분초 미지원으로 변경됨)
 
@@ -269,17 +271,73 @@ JPA 매핑: `@IdClass(PostId)`, `@IdClass(PostCommentId)`로 복합키 처리.
 
 LP 헤더 "열기" 버튼 → `setBoardLpHandoff({ brdId, pstSn? })` + `setActiveFullScreen('board')` → 풀뷰가 핸드오프 컨텍스트를 받아 해당 게시판(또는 글)으로 자동 진입.
 
+## Menu 도메인
+
+NavRail/모바일 메뉴 목록을 DB(`INT_MENU`)에서 관리한다. 하드코딩 없이 DB INSERT만으로 메뉴 추가·변경 가능.
+
+### 테이블 구조
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `MENU_ID` | VARCHAR(100) PK | 프론트엔드 `PanelId`와 동일 값 |
+| `MENU_NM` | VARCHAR(100) | 메뉴 표시명 |
+| `MENU_SN` | INTEGER | 정렬 순서 |
+| `ADM_YN` | VARCHAR(1) | `'Y'` = 관리자 메뉴, `'N'` = 일반 메뉴 |
+| `USE_YN` | VARCHAR(1) | `'Y'` = 활성, `'N'` = 비활성 |
+
+### API
+
+| 경로 | 인가 | 설명 |
+|---|---|---|
+| `GET /api/menus` | 인증 사용자 전체 | `USE_YN='Y'` 메뉴 전체 반환. `ADM_YN` 오름차순(N→Y), `MENU_SN` 오름차순 |
+
+### 초기 데이터
+
+`backend/src/main/resources/db/menu-init.sql` — 일반 메뉴 9개 + 관리자 메뉴 8개. `ON CONFLICT DO NOTHING` 으로 멱등 실행 가능.
+
+### 프론트엔드 연동
+
+| 파일 | 역할 |
+|---|---|
+| `shared/hooks/useMenuList.ts` | `useMenuList()` — DB 메뉴 → `MenuMeta[]` 변환. staleTime 10분 |
+| `shared/hooks/useMenuList.ts` | `useMenusForMode(isAdminMode)` — `admYn` 기준 필터링 편의 훅 |
+| `shared/constants/menus.ts` | `MENU_ICON_MAP`, `MENU_ICON_NAME` — panelId → 아이콘 매핑 (프론트 유지) |
+
+### 관리자 메뉴 panelId 규칙
+
+관리자 메뉴의 `MENU_ID`는 `admin-` 접두어 없이 기능명만 사용한다.
+
+| panelId | 화면 |
+|---|---|
+| `users` | 사용자 관리 |
+| `roles` | 권한 관리 |
+| `boards` | 게시판 관리 |
+| `approval-line` | 결재선 템플릿 |
+| `common-code` | 공통코드 관리 |
+| `job-grade` | 직급 관리 |
+| `dept` | 부서 관리 |
+| `system` | 시스템 설정 |
+
+### 새 화면 구현 시 체크리스트
+
+1. DB `INT_MENU`에 행 INSERT (또는 `menu-init.sql` 추가)
+2. `App.tsx`의 `SCREEN_MAP`에 `panelId: <XxxScreen />` 한 줄 추가
+3. `MobileFullScreenRouter.tsx`의 `SCREEN_MAP`에 동일 추가
+4. (구현 전) 두 `SCREEN_MAP`에 없으면 `PlaceholderScreen`으로 자동 처리 — DB `MENU_NM`이 타이틀로 표시됨
+
+---
+
 ## Admin 도메인
 
 관리자 모드(`isAdminMode`)에서만 접근 가능한 메뉴들. 모든 API는 `/api/admin/**` 경로로 `ROLE_ADMIN` 필요.
 
-| 메뉴 | API 경로 | 엔티티 | 주요 특징 |
+| 메뉴 (panelId) | API 경로 | 엔티티 | 주요 특징 |
 |---|---|---|---|
-| 공통코드 관리 | `/api/admin/common-codes` | `CommonCode` | 상위코드 + 하위코드 2단계 복합키 |
-| 직급 관리 | `/api/admin/job-grades` | `JobGrade` | 단순 목록, 소프트 삭제 (`use_yn=N`) |
-| 부서 관리 | `/api/admin/departments` | `Department` | `UP_DEPT_CD` 자기 참조 계층 트리, 비활성화 시 하위 부서 cascade |
-| 사용자 관리 | `/api/admin/users` | `User` | CRUD + 계정 활성/비활성, 비밀번호 초기화 |
-| 게시판 관리 | `/api/admin/boards` | `Board` | CRUD + `useYn` 활성/비활성 토글, 첨부/댓글 사용여부 플래그 |
+| `common-code` | `/api/admin/common-codes` | `CommonCode` | 상위코드 + 하위코드 2단계 복합키 |
+| `job-grade` | `/api/admin/job-grades` | `JobGrade` | 단순 목록, 소프트 삭제 (`use_yn=N`) |
+| `dept` | `/api/admin/departments` | `Department` | `UP_DEPT_CD` 자기 참조 계층 트리, 비활성화 시 하위 부서 cascade |
+| `users` | `/api/admin/users` | `User` | CRUD + 계정 활성/비활성, 비밀번호 초기화 |
+| `boards` | `/api/admin/boards` | `Board` | CRUD + `useYn` 활성/비활성 토글, 첨부/댓글 사용여부 플래그 |
 
 ### 부서 계층 구조
 
