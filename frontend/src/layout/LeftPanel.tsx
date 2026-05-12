@@ -15,6 +15,7 @@ import { useTheme } from '../shared/hooks/useTheme';
 import { useMenuList } from '../shared/hooks/useMenuList';
 import { BoardQuickPanel } from '../features/board/components/BoardQuickPanel';
 import { VehicleQuickPanel } from '../features/vehicle/components/VehicleQuickPanel';
+import { MtgrQuickPanel } from '../features/mtgr/components/MtgrQuickPanel';
 
 /** DB 메뉴 데이터가 없는 경우를 대비한 폴백 타이틀 맵 */
 const PANEL_TITLE_FALLBACK: Partial<Record<PanelId, string>> = {
@@ -173,7 +174,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
   const sections = activePanel ? (PANEL_PREVIEW[activePanel] ?? PLACEHOLDER_SECTIONS) : [];
 
   // 자체 헤더·콘텐츠를 렌더하는 패널 (LP 표준 헤더 우회)
-  const useCustomPanel = activePanel === 'board' || activePanel === 'vehicle';
+  const useCustomPanel = activePanel === 'board' || activePanel === 'vehicle' || activePanel === 'meeting';
 
   return (
     <Animated.View
@@ -199,6 +200,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
           >
             {activePanel === 'board' && <BoardQuickPanel onClose={onClose} />}
             {activePanel === 'vehicle' && <VehicleQuickPanel onClose={onClose} />}
+            {activePanel === 'meeting' && <MtgrQuickPanel onClose={onClose} />}
           </Animated.View>
         ) : (
           <>

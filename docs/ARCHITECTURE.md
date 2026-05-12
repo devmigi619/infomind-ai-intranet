@@ -354,6 +354,51 @@ JPA 매핑: `@IdClass(VehicleReservationId)`로 복합키 처리. `RSV_SN`은 `C
 | `features/vehicle/screens/VehicleScreen.tsx` | 전체현황(세로 타임라인) / 내 예약 / 예약신청 3모드 |
 | `features/vehicle/components/VehicleQuickPanel.tsx` | LeftPanel 퀵뷰 — 오늘 전체 예약, 내 예약 강조 |
 
+## Mtgr (회의실 예약)
+
+회의실 마스터 관리 + 날짜/시각 기반 예약·연장·취소. Vehicle 도메인과 동일한 구조.
+
+### 테이블 구조
+
+| 테이블 | 엔티티 | 키 | 비고 |
+|---|---|---|---|
+| `INT_MTGR` | `Mtgr` | `MTGR_ID` (String) | 회의실 마스터. `USE_YN='Y'`만 조회 |
+| `INT_MTGR_RSV` | `MtgrReservation` | `(MTGR_ID, RSV_SN)` 복합키 | 회의실별 시퀀스 |
+
+### 주요 컬럼 (`INT_MTGR_RSV`)
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `RSV_ST_YMD` / `RSV_ST_HHMM` | `VARCHAR(8/4)` | 예약 시작 일자/시각 (`YYYYMMDD` / `HHMM`) |
+| `RSV_END_YMD` / `RSV_END_HHMM` | `VARCHAR(8/4)` | 예약 종료 일자/시각 |
+| `EXT_YN` | `VARCHAR(1)` DEFAULT `'N'` | 연장 이력 여부 |
+| `EXT_YMD` / `EXT_HHMM` | VARCHAR | 마지막 연장 종료 일시 |
+
+### 비즈니스 규칙
+
+- **예약 가능 기간**: 오늘 ~ 오늘+7일
+- **충돌 검사**: 같은 회의실의 시간 겹침 여부 — `NOT (종료 < 신규시작 OR 시작 > 신규종료)` JPQL 패턴
+- **연장**: 횟수 제한 없음. `rsvEndYmd/Hhmm` 직접 수정 + `extYn='Y'` 기록. 자기 자신 제외 충돌 검사
+- **취소**: DELETE (소프트 삭제 없음)
+
+### API
+
+| 경로 | 설명 |
+|---|---|
+| `GET /api/meeting-rooms` | 활성 회의실 목록 (`useYn='Y'`) |
+| `GET /api/meeting-rooms/reservations?date=YYYYMMDD` | 해당 날짜에 걸친 전체 예약 (`mine` 플래그 포함) |
+| `POST /api/meeting-rooms/{mtgrId}/reservations` | 예약 신청 (충돌·기간 검증) |
+| `DELETE /api/meeting-rooms/{mtgrId}/reservations/{rsvSn}` | 예약 취소 (본인만) |
+| `PATCH /api/meeting-rooms/{mtgrId}/reservations/{rsvSn}/extend` | 예약 연장 |
+
+### 프론트엔드 연동
+
+| 파일 | 역할 |
+|---|---|
+| `features/mtgr/api.ts` | HTTP 함수 + React Query 훅 (`useMtgrs`, `useMtgrReservations`, `useExtendMtgrReservation` 등) |
+| `features/mtgr/screens/MtgrScreen.tsx` | 전체현황(세로 타임라인) / 내 예약 / 예약신청 3모드 |
+| `features/mtgr/components/MtgrQuickPanel.tsx` | LeftPanel 퀵뷰 — 오늘 전체 예약, 내 예약 강조 |
+
 ## Board 도메인
 
 다중 게시판 시스템. `Board`(게시판) ─ `Post`(글) ─ `PostComment`(댓글) 3계층.

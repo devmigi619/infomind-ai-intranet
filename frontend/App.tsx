@@ -28,6 +28,7 @@ import { AdminDeptScreen } from './src/features/admin-dept/screens/AdminDeptScre
 import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersScreen';
 import { AdminBoardsScreen } from './src/features/admin-boards/screens/AdminBoardsScreen';
 import { VehicleScreen } from './src/features/vehicle/screens/VehicleScreen';
+import { MtgrScreen } from './src/features/mtgr/screens/MtgrScreen';
 import { ConfirmProvider } from './src/shared/hooks/useConfirm';
 import { AppToast } from './src/shared/components/AppToast';
 import type { PanelId } from './src/types';
@@ -67,6 +68,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   users: <AdminUsersScreen />,
   boards: <AdminBoardsScreen />,
   vehicle: <VehicleScreen />,
+  meeting: <MtgrScreen />,
 };
 
 function AppContent() {
