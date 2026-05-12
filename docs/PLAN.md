@@ -141,8 +141,11 @@
 - [x] INT_MENU 테이블 기반 메뉴 관리 (GET /api/menus, useMenuList 훅, NavRail/MobileMenuPanel DB 연동)
 - [x] 관리자 메뉴 panelId 단순화 (`admin-users` → `users` 등 `admin-` 접두어 제거)
 - [x] SCREEN_MAP 패턴 도입 (App.tsx / MobileFullScreenRouter — 하드코딩 PLACEHOLDER_TITLES 제거)
+- [x] 첨부파일 공통 모듈 (INT_COM_FILE_GRP / INT_COM_FILE / INT_COM_FILE_BLOB, FS+BLOB 5MB 분기 저장, Tika MIME 검증, 이미지 webp 변환, 도메인 권한 위임 `AttachmentAuthorizer`)
+- [x] 첨부파일 임베딩 파이프라인 (Spring → FastAPI `/ai/files/process`, 시스템 JWT 위임, pymupdf/docx/xlsx 추출, RecursiveSplitter 800/200, bge-m3 1024차원, INT_COM_FILE_EMB 저장, PGvector ↔ String AttributeConverter + `?::vector` 캐스팅, 비동기 트리거 + bytes 스냅샷)
+- [x] 첨부 문서 단위 태그 추출 (qwen3:8b 문서 1회 호출 → `doc_type/topics/keywords/summary` JSON, 모든 청크 `tag_rslt`에 동일 복사)
+- [ ] RAG 검색 (벡터 유사도 + `tag_rslt` 필터 하이브리드, AI 채팅에서 활용) — 임베딩 파이프라인 완료, 검색 UI 미구현
 - [ ] 권한 관리 + 관리자 화면 (현재 NavRail 관리자 모드 자리만 마련됨)
-- [ ] RAG (내규 문서 검색, AI 채팅에서 활용)
 - [ ] 다국어 (한국어 / 영어)
 
 ---

@@ -202,6 +202,10 @@ toast.success('완료되었습니다.', 5000);
 | `INT_JBGD` | `JobGrade` | 직급. PK = `JBGD_CD` |
 | `INT_DEPT` | `Department` | 부서 (계층 구조, `UP_DEPT_CD` 자기 참조) |
 | `INT_MENU` | `Menu` | 메뉴 목록. PK = `MENU_ID` (panelId와 동일) |
+| `INT_COM_FILE_GRP` | `AttachmentGroup` | 첨부 그룹. PK = `AFILE_ID` (도메인별 접두어 `BRD_/APV_/RPT_` + 타임스탬프) |
+| `INT_COM_FILE` | `Attachment` | 첨부 파일 메타. PK = `(AFILE_ID, AFILE_SN)` |
+| `INT_COM_FILE_BLOB` | `AttachmentBlob` | 5MB 초과 파일의 BLOB 본체 (FK = INT_COM_FILE) |
+| `INT_COM_FILE_EMB` | `AttachmentEmbedding` | 청크별 임베딩 + 태그. PK = `(AFILE_ID, AFILE_SN, EMB_ID)` |
 
 > `crt_at`, `upd_at` 컬럼 타입: `TIMESTAMP` (PostgreSQL DATE는 시분초 미지원으로 변경됨)
 
@@ -395,6 +399,82 @@ JPA 매핑: `@IdClass(PostId)`, `@IdClass(PostCommentId)`로 복합키 처리.
 
 LP 헤더 "열기" 버튼 → `setBoardLpHandoff({ brdId, pstSn? })` + `setActiveFullScreen('board')` → 풀뷰가 핸드오프 컨텍스트를 받아 해당 게시판(또는 글)으로 자동 진입.
 
+## Attachment 도메인
+
+첨부파일 공통 모듈. 게시판/결재/주간보고 등 어느 도메인에서도 사용. RAG 검색을 위한 임베딩 파이프라인 포함.
+
+### 테이블 구조
+
+| 테이블 | 엔티티 | 키 | 비고 |
+|---|---|---|---|
+| `INT_COM_FILE_GRP` | `AttachmentGroup` | `AFILE_ID` | 첨부 그룹. 도메인별 접두어(`BRD_/APV_/RPT_`) + 타임스탬프 |
+| `INT_COM_FILE` | `Attachment` | `(AFILE_ID, AFILE_SN)` | 파일 메타. `FILE_PATH`가 `blob:/...`이면 BLOB 저장, 아니면 디스크 |
+| `INT_COM_FILE_BLOB` | `AttachmentBlob` | `(AFILE_ID, AFILE_SN)` | 5MB 초과 파일 본체 (`FK_INT_COM_FILE_TO_INT_COM_FILE_BLOB`) |
+| `INT_COM_FILE_EMB` | `AttachmentEmbedding` | `(AFILE_ID, AFILE_SN, EMB_ID)` | 청크별 임베딩 + 태그 |
+
+### 저장 정책
+
+| 파일 크기 | 저장 위치 | 메타의 `FILE_PATH` |
+|---|---|---|
+| ≤ 5MB | 디스크 (`./uploads/yyyy/MM/`) | 절대 경로 |
+| > 5MB | BLOB (`INT_COM_FILE_BLOB.FILE_BLOB`) | `blob:/yyyy/MM/{filename}` 마커 |
+
+작은 파일은 디스크로 빼서 DB 부담 감소, 큰 파일은 BLOB로 보관해 백업/이동 시 일관성 확보. 임계값은 `application.yml`의 `attachment.blob-threshold`.
+
+### 권한 위임
+
+도메인별 권한 판단은 `AttachmentAuthorizer` 인터페이스 구현체에 위임. 예: `BoardAttachmentAuthorizer`는 게시판/게시글 권한으로 첨부 접근 권한 판정. 첨부 자체에 권한 메타 없음 (부모 도메인 메타로 자연 해결).
+
+### 임베딩 파이프라인
+
+```
+[Spring AttachmentService.upload]
+  ├── 동기: int_com_file_grp + int_com_file [+ int_com_file_blob] INSERT
+  ├── 동기: bytes[] 스냅샷 추출 (MultipartFile은 요청 컨텍스트 종료 후 사용 불가)
+  └── 비동기 @Async: EmbeddingTriggerService.triggerEmbedding(bytes, fileName, ...)
+        │
+        ▼
+[FastAPI POST /ai/files/process]  ← 시스템 JWT (SystemJwtIssuer)
+  ├── 텍스트 추출 (pymupdf / docx / openpyxl / 평문 디코드)
+  ├── 청킹 RecursiveCharacterTextSplitter(800/200)
+  ├── 청크별 임베딩 (bge-m3, 1024차원)
+  └── 문서 단위 LLM 1회 호출 (qwen3:8b) → doc_type/topics/keywords/summary
+        │
+        ▼
+[Spring EmbeddingTriggerService]
+  └── 모든 청크에 doc_tags 동일 복사 → INT_COM_FILE_EMB INSERT
+```
+
+핵심 설계 결정:
+- **WebClient 16MB 한도**: 청크 N × vector(1024) JSON 기본 256KB 초과 → `ExchangeStrategies.maxInMemorySize` 확장
+- **PGvector 매핑**: Hibernate가 `PGvector` 타입 직접 매핑 불가 → `PGvectorConverter`(PGvector ↔ String) + `@ColumnTransformer(write="?::vector")`로 명시 캐스팅
+- **JWT 알고리즘**: 시크릿 49바이트 → `Keys.hmacShaKeyFor`가 HS384 선택 → FastAPI `verify_token`은 HS256/384/512 모두 허용
+- **bytes 스냅샷**: `transferTo()`가 톰캣 임시파일을 이동시키므로 save 이전에 `mf.getBytes()` 캡쳐
+
+### tag_rslt 스키마 (jsonb)
+
+문서 단위 LLM 1회 호출 결과를 모든 청크에 동일 복사. 청크별 차별성은 현재 없음 (필요 시 추후 청크별 추가 추출).
+
+```json
+{
+  "doc_type": "policy",
+  "topics": ["연차", "휴가"],
+  "keywords": ["연차 신청", "3일 전"],
+  "summary": "..."
+}
+```
+
+`tag_rslt`는 ERD 주석 그대로 **"TAG검색을 위한 결과값"** — 벡터(`emb_rslt`)로 잡히지 않는 어휘적·구조적 신호 보존용. 권한/부서/카테고리는 부모 테이블(`INT_BRD.DEPT_CD`, `INT_PST.USER_ID`)의 SoR로 해결하므로 박지 않음.
+
+### API
+
+| 경로 | 메서드 | 설명 |
+|---|---|---|
+| `POST /api/files/upload` | POST | 첨부 그룹 신규/추가. 멀티파트 |
+| `GET /api/files/{afileId}/{sn}/download` | GET | 파일 다운로드 (디스크/BLOB 자동 분기) |
+| `GET /api/files/{afileId}` | GET | 그룹 내 파일 목록 |
+| `DELETE /api/files/{afileId}/{sn}` | DELETE | 소프트 삭제 (`del_yn='Y'`) |
+
 ## Menu 도메인
 
 NavRail/모바일 메뉴 목록을 DB(`INT_MENU`)에서 관리한다. 하드코딩 없이 DB INSERT만으로 메뉴 추가·변경 가능.
@@ -512,10 +592,10 @@ const roleOptions = useCodeList('USER_SE');
 
 ## AI / LLM
 
-### 로컬 (선택)
-- **Ollama** 직접 설치 → `ollama pull qwen2.5:8b`
-- FastAPI가 `http://localhost:11434`로 호출
-- Ollama 미설치 시 AI 채팅만 동작 안 함 (다른 기능은 정상)
+### 로컬 / 개발기
+- **사내 GPU 서버** Ollama(`http://192.168.0.248:11434`) 기본 사용
+- 로컬 Ollama를 직접 띄우려면 `ollama pull qwen3:8b && ollama pull bona/bge-m3-korean` 후 `OLLAMA_URL` 변경
+- Ollama 미접속 시 AI 채팅 / 첨부 임베딩만 동작 안 함 (다른 기능은 정상)
 
 ### 운영기 (추후)
 - Docker Compose 안의 Ollama 컨테이너
@@ -525,8 +605,12 @@ const roleOptions = useCodeList('USER_SE');
 
 | 용도 | 모델 | 차원 |
 |---|---|---|
-| 채팅 / 추론 | `qwen2.5:8b` | — |
-| 텍스트 임베딩 | `bona/bge-m3` (Phase 3 RAG에서 사용) | 1024 |
+| 채팅 / 추론 / 첨부 태그 추출 | `qwen3:8b` | — |
+| 텍스트 임베딩 (첨부 청크) | `bona/bge-m3-korean:latest` | 1024 |
+
+> 모델 태그는 `ollama list` 결과의 실제 이름과 일치해야 함. `ai/.env.local`의 `LLM_MODEL` / `EMBEDDING_MODEL` 로 오버라이드 가능.
+>
+> **임베딩 모델 교체 시 주의**: 차원이 같아도 모델별 임베딩 공간이 달라 기존 벡터와 호환 불가. `int_com_file_emb` 클리어 후 재인덱싱 필요.
 
 ## 알림
 
@@ -587,9 +671,9 @@ Docker `-e JWT_SECRET=...`, K8s Secret, Vault 등으로 주입.
 | 변수 | 예시 값 | 설명 |
 |---|---|---|
 | `JWT_SECRET` | (Backend와 동일 값) | Spring Boot 와 공유. 토큰 검증용 |
-| `OLLAMA_URL` | `http://localhost:11434` | 로컬 Ollama |
-| `LLM_MODEL` | `qwen2.5:8b` | 채팅 모델 |
-| `EMBEDDING_MODEL` | `bona/bge-m3` | 임베딩 (Phase 3 RAG) |
+| `OLLAMA_URL` | `http://192.168.0.248:11434` | 사내 GPU 서버. 로컬 Ollama 쓰면 `http://localhost:11434` |
+| `LLM_MODEL` | `qwen3:8b` | 채팅 + 첨부 태그 추출 모델 (실제 `ollama list` 태그와 일치 필요) |
+| `EMBEDDING_MODEL` | `bona/bge-m3-korean:latest` | 첨부 청크 임베딩 (한국어 특화. 실제 `ollama list` 태그와 일치 필요) |
 
 **JWT_SECRET 일치 필수**: Backend가 발급한 토큰을 AI가 검증해야 하므로, `application-local.yml` 의 `jwt.secret` 과 `ai/.env.local` 의 `JWT_SECRET` 이 같은 값이어야 함.
 
@@ -606,8 +690,8 @@ Docker `-e JWT_SECRET=...`, K8s Secret, Vault 등으로 주입.
 | `DB_NAME` | | `infomind` | |
 | `DB_USERNAME` | ✅ | — | |
 | `DB_PASSWORD` | ✅ | — | |
-| `LLM_MODEL` | | `qwen2.5:8b` | Ollama 채팅 모델 |
-| `EMBEDDING_MODEL` | | `bona/bge-m3` | Ollama 임베딩 모델 |
+| `LLM_MODEL` | | `qwen3:8b` | Ollama 채팅 + 첨부 태그 추출 모델 |
+| `EMBEDDING_MODEL` | | `bona/bge-m3-korean:latest` | Ollama 임베딩 모델 (첨부 청크, 한국어 특화) |
 | `EMBEDDING_DIMENSIONS` | | `1024` | 임베딩 차원 |
 | `ALLOWED_ORIGINS` | | `*` | CORS 허용 출처 |
 | `FCM_SERVICE_ACCOUNT_KEY` | | _(빈값)_ | Firebase 서비스 계정 키 경로. 비어있으면 FCM 비활성 |

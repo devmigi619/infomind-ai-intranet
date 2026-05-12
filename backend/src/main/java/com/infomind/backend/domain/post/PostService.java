@@ -1,5 +1,6 @@
 package com.infomind.backend.domain.post;
 
+import com.infomind.backend.common.attachment.AttachmentService;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 public class PostService {
 
     private final PostRepository postRepository;
+    private final AttachmentService attachmentService;
 
     // ─── 조회 ──────────────────────────────────────────────────────────────
 
@@ -96,6 +98,11 @@ public class PostService {
         }
 
         post.softDelete(isAdmin ? "관리자삭제" : "작성자삭제");
+
+        // 첨부 그룹도 함께 soft delete (그룹 내 모든 활성 파일)
+        if (post.getAfileId() != null && !post.getAfileId().isBlank()) {
+            attachmentService.softDeleteGroup(post.getAfileId());
+        }
     }
 
     // ─── 좋아요 ────────────────────────────────────────────────────────────

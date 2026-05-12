@@ -14,6 +14,8 @@ import {
 import { useConfirm } from '../../../shared/hooks/useConfirm';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
+import { useDownloadAttachment } from '../../../shared/hooks/useDownloadAttachment';
+import { AttachmentPreviewModal } from '../../../shared/components/AttachmentPreviewModal';
 import { useUiStore } from '../../../store/uiStore';
 import { useCurrentUser } from '../../auth/api';
 import { spacing } from '../../../shared/constants/spacing';
@@ -33,6 +35,13 @@ import {
   type Post,
   type PostComment,
 } from '../api';
+import {
+  useAttachmentList,
+  useUploadAttachments,
+  useDeleteAttachment,
+  type AttachmentFileMeta,
+  type DocumentAsset,
+} from '../../attachment/api';
 
 const fontFamily = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -48,6 +57,23 @@ function formatDate(iso?: string): string {
   // ISO LocalDateTime 형식 (예: 2026-05-11T14:23:00) — 앞 16자만
   const d = iso.replace('T', ' ').slice(0, 16);
   return d;
+}
+
+function formatBytes(bytes?: number): string {
+  if (bytes == null) return '';
+  if (bytes < 1024) return `${bytes} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${kb.toFixed(1)} KB`;
+  const mb = kb / 1024;
+  return `${mb.toFixed(2)} MB`;
+}
+
+const IMAGE_EXT = new Set(['jpg', 'jpeg', 'png', 'gif', 'webp']);
+function isImageExt(ext?: string): boolean {
+  return !!ext && IMAGE_EXT.has(ext.toLowerCase());
+}
+function isPdfExt(ext?: string): boolean {
+  return (ext ?? '').toLowerCase() === 'pdf';
 }
 
 export function BoardScreen() {
@@ -71,6 +97,8 @@ export function BoardScreen() {
   const [writeTitle, setWriteTitle] = useState('');
   const [writeContent, setWriteContent] = useState('');
   const [writeNotice, setWriteNotice] = useState(false);
+  const [pendingAttachments, setPendingAttachments] = useState<DocumentAsset[]>([]);
+  const [writeAfileId, setWriteAfileId] = useState<string | null>(null);
 
   const { data: boards = [], isLoading: boardsLoading } = useBoards();
 
@@ -113,12 +141,15 @@ export function BoardScreen() {
   const createPost = useCreatePost();
   const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
+  const uploadAttachments = useUploadAttachments();
 
   const openWriteCreate = () => {
     setWriteMode('create');
     setWriteTitle('');
     setWriteContent('');
     setWriteNotice(false);
+    setPendingAttachments([]);
+    setWriteAfileId(null);
     setMode('write');
   };
 
@@ -127,6 +158,8 @@ export function BoardScreen() {
     setWriteTitle(post.pstTtl);
     setWriteContent(post.pstDesc);
     setWriteNotice(post.ntcYn === 'Y');
+    setPendingAttachments([]);
+    setWriteAfileId(post.afileId ?? null);
     setMode('write');
   };
 
@@ -140,28 +173,52 @@ export function BoardScreen() {
       Alert.alert('인증 오류', '로그인 정보를 확인할 수 없습니다.');
       return;
     }
+
+    // 1단계: 첨부 업로드 (있을 때만)
+    let attachedAfileId: string | null = writeAfileId;
+    if (pendingAttachments.length > 0) {
+      try {
+        const uploaded = await uploadAttachments.mutateAsync({
+          files: pendingAttachments,
+          prefix: 'BRD',
+          afileId: writeAfileId ?? undefined,
+        });
+        attachedAfileId = uploaded.afileId;
+      } catch {
+        Alert.alert('첨부 업로드 실패', '파일 업로드에 실패해 저장을 중단합니다.');
+        return;
+      }
+    }
+
+    // 2단계: 글 저장
     try {
       if (writeMode === 'create') {
+        const data = {
+          pstTtl: writeTitle.trim(),
+          pstDesc: writeContent.trim(),
+          userId: currentUserId,
+          ntcYn: writeNotice ? 'Y' : 'N',
+          afileId: attachedAfileId ?? undefined,
+        };
         await createPost.mutateAsync({
           brdId: activeBrdId,
-          data: {
-            pstTtl: writeTitle.trim(),
-            pstDesc: writeContent.trim(),
-            userId: currentUserId,
-            ntcYn: writeNotice ? 'Y' : 'N',
-          },
+          data,
         });
       } else if (selectedPstSn != null) {
+        const data = {
+          pstTtl: writeTitle.trim(),
+          pstDesc: writeContent.trim(),
+          ntcYn: writeNotice ? 'Y' : 'N',
+          afileId: attachedAfileId ?? undefined,
+        };
         await updatePost.mutateAsync({
           brdId: activeBrdId,
           pstSn: selectedPstSn,
-          data: {
-            pstTtl: writeTitle.trim(),
-            pstDesc: writeContent.trim(),
-            ntcYn: writeNotice ? 'Y' : 'N',
-          },
+          data,
         });
       }
+      setPendingAttachments([]);
+      setWriteAfileId(null);
       setMode(writeMode === 'edit' ? 'detail' : 'list');
     } catch {
       Alert.alert('저장 실패', '서버에 저장하지 못했습니다.');
@@ -194,10 +251,22 @@ export function BoardScreen() {
         notice={writeNotice}
         isEdit={writeMode === 'edit'}
         boardName={activeBoard?.brdNm ?? ''}
-        saving={createPost.isPending || updatePost.isPending}
+        saving={
+          createPost.isPending ||
+          updatePost.isPending ||
+          uploadAttachments.isPending
+        }
+        existingAfileId={writeAfileId}
+        pendingAttachments={pendingAttachments}
         onTitleChange={setWriteTitle}
         onContentChange={setWriteContent}
         onNoticeChange={setWriteNotice}
+        onAddAttachments={(files) =>
+          setPendingAttachments((prev) => [...prev, ...files])
+        }
+        onRemovePending={(idx) =>
+          setPendingAttachments((prev) => prev.filter((_, i) => i !== idx))
+        }
         onSave={handleSavePost}
         onCancel={() => setMode(writeMode === 'edit' ? 'detail' : 'list')}
       />
@@ -440,9 +509,13 @@ interface WriteFormProps {
   isEdit: boolean;
   boardName: string;
   saving: boolean;
+  existingAfileId: string | null;
+  pendingAttachments: DocumentAsset[];
   onTitleChange: (v: string) => void;
   onContentChange: (v: string) => void;
   onNoticeChange: (v: boolean) => void;
+  onAddAttachments: (files: DocumentAsset[]) => void;
+  onRemovePending: (idx: number) => void;
   onSave: () => void;
   onCancel: () => void;
 }
@@ -454,13 +527,69 @@ function WriteForm({
   isEdit,
   boardName,
   saving,
+  existingAfileId,
+  pendingAttachments,
   onTitleChange,
   onContentChange,
   onNoticeChange,
+  onAddAttachments,
+  onRemovePending,
   onSave,
   onCancel,
 }: WriteFormProps) {
   const theme = useTheme();
+  const confirm = useConfirm();
+  const { data: existingFiles = [] } = useAttachmentList(existingAfileId);
+  const deleteAttachment = useDeleteAttachment();
+
+  const handlePickFiles = async () => {
+    if (Platform.OS === 'web') {
+      // 웹: 숨겨진 input[type=file] 다중 선택
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.multiple = true;
+      input.onchange = () => {
+        const list = input.files;
+        if (!list || list.length === 0) return;
+        const picked: DocumentAsset[] = [];
+        for (let i = 0; i < list.length; i++) {
+          const f = list[i];
+          picked.push({
+            uri: URL.createObjectURL(f),
+            name: f.name,
+            size: f.size,
+            mimeType: f.type || 'application/octet-stream',
+            file: f,
+          });
+        }
+        onAddAttachments(picked);
+      };
+      input.click();
+      return;
+    }
+    // 네이티브: expo-document-picker 미설치 → 안내
+    Alert.alert(
+      '추후 지원',
+      '모바일 첨부 선택은 expo-document-picker 설치 후 지원 예정입니다.',
+    );
+  };
+
+  const handleRemoveExisting = async (file: AttachmentFileMeta) => {
+    const ok = await confirm({
+      title: '첨부 삭제',
+      message: `"${file.oriFileNm}" 파일을 삭제하시겠습니까?`,
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await deleteAttachment.mutateAsync({
+        afileId: file.afileId,
+        afileSn: file.afileSn,
+      });
+    } catch {
+      Alert.alert('삭제 실패', '첨부 파일을 삭제하지 못했습니다.');
+    }
+  };
   return (
     <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
       <TouchableOpacity
@@ -538,6 +667,93 @@ function WriteForm({
           </Text>
         </TouchableOpacity>
 
+        {/* 첨부 영역 */}
+        <View style={styles.field}>
+          <View style={styles.attachHeader}>
+            <Text style={[styles.fieldLabel, { color: theme.text.muted }]}>첨부 파일</Text>
+            <TouchableOpacity
+              onPress={handlePickFiles}
+              activeOpacity={0.7}
+              style={[
+                styles.attachAddBtn,
+                { borderColor: theme.border.default, backgroundColor: theme.bg.surface },
+              ]}
+            >
+              <Text style={[styles.attachAddBtnText, { color: theme.brand.primary }]}>
+                + 파일 선택
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {existingFiles.length === 0 && pendingAttachments.length === 0 ? (
+            <Text style={[styles.attachEmpty, { color: theme.text.subtle }]}>
+              첨부된 파일이 없습니다.
+            </Text>
+          ) : (
+            <View
+              style={[
+                styles.attachList,
+                { borderColor: theme.border.subtle, backgroundColor: theme.bg.surface },
+              ]}
+            >
+              {existingFiles.map((f) => (
+                <View
+                  key={`ex-${f.afileSn}`}
+                  style={[styles.attachItem, { borderBottomColor: theme.border.subtle }]}
+                >
+                  <View style={styles.attachInfo}>
+                    <Text
+                      style={[styles.attachName, { color: theme.text.primary }]}
+                      numberOfLines={1}
+                    >
+                      {f.oriFileNm}
+                    </Text>
+                    <Text style={[styles.attachMeta, { color: theme.text.muted }]}>
+                      {formatBytes(f.fileSize)} · 업로드됨
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => handleRemoveExisting(f)}
+                    activeOpacity={0.7}
+                    style={styles.attachRemoveBtn}
+                  >
+                    <Text style={[styles.attachRemoveText, { color: theme.semantic.danger }]}>
+                      삭제
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {pendingAttachments.map((f, idx) => (
+                <View
+                  key={`pn-${idx}-${f.name}`}
+                  style={[styles.attachItem, { borderBottomColor: theme.border.subtle }]}
+                >
+                  <View style={styles.attachInfo}>
+                    <Text
+                      style={[styles.attachName, { color: theme.text.primary }]}
+                      numberOfLines={1}
+                    >
+                      {f.name}
+                    </Text>
+                    <Text style={[styles.attachMeta, { color: theme.brand.primary }]}>
+                      {formatBytes(f.size)} · 업로드 대기
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => onRemovePending(idx)}
+                    activeOpacity={0.7}
+                    style={styles.attachRemoveBtn}
+                  >
+                    <Text style={[styles.attachRemoveText, { color: theme.text.muted }]}>
+                      제거
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
+
         <View style={styles.writeActions}>
           <TouchableOpacity
             onPress={onSave}
@@ -599,6 +815,9 @@ function PostDetail({
   const theme = useTheme();
   const { data: post, isLoading, error } = usePostDetail(brdId, pstSn);
   const likePost = useLikePost();
+  const download = useDownloadAttachment();
+  const { data: attachments = [] } = useAttachmentList(post?.afileId ?? null);
+  const [previewFile, setPreviewFile] = useState<AttachmentFileMeta | null>(null);
 
   const canEdit = post?.userId === currentUserId;
   const canDelete = canEdit || isAdminMode;
@@ -606,6 +825,13 @@ function PostDetail({
   const handleLike = () => {
     if (!post) return;
     likePost.mutate({ brdId: post.brdId, pstSn: post.pstSn });
+  };
+
+  const handleDownload = async (f: AttachmentFileMeta) => {
+    const result = await download(f);
+    if (!result.ok && result.message) {
+      Alert.alert('다운로드', result.message);
+    }
   };
 
   return (
@@ -684,6 +910,74 @@ function PostDetail({
             {post.pstDesc}
           </Text>
 
+          {/* 첨부 영역 */}
+          {attachments.length > 0 && (
+            <View
+              style={[
+                styles.detailAttachWrap,
+                { borderColor: theme.border.subtle, backgroundColor: theme.bg.surface },
+              ]}
+            >
+              <Text style={[styles.detailAttachTitle, { color: theme.text.muted }]}>
+                첨부 파일 {attachments.length}
+              </Text>
+              {attachments.map((f) => {
+                const previewable = isImageExt(f.fileExt) || isPdfExt(f.fileExt);
+                return (
+                  <View
+                    key={`atc-${f.afileSn}`}
+                    style={[
+                      styles.detailAttachItem,
+                      { borderTopColor: theme.border.subtle },
+                    ]}
+                  >
+                    <View style={styles.detailAttachInfo}>
+                      <Text
+                        style={[styles.attachName, { color: theme.text.primary }]}
+                        numberOfLines={1}
+                      >
+                        [{(f.fileExt ?? '').toUpperCase()}] {f.oriFileNm}
+                      </Text>
+                      <Text style={[styles.attachMeta, { color: theme.text.muted }]}>
+                        {formatBytes(f.fileSize)}
+                      </Text>
+                    </View>
+                    <View style={styles.detailAttachActions}>
+                      {previewable && (
+                        <TouchableOpacity
+                          onPress={() => setPreviewFile(f)}
+                          activeOpacity={0.7}
+                          style={[
+                            styles.detailAttachBtn,
+                            { borderColor: theme.border.default },
+                          ]}
+                        >
+                          <Text
+                            style={[styles.detailAttachBtnText, { color: theme.brand.primary }]}
+                          >
+                            미리보기
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity
+                        onPress={() => handleDownload(f)}
+                        activeOpacity={0.7}
+                        style={[
+                          styles.detailAttachBtn,
+                          { borderColor: theme.border.default },
+                        ]}
+                      >
+                        <Text style={[styles.detailAttachBtnText, { color: theme.text.body }]}>
+                          다운로드
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {/* 액션 row */}
           <View style={[styles.actionRow, { borderTopColor: theme.border.subtle }]}>
             <TouchableOpacity
@@ -728,6 +1022,12 @@ function PostDetail({
           />
         </ScrollView>
       )}
+
+      <AttachmentPreviewModal
+        open={!!previewFile}
+        file={previewFile}
+        onClose={() => setPreviewFile(null)}
+      />
     </View>
   );
 }
@@ -1467,6 +1767,99 @@ const styles = StyleSheet.create({
   secondaryButtonText: {
     fontSize: fontSize.body,
     fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+
+  // ─ 첨부 (Write/Detail 공통) ─
+  attachHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  attachAddBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+  },
+  attachAddBtnText: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+  },
+  attachEmpty: {
+    fontSize: fontSize.small,
+    fontFamily,
+    paddingVertical: spacing.sm,
+  },
+  attachList: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    overflow: 'hidden',
+  },
+  attachItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
+  },
+  attachInfo: { flex: 1, gap: 2 },
+  attachName: {
+    fontSize: fontSize.body,
+    fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+  attachMeta: {
+    fontSize: fontSize.caption,
+    fontFamily,
+  },
+  attachRemoveBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4,
+  },
+  attachRemoveText: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.medium,
+    fontFamily,
+  },
+
+  // ─ Detail 전용 첨부 박스 ─
+  detailAttachWrap: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    gap: spacing.xs,
+  },
+  detailAttachTitle: {
+    fontSize: fontSize.small,
+    fontWeight: fontWeight.semibold,
+    fontFamily,
+    marginBottom: spacing.xs,
+  },
+  detailAttachItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.sm,
+    borderTopWidth: 1,
+    gap: spacing.sm,
+  },
+  detailAttachInfo: { flex: 1, gap: 2 },
+  detailAttachActions: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  detailAttachBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderRadius: radius.md,
+  },
+  detailAttachBtnText: {
+    fontSize: fontSize.caption,
+    fontWeight: fontWeight.semibold,
     fontFamily,
   },
 });

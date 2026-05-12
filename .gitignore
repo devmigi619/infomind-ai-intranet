@@ -25,6 +25,8 @@ backend/bin/
 backend/src/main/resources/application.yml
 backend/src/main/resources/application.properties
 backend/src/main/resources/application-local.yml
+# 첨부 파일 저장 경로 — 디스크 분기로 저장되는 실파일. 환경마다 다르며 커밋 금지
+backend/uploads/
 
 # AI (FastAPI)
 **/__pycache__/

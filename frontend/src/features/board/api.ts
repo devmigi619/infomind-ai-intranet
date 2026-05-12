@@ -61,6 +61,7 @@ export interface CreatePostRequest {
   userId: string;
   ntcYn?: string;
   pstRmk?: string;
+  afileId?: string;
 }
 
 export interface UpdatePostRequest {
@@ -68,6 +69,7 @@ export interface UpdatePostRequest {
   pstDesc: string;
   ntcYn?: string;
   pstRmk?: string;
+  afileId?: string;
 }
 
 export interface DeletePostRequest {
