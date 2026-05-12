@@ -7,44 +7,12 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import {
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  FileText,
-  FileCheck,
-  Settings,
-  LayoutList,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  type LucideIcon,
-} from 'lucide-react-native';
+import { FileText, Settings } from 'lucide-react-native';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { selectPinnedForMode, useUiStore } from '../../store/uiStore';
-import { getMenusForMode } from '../../shared/constants/menus';
+import { MENU_ICON_MAP } from '../../shared/constants/menus';
+import { useMenusForMode } from '../../shared/hooks/useMenuList';
 import type { PanelId } from '../../types';
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-};
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -55,11 +23,10 @@ export function MobileMenuPanel() {
   const previousFullScreen = useUiStore((s) => s.previousFullScreen);
   const setActiveFullScreen = useUiStore((s) => s.setActiveFullScreen);
   const setCustomizationOpen = useUiStore((s) => s.setCustomizationOpen);
+  const menusForMode = useMenusForMode(isAdminMode);
 
   // 현재 모드의 메뉴 풀에서 핀 안 된 메뉴들만 (더보기 영역)
-  const moreMenus = getMenusForMode(isAdminMode).filter(
-    (m) => !pinnedMenus.includes(m.panel),
-  );
+  const moreMenus = menusForMode.filter((m) => !pinnedMenus.includes(m.panel));
   const sectionLabel = isAdminMode ? '관리자 메뉴' : '서비스';
 
   const handleMenuPress = (panelId: PanelId) => {
@@ -104,7 +71,7 @@ export function MobileMenuPanel() {
               ]}
             >
               {moreMenus.map((meta, index) => {
-                const Icon = ICON_MAP[meta.iconName] ?? FileText;
+                const Icon = MENU_ICON_MAP[meta.iconName] ?? FileText;
                 // 직전에 보던 위치였다면 active 시각 (어디에 있었는지 알려줌)
                 const isPreviousLocation = previousFullScreen === meta.panel;
                 return (

@@ -1,44 +1,11 @@
 import React, { useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Pressable } from 'react-native';
-import {
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-  ChevronRight,
-} from 'lucide-react-native';
+import { FileText, Settings, ChevronRight } from 'lucide-react-native';
 import type { PanelId } from '../types';
-import { getMenusForMode } from '../shared/constants/menus';
+import { MENU_ICON_MAP } from '../shared/constants/menus';
+import { useMenusForMode } from '../shared/hooks/useMenuList';
 import { useTheme } from '../shared/hooks/useTheme';
 import { useUiStore } from '../store/uiStore';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-};
 
 interface NavRailMorePopoverProps {
   isOpen: boolean;
@@ -59,6 +26,7 @@ export function NavRailMorePopover({
 }: NavRailMorePopoverProps) {
   const theme = useTheme();
   const isAdminMode = useUiStore((s) => s.isAdminMode);
+  const allMenusForMode = useMenusForMode(isAdminMode);
 
   // ESC 키로 닫기 (웹 전용)
   useEffect(() => {
@@ -74,9 +42,7 @@ export function NavRailMorePopover({
   if (!isOpen) return null;
 
   // 핀 되지 않은 메뉴들만 표시 (현재 모드에 맞는 풀에서)
-  const unpinnedMenus = getMenusForMode(isAdminMode).filter(
-    (m) => !pinnedMenus.includes(m.panel),
-  );
+  const unpinnedMenus = allMenusForMode.filter((m) => !pinnedMenus.includes(m.panel));
 
   return (
     <>
@@ -103,7 +69,7 @@ export function NavRailMorePopover({
 
         <View style={styles.list}>
           {unpinnedMenus.map((meta) => {
-            const Icon = ICON_MAP[meta.iconName] ?? FileText;
+            const Icon = MENU_ICON_MAP[meta.iconName] ?? FileText;
             return (
               <TouchableOpacity
                 key={meta.panel}

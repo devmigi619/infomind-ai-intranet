@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { PanelId, RpTab } from '../types';
 import type { AssistantCard } from '../features/ai-assistant/types';
-import { ALL_MENUS } from '../shared/constants/menus';
+import { MENU_ICON_NAME } from '../shared/constants/menus';
 
 // zustand v5의 persist 미들웨어가 import.meta를 사용하는데
 // Expo Web의 Hermes 엔진이 import.meta를 지원하지 않아 별도 구현.
@@ -70,7 +70,7 @@ interface UiState {
 
 // 디폴트 값들 — resetUiToDefaults에서 재사용
 const DEFAULT_PINNED_USER: PanelId[] = ['board', 'approval', 'report'];
-const DEFAULT_PINNED_ADMIN: PanelId[] = ['admin-users', 'admin-roles', 'admin-boards'];
+const DEFAULT_PINNED_ADMIN: PanelId[] = ['users', 'roles', 'boards'];
 const DEFAULT_THEME: ThemePreference = 'system';
 
 // 현재 hydrate 된 userId — null이면 자동 저장 비활성
@@ -226,8 +226,8 @@ export const useUiStore = create<UiState>((set, get) => ({
         try {
           const parsed = JSON.parse(stored);
           // 옛 저장값에 폐기된 panelId('admin-home' 등)가 들어 있을 수 있어
-          // ALL_MENUS에 존재하는 panelId만 통과시키는 방어 필터.
-          const validPanels = new Set(ALL_MENUS.map((m) => m.panel));
+          // MENU_ICON_NAME 키에 존재하는 panelId만 통과시키는 방어 필터.
+          const validPanels = new Set(Object.keys(MENU_ICON_NAME));
           if (Array.isArray(parsed?.pinnedMenusUser)) {
             next.pinnedMenusUser = (parsed.pinnedMenusUser as string[])
               .filter((p) => validPanels.has(p as PanelId)) as PanelId[];

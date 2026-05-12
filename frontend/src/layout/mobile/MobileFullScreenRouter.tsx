@@ -21,14 +21,14 @@ const PLACEHOLDER_TITLES: Record<string, string> = {
   contacts: '주소록',
   documents: '자료실',
   certificate: '증명서',
-  'admin-users': '사용자 관리',
-  'admin-roles': '권한 관리',
-  'admin-boards': '게시판 관리',
-  'admin-approval-line': '결재선 관리',
-  'admin-common-code': '공통코드 관리',
-  'admin-job-grade': '직급 관리',
-  'admin-dept': '부서 관리',
-  'admin-system': '시스템 설정',
+  users: '사용자 관리',
+  roles: '권한 관리',
+  boards: '게시판 관리',
+  'approval-line': '결재선 관리',
+  'common-code': '공통코드 관리',
+  'job-grade': '직급 관리',
+  dept: '부서 관리',
+  system: '시스템 설정',
 };
 
 const BOTTOM_TAB_HEIGHT = 64;
@@ -87,15 +87,15 @@ export function MobileFullScreenRouter() {
         return <WeeklyReportScreen />;
       case 'settings':
         return <SettingsScreen />;
-      case 'admin-common-code':
+      case 'common-code':
         return <AdminCommonCodeScreen />;
-      case 'admin-job-grade':
+      case 'job-grade':
         return <AdminJobGradeScreen />;
-      case 'admin-dept':
+      case 'dept':
         return <AdminDeptScreen />;
-      case 'admin-users':
+      case 'users':
         return <AdminUsersScreen />;
-      case 'admin-boards':
+      case 'boards':
         return <AdminBoardsScreen />;
       case 'menu-panel':
         return <MobileMenuPanel />;

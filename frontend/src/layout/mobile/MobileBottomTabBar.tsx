@@ -1,52 +1,18 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import {
-  Home,
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  Settings,
-  MoreHorizontal,
-} from 'lucide-react-native';
+import { Home, FileText, MoreHorizontal } from 'lucide-react-native';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { selectPinnedForMode, useUiStore } from '../../store/uiStore';
-import { ALL_MENUS } from '../../shared/constants/menus';
+import { MENU_ICON_MAP } from '../../shared/constants/menus';
+import { useMenuList } from '../../shared/hooks/useMenuList';
 import type { PanelId } from '../../types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  Settings,
-};
-
-// ALL_MENUS에서 라벨 매핑 빌드 (단일 출처)
-const LABEL_MAP: Record<string, string> = Object.fromEntries(
-  ALL_MENUS.map((m) => [m.panel, m.label]),
-);
 
 export function MobileBottomTabBar() {
   const theme = useTheme();
   const pinnedMenus = useUiStore(selectPinnedForMode);
   const activeFullScreen = useUiStore((s) => s.activeFullScreen);
   const setActiveFullScreen = useUiStore((s) => s.setActiveFullScreen);
+  const menus = useMenuList();
 
   // First 3 pinned menus (홈 + 핀3 + 더보기 = 5슬롯)
   const tabMenus = pinnedMenus.slice(0, 3);
@@ -77,7 +43,7 @@ export function MobileBottomTabBar() {
   // 핀 안 된 메뉴(더보기 영역의 메뉴)에 들어와있는지 — 풀뷰 위치이지만 사용자에게는 "더보기 영역"
   const isCurrentlyUnpinnedMenu = (panel: PanelId, pinned: PanelId[]): boolean => {
     if (pinned.includes(panel)) return false;
-    return ALL_MENUS.some((m) => m.panel === panel);
+    return menus.some((m) => m.panel === panel);
   };
 
   const isHomeActive = activeFullScreen === null;
@@ -128,9 +94,9 @@ export function MobileBottomTabBar() {
         </TouchableOpacity>
 
         {tabMenus.map((panelId) => {
-          const meta = ALL_MENUS.find((m) => m.panel === panelId);
-          const Icon = meta ? ICON_MAP[meta.iconName] ?? FileText : FileText;
-          const label = LABEL_MAP[panelId] ?? panelId;
+          const meta = menus.find((m) => m.panel === panelId);
+          const Icon = meta ? MENU_ICON_MAP[meta.iconName] ?? FileText : FileText;
+          const label = meta?.label ?? panelId;
           const isActive = activeFullScreen === panelId;
           const color = isActive ? theme.brand.primary : theme.text.muted;
 

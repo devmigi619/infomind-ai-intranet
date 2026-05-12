@@ -1,44 +1,10 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import {
-  Home,
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-  MoreHorizontal,
-} from 'lucide-react-native';
+import { Home, FileText, MoreHorizontal } from 'lucide-react-native';
 import type { PanelId } from '../types';
-import { ALL_MENUS } from '../shared/constants/menus';
+import { MENU_ICON_MAP } from '../shared/constants/menus';
+import { useMenuList } from '../shared/hooks/useMenuList';
 import { useTheme } from '../shared/hooks/useTheme';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-};
 
 interface NavRailProps {
   activePanel: PanelId | null;
@@ -59,6 +25,7 @@ export function NavRail({
   const isHomeActive = activePanel === null && activeFullScreen === null;
   const moreButtonRef = React.useRef<View>(null);
   const theme = useTheme();
+  const menus = useMenuList();
 
   const handleMorePress = () => {
     moreButtonRef.current?.measure((_x, _y, _w, _h, _pageX, pageY) => {
@@ -96,9 +63,9 @@ export function NavRail({
 
       {/* 핀 된 메뉴들 */}
       {pinnedMenus.map((panelId) => {
-        const meta = ALL_MENUS.find((m) => m.panel === panelId);
+        const meta = menus.find((m) => m.panel === panelId);
         if (!meta) return null;
-        const Icon = ICON_MAP[meta.iconName] ?? FileText;
+        const Icon = MENU_ICON_MAP[meta.iconName] ?? FileText;
         const isActive = activePanel === panelId || activeFullScreen === panelId;
         const unread = panelId === 'approval' ? 2 : 0;
 

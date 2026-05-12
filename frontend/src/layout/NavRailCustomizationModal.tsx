@@ -12,49 +12,13 @@ import {
   PanResponder,
   type PanResponderGestureState,
 } from 'react-native';
-import {
-  Home,
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-  X,
-  Check,
-} from 'lucide-react-native';
+import { Home, FileText, X, Check } from 'lucide-react-native';
 import { selectPinnedForMode, useUiStore } from '../store/uiStore';
-import { ALL_MENUS, getMenusForMode, type MenuMeta } from '../shared/constants/menus';
+import { MENU_ICON_MAP, type MenuMeta } from '../shared/constants/menus';
+import { useMenuList, useMenusForMode } from '../shared/hooks/useMenuList';
 import { useTheme } from '../shared/hooks/useTheme';
 import { useResponsive } from '../shared/hooks/useResponsive';
 import type { PanelId } from '../types';
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ICON_MAP: Record<string, React.ComponentType<any>> = {
-  Home,
-  LayoutList,
-  FileCheck,
-  FileText,
-  Calendar,
-  Building2,
-  Car,
-  Users,
-  BookOpen,
-  Shield,
-  Tag,
-  List,
-  GraduationCap,
-  Network,
-  Settings,
-};
 
 interface NavRailCustomizationModalProps {
   isOpen: boolean;
@@ -79,6 +43,8 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
   const pinnedMenus = useUiStore(selectPinnedForMode);
   const theme = useTheme();
   const { isMobile } = useResponsive();
+  const menus = useMenuList();
+  const menusForMode = useMenusForMode(isAdminMode);
   const maxPinned = isMobile ? 3 : 7;
   const [dragState, setDragState] = useState<DragState>({
     draggingIndex: null,
@@ -363,9 +329,9 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
   if (!isOpen) return null;
 
   const renderMenuRow = (panelId: PanelId, index: number) => {
-    const meta = ALL_MENUS.find((m) => m.panel === panelId);
+    const meta = menus.find((m) => m.panel === panelId);
     if (!meta) return null;
-    const Icon = ICON_MAP[meta.iconName] ?? FileText;
+    const Icon = MENU_ICON_MAP[meta.iconName] ?? FileText;
     const isDragging = dragState.draggingIndex === index;
     const dropAbove =
       dragState.dropTarget?.index === index && dragState.dropTarget?.position === 'above';
@@ -448,7 +414,7 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
   };
 
   const renderUncheckedRow = (meta: MenuMeta) => {
-    const Icon = ICON_MAP[meta.iconName] ?? FileText;
+    const Icon = MENU_ICON_MAP[meta.iconName] ?? FileText;
     const disabled = isMax;
 
     return (
@@ -493,9 +459,7 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
     );
   };
 
-  const unpinnedMenus = getMenusForMode(isAdminMode).filter(
-    (m) => !pinnedMenus.includes(m.panel),
-  );
+  const unpinnedMenus = menusForMode.filter((m) => !pinnedMenus.includes(m.panel));
 
   // PC/모바일 공유: 화면 중앙 fade 모달, 박스 폭만 디바이스 분기
   return (
