@@ -69,6 +69,7 @@
 - [x] `store/uiStore.ts` (Zustand 글로벌 상태)
 - [x] React Query 도입 (서버 상태 캐싱/동기화)
 - [x] 디자인 토큰 (`shared/constants/`: colors, spacing, radius, typography, shadows, duration, zIndex)
+- [x] 공통 토스트 메시지 시스템 (`store/toastStore.ts`, `AppToast`, `useToast`, 인터셉터 자동 에러 처리)
 
 ---
 
@@ -80,7 +81,7 @@
 - [ ] 주간보고 LP (이번 주 / 지난 주)
 - [ ] 캘린더 LP (오늘 일정) — Phase 2 데이터 연동 전 placeholder
 - [ ] 회의실 LP — placeholder
-- [ ] 차량 LP — placeholder
+- [x] 차량 LP (오늘 전체 예약 현황, 내 예약 강조 표시, VehicleQuickPanel)
 
 ### 4단계 — 모듈별 풀뷰 레이아웃 다듬기
 - [x] 게시판 풀뷰 (목록/상세/작성, 단일 컬럼 상태머신, NTC 핀, 대댓글, 모바일 카드/PC 테이블)

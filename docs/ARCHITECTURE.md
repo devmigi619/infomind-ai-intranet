@@ -277,6 +277,19 @@ toast.success('완료되었습니다.', 5000);
   - refresh 시 `RVK_YN='N'` 조건으로 유효성 검증
   - logout 시 해당 토큰 `RVK_YN='Y'` 업데이트 (즉시 무효화)
 
+### 로그인 응답 필드 매핑
+
+백엔드 `UserInfoResponse`의 필드명이 프론트 `User` 인터페이스와 다르다.  
+`authApi.login`에서 저장 전에 변환하며, **이 매핑을 빠뜨리면 `user.role`이 항상 `undefined`가 되어 관리자 토글이 표시되지 않는다.**
+
+| 백엔드 (`UserInfoResponse`) | 프론트 (`User` interface) |
+|---|---|
+| `userNm` | `name` |
+| `userSe` | `role` (`'ADMIN'` \| `'USER'`) |
+| `deptCd` | `department` |
+| `jbgdCd` | `position` |
+| `userId` | `userId` (동일) |
+
 ### JWT 정책
 
 | 항목 | 값 |
@@ -286,6 +299,56 @@ toast.success('완료되었습니다.', 5000);
 | 커스텀 claim | `userSe` (권한, 구 `role` claim 대체) |
 | principal 타입 | `String` — 전 Service/Controller 공통 |
 | 액세스 토큰 유효기간 | 8시간 (application.yml `jwt.expiry-hours`) |
+
+## Vehicle 도메인
+
+차량 예약 시스템. 차량 목록 관리 + 날짜/시각 기반 예약·반납·연장.
+
+### 테이블 구조
+
+| 테이블 | 엔티티 | 키 | 비고 |
+|---|---|---|---|
+| `INT_VEH` | `Vehicle` | `VEH_ID` (String) | 차량 마스터. `USE_YN='Y'`만 조회 |
+| `INT_VEH_RSV` | `VehicleReservation` | `(VEH_ID, RSV_SN)` 복합키 | 차량별 시퀀스 |
+
+JPA 매핑: `@IdClass(VehicleReservationId)`로 복합키 처리. `RSV_SN`은 `COALESCE(MAX, 0)+1` 쿼리로 차량별 채번.
+
+### 주요 컬럼 (`INT_VEH_RSV`)
+
+| 컬럼 | 타입 | 설명 |
+|---|---|---|
+| `RSV_ST_YMD` / `RSV_ST_HHMM` | `VARCHAR(8/4)` | 예약 시작 일자/시각 (`YYYYMMDD` / `HHMM`) |
+| `RSV_END_YMD` / `RSV_END_HHMM` | `VARCHAR(8/4)` | 예약 종료 일자/시각 (반납 시 실제 반납 시각으로 갱신) |
+| `RTN_YN` | `VARCHAR(1)` DEFAULT `'N'` | 반납 여부 |
+| `RTN_YMD` / `RTN_HHMM` / `RTN_PLC` | VARCHAR | 반납 일시·장소 |
+| `EXT_YN` | `VARCHAR(1)` DEFAULT `'N'` | 연장 이력 여부 |
+| `EXT_YMD` / `EXT_HHMM` | VARCHAR | 마지막 연장 종료 일시 |
+
+### 비즈니스 규칙
+
+- **예약 가능 기간**: 오늘 ~ 오늘+7일
+- **충돌 검사**: 같은 차량의 시간 겹침 여부 — `NOT (종료 < 신규시작 OR 시작 > 신규종료)` JPQL 패턴
+- **반납**: `rtnYn='Y'` 설정 + `rsvEndYmd/Hhmm`을 실제 반납 시각으로 갱신 → 반납 후 연장·취소 불가
+- **연장**: 횟수 제한 없음. `rsvEndYmd/Hhmm` 직접 수정 + `extYn='Y'` 기록. 자기 자신 제외 충돌 검사(`findConflictsExcluding`)
+
+### API
+
+| 경로 | 설명 |
+|---|---|
+| `GET /api/vehicles` | 활성 차량 목록 (`useYn='Y'`) |
+| `GET /api/vehicles/reservations?date=YYYYMMDD` | 해당 날짜에 걸친 전체 예약 (`mine` 플래그 포함) |
+| `POST /api/vehicles/{vehId}/reservations` | 예약 신청 (충돌·기간 검증) |
+| `DELETE /api/vehicles/{vehId}/reservations/{rsvSn}` | 예약 취소 (본인만) |
+| `PATCH /api/vehicles/{vehId}/reservations/{rsvSn}/return` | 반납 처리 |
+| `PATCH /api/vehicles/{vehId}/reservations/{rsvSn}/extend` | 예약 연장 |
+
+### 프론트엔드 연동
+
+| 파일 | 역할 |
+|---|---|
+| `features/vehicle/api.ts` | HTTP 함수 + React Query 훅 (`useVehicles`, `useVehicleReservations`, `useReturnVehicle`, `useExtendReservation` 등) |
+| `features/vehicle/screens/VehicleScreen.tsx` | 전체현황(세로 타임라인) / 내 예약 / 예약신청 3모드 |
+| `features/vehicle/components/VehicleQuickPanel.tsx` | LeftPanel 퀵뷰 — 오늘 전체 예약, 내 예약 강조 |
 
 ## Board 도메인
 

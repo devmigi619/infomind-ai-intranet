@@ -17,7 +17,20 @@ export interface User {
 const authApi = {
   login: async (userId: string, password: string) => {
     const res = await apiClient.post('/api/auth/login', { userId, password });
-    const { token, refreshToken, user } = res.data.data;
+    const { token, refreshToken, user: raw } = res.data.data;
+
+    // 백엔드 UserInfoResponse 필드명 → 프론트 User 인터페이스 매핑
+    // 백엔드: userNm / userSe / deptCd / jbgdCd
+    // 프론트:  name  / role  / department / position
+    const user: User = {
+      id:         raw.id        ?? 0,
+      userId:     raw.userId,
+      name:       raw.userNm    ?? raw.userId,
+      department: raw.deptCd    ?? '',
+      position:   raw.jbgdCd   ?? '',
+      role:       raw.userSe    ?? 'USER',
+    };
+
     await AsyncStorage.setItem('token', token);
     // refresh 함수와 일관: 모바일은 SecureStore, 웹은 AsyncStorage
     if (Platform.OS === 'android' || Platform.OS === 'ios') {
@@ -26,7 +39,7 @@ const authApi = {
       await AsyncStorage.setItem('refreshToken', refreshToken);
     }
     await AsyncStorage.setItem('user', JSON.stringify(user));
-    return user as User;
+    return user;
   },
   logout: async () => {
     await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
