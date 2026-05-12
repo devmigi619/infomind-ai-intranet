@@ -112,6 +112,67 @@ Nginx 역할:
 - 동시 다발 401 처리: `failedQueue`로 재발급 중 도착한 요청을 큐잉했다가 일괄 재시도
 - 플랫폼별 저장소: iOS/Android → `SecureStore` (리프레시), 웹 → `AsyncStorage`
 
+### 공통 토스트 메시지 시스템
+
+서버 응답 구조(`ApiResponse<T>`)에 맞춰 HTTP 에러를 자동으로 토스트로 표시한다.
+
+**서버 응답 구조**
+
+```json
+// 성공
+{ "success": true, "data": { ... }, "message": null }
+
+// 실패 (400 / 500)
+{ "success": false, "data": null, "message": "에러 메시지" }
+
+// 인증 실패 (401)
+{ "code": "UNAUTHORIZED", "message": "인증이 필요합니다." }
+```
+
+**인터셉터 자동 처리 규칙**
+
+| 상황 | 토스트 |
+|---|---|
+| 401 → 재발급 성공 | 없음 (조용히 재시도) |
+| 401 → 재발급 실패 | 🔴 "세션이 만료되었습니다. 다시 로그인해 주세요." |
+| 403 | 🔴 서버 `message` 또는 "접근 권한이 없습니다." |
+| 400 | 🔴 서버 `message` 또는 "요청이 올바르지 않습니다." |
+| 5xx | 🔴 서버 `message` 또는 "서버 오류가 발생했습니다." |
+| 네트워크 에러 (응답 없음) | 🟡 "네트워크 연결을 확인해 주세요." |
+
+에러가 인터셉터에서 처리되면 `error._handled = true` 플래그가 설정된다.  
+컴포넌트 catch 블록에서 중복 처리를 방지하려면 이 플래그를 확인한다.
+
+```ts
+} catch (err: any) {
+  if ((err as any)?._handled) return; // 인터셉터에서 이미 토스트 표시
+  toast.error(err?.message ?? '오류가 발생했습니다.');
+}
+```
+
+**관련 파일**
+
+| 파일 | 역할 |
+|---|---|
+| `store/toastStore.ts` | Zustand 토스트 store — `show(item)` / `hide(id)` / `clear()` |
+| `shared/components/AppToast.tsx` | 토스트 UI — 화면 상단 overlay, fade+slide 애니메이션, 자동 dismiss |
+| `shared/hooks/useToast.ts` | 컴포넌트용 편의 훅 |
+
+**컴포넌트에서 성공 토스트 사용법**
+
+```ts
+const toast = useToast();
+toast.success('저장되었습니다.');
+toast.error('처리 중 오류가 발생했습니다.');
+toast.warning('입력값을 확인해 주세요.');
+toast.info('처리 중입니다.');
+
+// 지속 시간(ms) 직접 지정
+toast.success('완료되었습니다.', 5000);
+```
+
+> `AppToast`는 `App.tsx` 루트에 마운트(`zIndex: 200`). 성공 메시지는 컴포넌트에서 명시적으로 호출하고, 에러는 인터셉터가 자동 처리한다.
+
 ## 데이터베이스
 
 ### 로컬

@@ -13,6 +13,7 @@ import { AdminJobGradeScreen } from '../../features/admin-job-grade/screens/Admi
 import { AdminDeptScreen } from '../../features/admin-dept/screens/AdminDeptScreen';
 import { AdminUsersScreen } from '../../features/admin-users/screens/AdminUsersScreen';
 import { AdminBoardsScreen } from '../../features/admin-boards/screens/AdminBoardsScreen';
+import { VehicleScreen } from '../../features/vehicle/screens/VehicleScreen';
 import { MobileMenuPanel } from './MobileMenuPanel';
 
 /** panelId → 실제 화면 컴포넌트 맵 (구현 완료된 패널만 등록) */
@@ -26,6 +27,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   dept: <AdminDeptScreen />,
   users: <AdminUsersScreen />,
   boards: <AdminBoardsScreen />,
+  vehicle: <VehicleScreen />,
   'menu-panel': <MobileMenuPanel />,
 };
 

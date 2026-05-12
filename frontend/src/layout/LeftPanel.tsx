@@ -12,15 +12,12 @@ import {
 import { ArrowRight, X } from 'lucide-react-native';
 import type { PanelId } from '../types';
 import { useTheme } from '../shared/hooks/useTheme';
+import { useMenuList } from '../shared/hooks/useMenuList';
 import { BoardQuickPanel } from '../features/board/components/BoardQuickPanel';
+import { VehicleQuickPanel } from '../features/vehicle/components/VehicleQuickPanel';
 
-interface LeftPanelProps {
-  activePanel: PanelId | null;
-  onClose: () => void;
-  onOpenFullScreen: () => void;
-}
-
-const PANEL_TITLES: Record<PanelId, string> = {
+/** DB 메뉴 데이터가 없는 경우를 대비한 폴백 타이틀 맵 */
+const PANEL_TITLE_FALLBACK: Partial<Record<PanelId, string>> = {
   board: '게시판',
   approval: '전자결재',
   report: '주간보고',
@@ -41,6 +38,13 @@ const PANEL_TITLES: Record<PanelId, string> = {
   settings: '설정',
   'menu-panel': '메뉴',
 };
+
+interface LeftPanelProps {
+  activePanel: PanelId | null;
+  onClose: () => void;
+  onOpenFullScreen: () => void;
+}
+
 
 type PreviewSection = {
   label: string;
@@ -108,15 +112,7 @@ const PANEL_PREVIEW: Partial<Record<PanelId, PreviewSection[]>> = {
       ],
     },
   ],
-  vehicle: [
-    {
-      label: '예약 현황',
-      cards: [
-        { title: '아반떼 (12가 1234)', meta: '4/29 09:00 - 18:00' },
-        { title: '카니발 (34나 5678)', meta: '5/2 종일' },
-      ],
-    },
-  ],
+  // vehicle 은 VehicleQuickPanel 에서 실데이터로 렌더 (PANEL_PREVIEW 우회)
 };
 
 const PLACEHOLDER_SECTIONS: PreviewSection[] = [
@@ -135,6 +131,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
   const translateAnim = useRef(new Animated.Value(0)).current;
   const lastPanelRef = useRef<PanelId | null>(activePanel);
   const theme = useTheme();
+  const menus = useMenuList();
 
   useEffect(() => {
     Animated.timing(widthAnim, {
@@ -169,11 +166,14 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
     }
   }, [activePanel, fadeAnim, translateAnim]);
 
-  const title = activePanel ? PANEL_TITLES[activePanel] : '';
+  // DB 메뉴 테이블에서 타이틀 조회, 없으면 fallback
+  const title = activePanel
+    ? (menus.find((m) => m.panel === activePanel)?.label ?? PANEL_TITLE_FALLBACK[activePanel] ?? activePanel)
+    : '';
   const sections = activePanel ? (PANEL_PREVIEW[activePanel] ?? PLACEHOLDER_SECTIONS) : [];
 
-  // 게시판은 자체 헤더(목록↔상세 토글 + 열기 버튼)를 그리므로 LP 표준 헤더를 우회한다.
-  const useCustomPanel = activePanel === 'board';
+  // 자체 헤더·콘텐츠를 렌더하는 패널 (LP 표준 헤더 우회)
+  const useCustomPanel = activePanel === 'board' || activePanel === 'vehicle';
 
   return (
     <Animated.View
@@ -198,6 +198,7 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
             ]}
           >
             {activePanel === 'board' && <BoardQuickPanel onClose={onClose} />}
+            {activePanel === 'vehicle' && <VehicleQuickPanel onClose={onClose} />}
           </Animated.View>
         ) : (
           <>

@@ -27,7 +27,9 @@ import { AdminJobGradeScreen } from './src/features/admin-job-grade/screens/Admi
 import { AdminDeptScreen } from './src/features/admin-dept/screens/AdminDeptScreen';
 import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersScreen';
 import { AdminBoardsScreen } from './src/features/admin-boards/screens/AdminBoardsScreen';
+import { VehicleScreen } from './src/features/vehicle/screens/VehicleScreen';
 import { ConfirmProvider } from './src/shared/hooks/useConfirm';
+import { AppToast } from './src/shared/components/AppToast';
 import type { PanelId } from './src/types';
 
 const queryClient = new QueryClient({
@@ -44,7 +46,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
-        <AppContent />
+        <View style={{ flex: 1 }}>
+          <AppContent />
+          <AppToast />
+        </View>
       </ConfirmProvider>
     </QueryClientProvider>
   );
@@ -61,6 +66,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   dept: <AdminDeptScreen />,
   users: <AdminUsersScreen />,
   boards: <AdminBoardsScreen />,
+  vehicle: <VehicleScreen />,
 };
 
 function AppContent() {
