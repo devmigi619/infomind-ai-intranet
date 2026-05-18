@@ -35,8 +35,9 @@ public class AttachmentController {
     public ResponseEntity<ApiResponse<AttachmentService.UploadResponse>> upload(
             @RequestParam("files") MultipartFile[] files,
             @RequestParam(value = "afileId", required = false) String afileId,
-            @RequestParam(value = "prefix", required = false) String prefix) {
-        return ResponseEntity.ok(ApiResponse.ok(attachmentService.upload(files, afileId, prefix)));
+            @RequestParam(value = "prefix", required = false) String prefix,
+            @RequestParam(value = "embedEnabled", defaultValue = "true") boolean embedEnabled) {
+        return ResponseEntity.ok(ApiResponse.ok(attachmentService.upload(files, afileId, prefix, embedEnabled)));
     }
 
     @GetMapping("/{afileId}")

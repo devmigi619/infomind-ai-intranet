@@ -41,6 +41,7 @@ const attachmentApi = {
     files: DocumentAsset[],
     prefix?: string,
     afileId?: string,
+    embedEnabled: boolean = true,
   ): Promise<AttachmentUploadResponse> => {
     const form = new FormData();
 
@@ -66,6 +67,7 @@ const attachmentApi = {
 
     if (prefix) form.append('prefix', prefix);
     if (afileId) form.append('afileId', afileId);
+    if (!embedEnabled) form.append('embedEnabled', 'false');
 
     const res = await apiClient.post('/api/files/upload', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
@@ -92,11 +94,13 @@ export const useUploadAttachments = () =>
       files,
       prefix,
       afileId,
+      embedEnabled = true,
     }: {
       files: DocumentAsset[];
       prefix?: string;
       afileId?: string;
-    }) => attachmentApi.upload(files, prefix, afileId),
+      embedEnabled?: boolean;
+    }) => attachmentApi.upload(files, prefix, afileId, embedEnabled),
   });
 
 export const useAttachmentList = (afileId?: string | null) =>

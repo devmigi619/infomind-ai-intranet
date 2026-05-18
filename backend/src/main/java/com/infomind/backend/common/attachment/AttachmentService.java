@@ -82,6 +82,11 @@ public class AttachmentService {
      */
     @Transactional
     public UploadResponse upload(MultipartFile[] files, String afileId, String prefix) {
+        return upload(files, afileId, prefix, true);
+    }
+
+    @Transactional
+    public UploadResponse upload(MultipartFile[] files, String afileId, String prefix, boolean embedEnabled) {
         if (files == null || files.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "업로드할 파일이 없습니다.");
         }
@@ -159,13 +164,15 @@ public class AttachmentService {
         }
 
         // 비동기 임베딩 트리거 — 위에서 캡쳐한 bytes/fileName 스냅샷 사용
-        for (int i = 0; i < files.length; i++) {
-            FileMeta meta = results.get(i);
-            embeddingTriggerService.triggerEmbedding(
-                    bytesSnapshots.get(i),
-                    fileNameSnapshots.get(i),
-                    meta.getAfileId(),
-                    meta.getAfileSn() != null ? meta.getAfileSn().longValue() : null);
+        if (embedEnabled) {
+            for (int i = 0; i < files.length; i++) {
+                FileMeta meta = results.get(i);
+                embeddingTriggerService.triggerEmbedding(
+                        bytesSnapshots.get(i),
+                        fileNameSnapshots.get(i),
+                        meta.getAfileId(),
+                        meta.getAfileSn() != null ? meta.getAfileSn().longValue() : null);
+            }
         }
 
         return UploadResponse.builder()

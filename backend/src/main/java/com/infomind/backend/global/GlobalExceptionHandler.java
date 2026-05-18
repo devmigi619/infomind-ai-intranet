@@ -3,6 +3,7 @@ package com.infomind.backend.global;
 import com.infomind.backend.common.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +24,16 @@ public class GlobalExceptionHandler {
                 .orElse("입력값이 올바르지 않습니다.");
         log.warn("[VALIDATION] {}", message);
         return ResponseEntity.badRequest().body(ApiResponse.fail(message));
+    }
+
+    /**
+     * 리프레시 토큰 거부 (419) — 만료·무효·미보유
+     */
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidRefreshToken(InvalidRefreshTokenException e) {
+        log.warn("[REFRESH_TOKEN_REJECTED] {}", e.getMessage());
+        return ResponseEntity.status(HttpStatusCode.valueOf(419))
+                .body(ApiResponse.fail(e.getMessage()));
     }
 
     /**

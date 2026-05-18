@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './src/shared/api/queryClient';
 import { TopHeader } from './src/layout/TopHeader';
 import { NavRail } from './src/layout/NavRail';
 import { NavRailMorePopover } from './src/layout/NavRailMorePopover';
@@ -29,19 +30,13 @@ import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersS
 import { AdminBoardsScreen } from './src/features/admin-boards/screens/AdminBoardsScreen';
 import { VehicleScreen } from './src/features/vehicle/screens/VehicleScreen';
 import { MtgrScreen } from './src/features/mtgr/screens/MtgrScreen';
+import { AdminLeaveScreen } from './src/features/admin-leave/screens/AdminLeaveScreen';
+import { LeaveReqScreen } from './src/features/leave-req/screens/LeaveReqScreen';
+import { LeaveReqFormScreen } from './src/features/leave-req/screens/LeaveReqFormScreen';
 import { ConfirmProvider } from './src/shared/hooks/useConfirm';
 import { AppToast } from './src/shared/components/AppToast';
 import type { PanelId } from './src/types';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: true,
-      staleTime: 1000 * 60, // 1분
-    },
-  },
-});
 
 export default function App() {
   return (
@@ -69,6 +64,9 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   boards: <AdminBoardsScreen />,
   vehicle: <VehicleScreen />,
   meeting: <MtgrScreen />,
+  leave: <AdminLeaveScreen />,
+  'leave-req': <LeaveReqScreen />,
+  'leave-req-form': <LeaveReqFormScreen />,
 };
 
 function AppContent() {

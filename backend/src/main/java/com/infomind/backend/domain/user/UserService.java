@@ -1,5 +1,6 @@
 package com.infomind.backend.domain.user;
 
+import com.infomind.backend.global.InvalidRefreshTokenException;
 import com.infomind.backend.security.JwtProvider;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -57,19 +58,8 @@ public class UserService {
 
     @Transactional
     public AuthController.RefreshResponse refresh(String refreshTokenStr) {
-        // 1. JWT 서명 검증
-        if (!jwtProvider.validateToken(refreshTokenStr)) {
-            throw new IllegalArgumentException("유효하지 않은 refresh token입니다.");
-        }
-
-        // 2. DB에서 미회수(RVK_YN=N) 토큰 확인
-        RefreshToken stored = refreshTokenRepository.findByTkAndRvkYn(refreshTokenStr, "N")
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않은 refresh token입니다."));
-
-        // 3. DB 만료일 검증
-        if (stored.getTkExpDt().isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("만료된 refresh token입니다.");
-        }
+        // 1~3: 서명·DB 보유 여부·만료일 통합 검증
+        RefreshToken stored = validateAndGetRefreshToken(refreshTokenStr);
 
         String userId = jwtProvider.getUserId(refreshTokenStr);
         User user = userRepository.findById(userId)
@@ -128,6 +118,20 @@ public class UserService {
                 .userSe(user.getUserSe())
                 .eml(user.getEml())
                 .build();
+    }
+
+    /**
+     * JWT 서명 검증 → DB 미회수 토큰 조회 → 만료일 검증을 한 번에 처리.
+     * 세 케이스 모두 InvalidRefreshTokenException(419)으로 통일한다.
+     */
+    private RefreshToken validateAndGetRefreshToken(String tokenStr) {
+        if (!jwtProvider.validateToken(tokenStr))
+            throw new InvalidRefreshTokenException("인증이 올바르지 않습니다.");
+        RefreshToken rtk = refreshTokenRepository.findByTkAndRvkYn(tokenStr, "N")
+                .orElseThrow(() -> new InvalidRefreshTokenException("인증이 올바르지 않습니다."));
+        if (rtk.getTkExpDt().isBefore(LocalDate.now()))
+            throw new InvalidRefreshTokenException("인증이 올바르지 않습니다.");
+        return rtk;
     }
 
     private String resolveIp() {

@@ -17,6 +17,9 @@ export type PanelId =
   | 'dept'
   | 'system'
   | 'settings'
-  | 'menu-panel';
+  | 'menu-panel'
+  | 'leave'
+  | 'leave-req'
+  | 'leave-req-form';
 
 export type RpTab = 'home' | 'ai';

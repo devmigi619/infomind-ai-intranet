@@ -11,9 +11,12 @@ import {
   Shield,
   Tag,
   List,
+
   GraduationCap,
   Network,
   Settings,
+    TreePalm,
+    BookA
 } from 'lucide-react-native';
 import type React from 'react';
 
@@ -39,9 +42,11 @@ export const MENU_ICON_MAP: Record<string, React.ComponentType<any>> = {
   Shield,
   Tag,
   List,
+  BookA,
   GraduationCap,
   Network,
   Settings,
+  TreePalm,
 };
 
 /** menu_id → iconName 매핑 (DB에 없으므로 프론트 유지) */
@@ -58,8 +63,10 @@ export const MENU_ICON_NAME: Record<string, string> = {
   users: 'Users',
   roles: 'Shield',
   boards: 'Tag',
+  leave: 'TreePalm',
+  'leave-req': 'TreePalm',
   'approval-line': 'FileText',
-  'common-code': 'List',
+  'common-code': 'BookA',
   'job-grade': 'GraduationCap',
   dept: 'Network',
   system: 'Settings',

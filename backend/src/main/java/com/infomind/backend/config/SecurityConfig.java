@@ -48,10 +48,17 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, e) -> {
-                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setStatus(418);  // 액세스 토큰 거부
                             response.setContentType("application/json;charset=UTF-8");
                             response.getWriter().write(
                                     "{\"code\":\"UNAUTHORIZED\",\"message\":\"인증이 필요합니다.\"}"
+                            );
+                        })
+                        .accessDeniedHandler((request, response, e) -> {
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);  // 403
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write(
+                                    "{\"code\":\"FORBIDDEN\",\"message\":\"권한이 없습니다.\"}"
                             );
                         })
                 )

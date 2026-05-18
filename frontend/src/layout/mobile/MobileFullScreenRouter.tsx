@@ -15,6 +15,9 @@ import { AdminUsersScreen } from '../../features/admin-users/screens/AdminUsersS
 import { AdminBoardsScreen } from '../../features/admin-boards/screens/AdminBoardsScreen';
 import { VehicleScreen } from '../../features/vehicle/screens/VehicleScreen';
 import { MtgrScreen } from '../../features/mtgr/screens/MtgrScreen';
+import { AdminLeaveScreen } from '../../features/admin-leave/screens/AdminLeaveScreen';
+import { LeaveReqScreen } from '../../features/leave-req/screens/LeaveReqScreen';
+import { LeaveReqFormScreen } from '../../features/leave-req/screens/LeaveReqFormScreen';
 import { MobileMenuPanel } from './MobileMenuPanel';
 
 /** panelId → 실제 화면 컴포넌트 맵 (구현 완료된 패널만 등록) */
@@ -30,6 +33,9 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   boards: <AdminBoardsScreen />,
   vehicle: <VehicleScreen />,
   meeting: <MtgrScreen />,
+  leave: <AdminLeaveScreen />,
+  'leave-req': <LeaveReqScreen />,
+  'leave-req-form': <LeaveReqFormScreen />,
   'menu-panel': <MobileMenuPanel />,
 };
 

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.infomind.backend.domain.leave.LeaveBalanceMapper">
+
+    <!--
+      연도별 승인된 차감 휴가 사용일수 조회
+      - aprv_rslt_se = '3' (승인)
+      - leave_mst.ded_yn = 'Y' (차감 휴가만)
+      - 연도 기준: 각 신청의 첫 번째 날짜(MIN(leave_use_ymd)) 기준 연도
+      - req_sn 별로 그룹화하여 leave_use_dcnt 중복 합산 방지
+    -->
+    <select id="getUsedByYear"
+            resultType="com.infomind.backend.domain.leave.LeaveBalanceMapper$YearlyUsedDto">
+        SELECT
+            yr.year,
+            CAST(SUM(yr.leave_use_dcnt) AS NUMERIC(7,1)) AS used_dcnt
+        FROM (
+            SELECT
+                m.req_user_id,
+                m.req_sn,
+                SUBSTR(MIN(d.leave_use_ymd), 1, 4)       AS year,
+                m.leave_use_dcnt
+            FROM int_leave_req_mst m
+            JOIN int_leave_req_dtl d
+                ON  d.req_user_id = m.req_user_id
+                AND d.req_sn      = m.req_sn
+            JOIN int_leave_mst lm
+                ON  lm.leave_cd   = m.leave_cd
+            WHERE m.req_user_id   = #{userId}
+              AND m.aprv_rslt_se  = '3'
+              AND lm.ded_yn       = 'Y'
+            GROUP BY m.req_user_id, m.req_sn, m.leave_use_dcnt
+        ) yr
+        GROUP BY yr.year
+        ORDER BY yr.year DESC
+    </select>
+
+    <!-- DB 함수로 기본 휴가 부여일수 조회 -->
+    <select id="calcEntitlement" resultType="java.math.BigDecimal">
+        SELECT f_leave_calc(#{userId})
+    </select>
+
+</mapper>

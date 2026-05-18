@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useToastStore } from '../../store/toastStore';
+import { useUiStore } from '../../store/uiStore';
+import { queryClient } from './queryClient';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!BASE_URL) {
@@ -32,15 +34,6 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 /**
- * 서버 응답 구조
- *   성공: { success: true,  data: {...},  message: null }
- *   실패: { success: false, data: null,   message: "에러 메시지" }
- *   401:  { code: "UNAUTHORIZED", message: "인증이 필요합니다." }
- */
-const extractMessage = (error: any): string | null =>
-  error?.response?.data?.message ?? null;
-
-/**
  * 인터셉터에서 처리된 에러임을 표시하는 플래그.
  * 컴포넌트 catch 블록에서 중복 처리를 방지할 수 있습니다.
  *   if ((err as any)?._handled) return;
@@ -50,6 +43,24 @@ const markHandled = (error: any): any => {
   return error;
 };
 
+/**
+ * 세션 만료 처리 — 토큰 삭제 + currentUser 초기화 + UI 리셋 + 토스트
+ * 418 리프레시 실패 또는 419 직접 수신 시 호출
+ */
+const forceLogout = async () => {
+  const toast = useToastStore.getState();
+
+  await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
+  if (Platform.OS !== 'web') {
+    await SecureStore.deleteItemAsync('refreshToken').catch(() => {});
+  }
+
+  queryClient.setQueryData(['auth', 'currentUser'], null);
+  useUiStore.getState().resetUiToDefaults();
+
+  toast.show({ variant: 'error', message: '세션이 만료되었습니다. 다시 로그인해 주세요.' });
+};
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -57,8 +68,8 @@ apiClient.interceptors.response.use(
     const status: number | undefined = error.response?.status;
     const toast = useToastStore.getState();
 
-    // ── 401: 토큰 재발급 후 재시도 ───────────────────────────────────────
-    if (status === 401 && !original._retry) {
+    // ── 418: 액세스 토큰 거부 → 리프레시 후 재시도 ──────────────────────
+    if (status === 418 && !original._retry) {
       if (isRefreshing) {
         return new Promise<string>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
@@ -99,37 +110,34 @@ apiClient.interceptors.response.use(
         return apiClient(original);
       } catch (err) {
         processQueue(err, null);
-        await AsyncStorage.multiRemove(['token', 'refreshToken', 'user']);
-        // 재발급 실패 = 세션 만료
-        toast.show({ variant: 'error', message: '세션이 만료되었습니다. 다시 로그인해 주세요.' });
+        await forceLogout();
         return Promise.reject(markHandled(err));
       } finally {
         isRefreshing = false;
       }
     }
 
-    // ── 그 외 HTTP 에러 ──────────────────────────────────────────────────
-    if (status === 403) {
-      const msg = extractMessage(error) ?? '접근 권한이 없습니다.';
-      toast.show({ variant: 'error', message: msg });
-      return Promise.reject(markHandled(error));
-    }
-
-    if (status === 400) {
-      const msg = extractMessage(error) ?? '요청이 올바르지 않습니다.';
-      toast.show({ variant: 'error', message: msg });
-      return Promise.reject(markHandled(error));
-    }
-
-    if (status !== undefined && status >= 500) {
-      const msg = extractMessage(error) ?? '서버 오류가 발생했습니다.';
-      toast.show({ variant: 'error', message: msg });
+    // ── 419: 리프레시 토큰 거부 → 세션 만료 처리 ────────────────────────
+    if (status === 419) {
+      await forceLogout();
       return Promise.reject(markHandled(error));
     }
 
     // ── 네트워크 에러 (서버 응답 없음) ───────────────────────────────────
     if (!error.response) {
       toast.show({ variant: 'warning', message: '네트워크 연결을 확인해 주세요.' });
+      return Promise.reject(markHandled(error));
+    }
+
+    // ── 4xx 에러 ─────────────────────────────────────────────────────────
+    if (status !== undefined && status >= 400 && status < 500) {
+      toast.show({ variant: 'error', message: '요청에 실패했습니다.' });
+      return Promise.reject(markHandled(error));
+    }
+
+    // ── 5xx 에러 ─────────────────────────────────────────────────────────
+    if (status !== undefined && status >= 500) {
+      toast.show({ variant: 'error', message: '알 수 없는 에러가 발생했습니다.' });
       return Promise.reject(markHandled(error));
     }
 
