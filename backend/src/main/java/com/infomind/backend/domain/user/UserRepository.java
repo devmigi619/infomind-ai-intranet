@@ -2,6 +2,7 @@ package com.infomind.backend.domain.user;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface UserRepository extends JpaRepository<User, String> {
@@ -15,4 +16,7 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     /** 특정 user_se만 조회 */
     List<User> findByUserSe(String userSe);
+
+    /** 부서 코드 목록에 속한 사용자 조회 (부서원 자동포함용) */
+    List<User> findByDeptCdIn(Collection<String> deptCds);
 }

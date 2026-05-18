@@ -297,9 +297,53 @@ function DetailPanel({
         {detail.refList.length > 0 && (
           <View style={s.card}>
             <Text style={s.cardTitle}>수신참조</Text>
-            <Text style={{ color: theme.text.body, fontSize: 13, marginTop: 4 }}>
-              {detail.refList.map((r) => r.refUserNm).join(', ')}
-            </Text>
+            <View style={{ gap: 6, marginTop: 8 }}>
+              {detail.refList.map((r) => (
+                <View
+                  key={r.refUserId}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    paddingVertical: 4,
+                    borderBottomWidth: 1,
+                    borderBottomColor: theme.border.subtle,
+                  }}
+                >
+                  {/* 이름 */}
+                  <Text style={{ flex: 1, fontSize: 13, color: theme.text.primary, fontWeight: '500' }}>
+                    {r.refUserNm}
+                  </Text>
+                  {/* 조회여부 + 일자 */}
+                  {r.qryYn === 'Y' ? (
+                    <View style={{ alignItems: 'flex-end', gap: 1 }}>
+                      <View style={{
+                        backgroundColor: '#D1FAE5',
+                        borderRadius: 6,
+                        paddingHorizontal: 7,
+                        paddingVertical: 2,
+                      }}>
+                        <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '600' }}>조회</Text>
+                      </View>
+                      {r.updAt && (
+                        <Text style={{ fontSize: 11, color: theme.text.muted }}>
+                          {r.updAt.slice(0, 10)}
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <View style={{
+                      backgroundColor: theme.bg.surfaceMute,
+                      borderRadius: 6,
+                      paddingHorizontal: 7,
+                      paddingVertical: 2,
+                    }}>
+                      <Text style={{ fontSize: 11, color: theme.text.subtle, fontWeight: '600' }}>미조회</Text>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
@@ -557,7 +601,7 @@ export function LeaveReqScreen() {
   const { data: me } = useCurrentUser();
   const setActiveFullScreen = useUiStore((s) => s.setActiveFullScreen);
 
-  const [activeTab, setActiveTab] = useState<'my' | 'approver'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'ref' | 'approver'>('my');
   const [selectedKey, setSelectedKey] = useState<{ reqUserId: string; reqSn: number } | null>(null);
 
   const { data: list = [], isLoading } = useLeaveReqList(activeTab);
@@ -584,14 +628,14 @@ export function LeaveReqScreen() {
 
       {/* 탭 */}
       <View style={s.tabBar}>
-        {(['my', 'approver'] as const).map((tab) => (
+        {(['my', 'ref', 'approver'] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
             style={[s.tabItem, activeTab === tab && s.tabItemActive]}
             onPress={() => { setActiveTab(tab); setSelectedKey(null); }}
           >
             <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>
-              {tab === 'my' ? '내 신청' : '결재 대기'}
+              {tab === 'my' ? '내 신청' : tab === 'ref' ? '결재 참조' : '결재 대기'}
             </Text>
           </TouchableOpacity>
         ))}
@@ -609,7 +653,11 @@ export function LeaveReqScreen() {
           ) : list.length === 0 ? (
             <View style={s.empty}>
               <Text style={s.emptyText}>
-                {activeTab === 'my' ? '신청 내역이 없습니다.' : '결재 대기 중인 건이 없습니다.'}
+                {activeTab === 'my'
+                  ? '신청 내역이 없습니다.'
+                  : activeTab === 'ref'
+                  ? '참조된 신청 건이 없습니다.'
+                  : '결재 대기 중인 건이 없습니다.'}
               </Text>
             </View>
           ) : (

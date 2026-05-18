@@ -40,6 +40,7 @@ export interface LeaveRefDto {
   refUserId: string;
   refUserNm: string;
   qryYn: string;
+  updAt: string | null;  // 조회일자 (qryYn='Y'일 때만 값 존재)
 }
 
 export interface LeaveReqDetailDto extends LeaveReqSummaryDto {
@@ -98,7 +99,7 @@ export interface TmplCreateData {
 // ─── API 함수 ─────────────────────────────────────────────────────────────────
 
 const leaveReqApi = {
-  getList: (role: 'my' | 'approver'): Promise<LeaveReqSummaryDto[]> =>
+  getList: (role: 'my' | 'approver' | 'ref'): Promise<LeaveReqSummaryDto[]> =>
     apiClient.get('/api/leave-req', { params: { role } }).then((r) => r.data?.data ?? []),
 
   getDetail: (reqUserId: string, reqSn: number): Promise<LeaveReqDetailDto> =>
@@ -214,7 +215,7 @@ export interface MyLeaveBalanceDto {
 
 // ─── React Query 훅 ───────────────────────────────────────────────────────────
 
-export const useLeaveReqList = (role: 'my' | 'approver') =>
+export const useLeaveReqList = (role: 'my' | 'approver' | 'ref') =>
   useQuery({
     queryKey: ['leave-req', role],
     queryFn: () => leaveReqApi.getList(role),

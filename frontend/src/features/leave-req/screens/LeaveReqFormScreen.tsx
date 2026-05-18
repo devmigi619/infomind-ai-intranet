@@ -178,111 +178,55 @@ function CalendarGrid({ dates, onChange, mode, theme }: {
 
 // ─── 반일 시간 선택기 ──────────────────────────────────────────────────────────
 
-const HOUR_OPTS = Array.from({ length: 24 }, (_, i) => ({
-  value: String(i).padStart(2, '0'),
-  label: `${String(i).padStart(2, '0')}시`,
-}));
+type HalfDaySlot = 'am' | 'pm';
 
-const MIN_OPTS = [
-  { value: '00', label: '00분' },
-  { value: '30', label: '30분' },
+const HALF_DAY_SLOTS: { key: HalfDaySlot; label: string; range: string; st: string; end: string }[] = [
+  { key: 'am', label: '오전', range: '09:00 ~ 14:00', st: '0900', end: '1400' },
+  { key: 'pm', label: '오후', range: '14:00 ~ 18:00', st: '1400', end: '1800' },
 ];
 
-/** HHMM 문자열 → { h, m } */
-function hhmmParts(hhmm: string | null): { h: string; m: string } {
-  if (!hhmm || hhmm.length !== 4) return { h: '', m: '' };
-  return { h: hhmm.slice(0, 2), m: hhmm.slice(2, 4) };
-}
-
-/** { h, m } → HHMM 또는 null */
-function toHhmm(h: string, m: string): string | null {
-  return h && m ? `${h}${m}` : null;
-}
-
-/** HHMM "0900" → "09:00" 표시용 */
-function fmtHhmm(hhmm: string | null): string {
-  if (!hhmm || hhmm.length !== 4) return '';
-  return `${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}`;
-}
-
 /**
- * 시작/종료 시분 선택기.
- * 차이가 정확히 2시간(0.25일) 또는 4시간(0.5일)일 때만 유효 표시.
+ * 오전/오후 버튼 선택기.
+ * 선택하면 시작·종료 시분이 고정 세팅되고 직접 수정 불가.
  */
-function HalfDayTimePicker({ stHhmm, endHhmm, onChangeStart, onChangeEnd, theme }: {
-  stHhmm: string | null; endHhmm: string | null;
-  onChangeStart: (v: string | null) => void;
-  onChangeEnd: (v: string | null) => void;
+function HalfDaySelector({ slot, onChange, theme }: {
+  slot: HalfDaySlot;
+  onChange: (slot: HalfDaySlot, st: string, end: string) => void;
   theme: ReturnType<typeof useTheme>;
 }) {
-  const st  = hhmmParts(stHhmm);
-  const end = hhmmParts(endHhmm);
-
-  const handleStH  = (h: string)  => onChangeStart(toHhmm(h, st.m));
-  const handleStM  = (m: string)  => onChangeStart(toHhmm(st.h, m));
-  const handleEndH = (h: string)  => onChangeEnd(toHhmm(h, end.m));
-  const handleEndM = (m: string)  => onChangeEnd(toHhmm(end.h, m));
-
-  // 유효성: 차이 계산
-  let validityMsg: string | null = null;
-  let validityOk = false;
-  if (stHhmm && endHhmm) {
-    const stMin  = parseInt(stHhmm.slice(0,2)) * 60 + parseInt(stHhmm.slice(2,4));
-    const endMin = parseInt(endHhmm.slice(0,2)) * 60 + parseInt(endHhmm.slice(2,4));
-    const diff   = endMin - stMin;
-    if (diff === 120)      { validityMsg = '2시간 → 0.25일 적용';  validityOk = true; }
-    else if (diff === 240) { validityMsg = '4시간 → 0.5일 적용';   validityOk = true; }
-    else if (diff <= 0)    { validityMsg = '종료 시간이 시작보다 빠릅니다.'; }
-    else                   { validityMsg = '2시간 또는 4시간 단위만 신청 가능합니다.'; }
-  }
-
   return (
-    <View style={[hdp.root, { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }]}>
-      {/* 시작 시간 */}
-      <View style={hdp.row}>
-        <Text style={[hdp.label, { color: theme.text.muted }]}>시작</Text>
-        <View style={hdp.dropRow}>
-          <View style={{ width: 90 }}>
-            <AppDropdown value={st.h} onChange={handleStH} options={HOUR_OPTS} placeholder="시" />
-          </View>
-          <Text style={[hdp.colon, { color: theme.text.muted }]}>:</Text>
-          <View style={{ width: 80 }}>
-            <AppDropdown value={st.m} onChange={handleStM} options={MIN_OPTS} placeholder="분" />
-          </View>
-        </View>
-      </View>
-
-      {/* 종료 시간 */}
-      <View style={hdp.row}>
-        <Text style={[hdp.label, { color: theme.text.muted }]}>종료</Text>
-        <View style={hdp.dropRow}>
-          <View style={{ width: 90 }}>
-            <AppDropdown value={end.h} onChange={handleEndH} options={HOUR_OPTS} placeholder="시" />
-          </View>
-          <Text style={[hdp.colon, { color: theme.text.muted }]}>:</Text>
-          <View style={{ width: 80 }}>
-            <AppDropdown value={end.m} onChange={handleEndM} options={MIN_OPTS} placeholder="분" />
-          </View>
-        </View>
-      </View>
-
-      {/* 유효성 메시지 */}
-      {validityMsg && (
-        <Text style={[hdp.validity, { color: validityOk ? theme.semantic.success : theme.semantic.danger }]}>
-          {validityOk ? '✓ ' : '✕ '}{validityMsg}
-        </Text>
-      )}
+    <View style={hds.row}>
+      {HALF_DAY_SLOTS.map((s) => {
+        const active = slot === s.key;
+        return (
+          <TouchableOpacity
+            key={s.key}
+            onPress={() => onChange(s.key, s.st, s.end)}
+            activeOpacity={0.75}
+            style={[
+              hds.btn,
+              { borderColor: active ? theme.brand.primary : theme.border.default,
+                backgroundColor: active ? theme.brand.primary : theme.bg.surfaceMute },
+            ]}
+          >
+            <Text style={[hds.btnLabel, { color: active ? '#fff' : theme.text.body }]}>
+              {s.label}
+            </Text>
+            <Text style={[hds.btnRange, { color: active ? 'rgba(255,255,255,0.85)' : theme.text.muted }]}>
+              {s.range}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
 
-const hdp = StyleSheet.create({
-  root: { borderWidth: 1, borderRadius: 10, padding: 12, gap: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  label: { width: 32, fontSize: 13, fontWeight: '600' },
-  dropRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 },
-  colon: { fontSize: 16, fontWeight: '700' },
-  validity: { fontSize: 12, fontWeight: '500', paddingTop: 2 },
+const hds = StyleSheet.create({
+  row: { flexDirection: 'row', gap: 10 },
+  btn: { flex: 1, borderWidth: 1.5, borderRadius: 10, paddingVertical: 12, alignItems: 'center', gap: 4 },
+  btnLabel: { fontSize: 15, fontWeight: '700' },
+  btnRange: { fontSize: 12 },
 });
 
 function DateSelector({ dates, onChange, theme }: { dates:string[]; onChange:(d:string[])=>void; theme:ReturnType<typeof useTheme> }) {
@@ -1016,6 +960,7 @@ export function LeaveReqFormScreen() {
   const [pendingFiles, setPendingFiles] = useState<DocumentAsset[]>([]);
   const [leaveStHhmm, setLeaveStHhmm] = useState<string | null>(null);
   const [leaveEndHhmm, setLeaveEndHhmm] = useState<string | null>(null);
+  const [leaveSlot, setLeaveSlot] = useState<HalfDaySlot>('am');
 
   const { data: mstList = [] } = useLeaveMstList();
   const { data: dtlList = [] } = useLeaveDtlList(leaveCd || null);
@@ -1037,17 +982,9 @@ export function LeaveReqFormScreen() {
     if (dates.length === 0) { toast.error('신청 날짜를 선택해주세요.'); return; }
     if (aprvList.length === 0) { toast.error('결재자를 추가해주세요.'); return; }
 
-    // 반일 시간 유효성 검사
-    if (isHalfDay) {
-      if (!leaveStHhmm || !leaveEndHhmm) {
-        toast.error('반일 신청 시 시작/종료 시간을 입력해주세요.'); return;
-      }
-      const stMin  = parseInt(leaveStHhmm.slice(0,2)) * 60 + parseInt(leaveStHhmm.slice(2,4));
-      const endMin = parseInt(leaveEndHhmm.slice(0,2)) * 60 + parseInt(leaveEndHhmm.slice(2,4));
-      const diff = endMin - stMin;
-      if (diff !== 120 && diff !== 240) {
-        toast.error('시간 차이는 2시간(0.25일) 또는 4시간(0.5일)이어야 합니다.'); return;
-      }
+    // 반일 시간 선택 확인
+    if (isHalfDay && (!leaveStHhmm || !leaveEndHhmm)) {
+      toast.error('오전/오후를 선택해주세요.'); return;
     }
 
     try {
@@ -1104,8 +1041,10 @@ export function LeaveReqFormScreen() {
                 setLeaveDtlCd(v);
                 const dtl = dtlList.find(d => d.leaveDtlCd === v);
                 if (dtl?.leaveSe === 'H') {
+                  // 오전 기본값 세팅
+                  setLeaveSlot('am');
                   setLeaveStHhmm('0900');
-                  setLeaveEndHhmm('1300');
+                  setLeaveEndHhmm('1400');
                 } else {
                   setLeaveStHhmm(null);
                   setLeaveEndHhmm(null);
@@ -1115,16 +1054,28 @@ export function LeaveReqFormScreen() {
               placeholder="세부유형 선택"
               disabled={!leaveCd}
             />
+            {selectedDtl && selectedDtl.useAvlDcnt != null && (
+              <Text style={{ fontSize: 12, color: theme.text.muted }}>
+                사용 가능 일수:{' '}
+                <Text style={{ fontWeight: '700', color: theme.brand.primary }}>
+                  {selectedDtl.useAvlDcnt % 1 === 0
+                    ? selectedDtl.useAvlDcnt
+                    : selectedDtl.useAvlDcnt.toFixed(1)}일
+                </Text>
+              </Text>
+            )}
           </FormRow>
         )}
 
         {isHalfDay && (
-          <FormRow label="시간 입력" required theme={theme}>
-            <HalfDayTimePicker
-              stHhmm={leaveStHhmm}
-              endHhmm={leaveEndHhmm}
-              onChangeStart={setLeaveStHhmm}
-              onChangeEnd={setLeaveEndHhmm}
+          <FormRow label="오전 / 오후" required theme={theme}>
+            <HalfDaySelector
+              slot={leaveSlot}
+              onChange={(slot, st, end) => {
+                setLeaveSlot(slot);
+                setLeaveStHhmm(st);
+                setLeaveEndHhmm(end);
+              }}
               theme={theme}
             />
           </FormRow>

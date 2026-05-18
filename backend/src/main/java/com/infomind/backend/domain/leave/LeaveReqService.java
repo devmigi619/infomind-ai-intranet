@@ -1,5 +1,7 @@
 package com.infomind.backend.domain.leave;
 
+import com.infomind.backend.domain.admin.Department;
+import com.infomind.backend.domain.admin.DepartmentRepository;
 import com.infomind.backend.domain.admin.LeaveDtl;
 import com.infomind.backend.domain.admin.LeaveDtlId;
 import com.infomind.backend.domain.admin.LeaveDtlRepository;
@@ -18,7 +20,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayDeque;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Queue;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +38,7 @@ public class LeaveReqService {
     private final LeaveMstRepository     leaveMstRepo;
     private final LeaveDtlRepository     leaveDtlRepo;
     private final UserRepository         userRepo;
+    private final DepartmentRepository   deptRepo;
     private final LeaveBalanceMapper     balanceMapper;
 
     private static final DateTimeFormatter YMD = DateTimeFormatter.ofPattern("yyyyMMdd");
@@ -50,11 +57,26 @@ public class LeaveReqService {
                 .stream().map(this::toSummary).collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
+    public List<LeaveReqSummaryDto> getRefList(String userId) {
+        return mstRepo.findByRefUser(userId)
+                .stream().map(this::toSummary).collect(Collectors.toList());
+    }
+
     // ─── 상세 ──────────────────────────────────────────────────────────────────
 
-    @Transactional(readOnly = true)
-    public LeaveReqDetailDto getDetail(String reqUserId, Long reqSn) {
+    @Transactional
+    public LeaveReqDetailDto getDetail(String reqUserId, Long reqSn, String currentUserId) {
         LeaveReqMst mst = findMst(reqUserId, reqSn);
+        // 현재 사용자가 수신참조로 등록된 경우 조회여부 Y 처리
+        if (currentUserId != null) {
+            refRepo.findByIdReqUserIdAndIdReqSnAndIdRefUserId(reqUserId, reqSn, currentUserId)
+                    .filter(r -> !"Y".equals(r.getQryYn()))
+                    .ifPresent(r -> {
+                        r.markRead();
+                        refRepo.save(r);
+                    });
+        }
         return toDetail(mst);
     }
 
@@ -80,7 +102,8 @@ public class LeaveReqService {
 
         saveDates(reqUserId, nextSn, req.getDates(), req.getLeaveStHhmm(), req.getLeaveEndHhmm());
         saveAprv(reqUserId, nextSn, req.getAprvList());
-        saveRef(reqUserId, nextSn, req.getRefList());
+        saveRef(reqUserId, nextSn, req.getRefList(),
+                req.getDeptRefYn(), reqUserId);
 
         // 결재자가 있으면 즉시 '진행(2)' 상태로
         if (req.getAprvList() != null && !req.getAprvList().isEmpty()) {
@@ -115,7 +138,7 @@ public class LeaveReqService {
 
         saveDates(reqUserId, reqSn, req.getDates(), req.getLeaveStHhmm(), req.getLeaveEndHhmm());
         saveAprv(reqUserId, reqSn, req.getAprvList());
-        saveRef(reqUserId, reqSn, req.getRefList());
+        saveRef(reqUserId, reqSn, req.getRefList(), req.getDeptRefYn(), reqUserId);
 
         if (req.getAprvList() != null && !req.getAprvList().isEmpty()) {
             mst.updateStatus("2");
@@ -265,31 +288,15 @@ public class LeaveReqService {
     private BigDecimal calcUseDcnt(String leaveDtlCd, String leaveCd, List<String> dates,
                                     String leaveStHhmm, String leaveEndHhmm) {
         if (dates == null || dates.isEmpty()) return BigDecimal.ZERO;
+        // 반일(H)이면 날짜 수 × 0.5, 종일(F)이면 날짜 수 × 1
         BigDecimal perDay = BigDecimal.ONE;
         if (leaveDtlCd != null && leaveCd != null) {
             var dtlOpt = leaveDtlRepo.findById(new LeaveDtlId(leaveCd, leaveDtlCd));
             if (dtlOpt.isPresent() && "H".equals(dtlOpt.get().getLeaveSe())) {
-                if (leaveStHhmm != null && leaveEndHhmm != null) {
-                    int diffMin = parseHhmm(leaveEndHhmm) - parseHhmm(leaveStHhmm);
-                    if (diffMin == 120) {
-                        perDay = new BigDecimal("0.25");
-                    } else if (diffMin == 240) {
-                        perDay = new BigDecimal("0.5");
-                    } else {
-                        throw new IllegalArgumentException(
-                                "시간 차이는 2시간(0.25일) 또는 4시간(0.5일)이어야 합니다.");
-                    }
-                } else {
-                    perDay = new BigDecimal("0.5");
-                }
+                perDay = new BigDecimal("0.5");
             }
         }
         return perDay.multiply(new BigDecimal(dates.size()));
-    }
-
-    private static int parseHhmm(String hhmm) {
-        return Integer.parseInt(hhmm.substring(0, 2)) * 60
-             + Integer.parseInt(hhmm.substring(2, 4));
     }
 
     private void saveDates(String reqUserId, Long reqSn, List<String> dates,
@@ -314,13 +321,63 @@ public class LeaveReqService {
         }
     }
 
-    private void saveRef(String reqUserId, Long reqSn, List<String> refUserIds) {
-        if (refUserIds == null) return;
-        for (String refUserId : refUserIds) {
-            refRepo.save(LeaveReqRef.builder()
-                    .id(new LeaveReqRefId(reqUserId, reqSn, refUserId))
-                    .build());
+    private void saveRef(String reqUserId, Long reqSn, List<String> refUserIds,
+                         String deptRefYn, String reqUserIdForDept) {
+        Set<String> inserted = new HashSet<>();
+
+        // 1. 직접 지정 참조자
+        if (refUserIds != null) {
+            for (String refUserId : refUserIds) {
+                if (inserted.add(refUserId)) {
+                    refRepo.save(LeaveReqRef.builder()
+                            .id(new LeaveReqRefId(reqUserId, reqSn, refUserId))
+                            .build());
+                }
+            }
         }
+
+        // 2. 부서원 자동포함 (DEPT_REF_YN='Y')
+        if ("Y".equals(deptRefYn)) {
+            userRepo.findById(reqUserIdForDept)
+                    .map(User::getDeptCd)
+                    .ifPresent(deptCd -> {
+                        String rootDeptCd = findRootDeptCd(deptCd);
+                        Set<String> allDeptCds = collectSubtreeDeptCds(rootDeptCd);
+                        userRepo.findByDeptCdIn(allDeptCds).stream()
+                                .map(User::getUserId)
+                                .filter(uid -> !uid.equals(reqUserId))   // 신청자 제외
+                                .filter(inserted::add)                   // 중복 제외 + 집합 등록
+                                .forEach(uid -> refRepo.save(LeaveReqRef.builder()
+                                        .id(new LeaveReqRefId(reqUserId, reqSn, uid))
+                                        .build()));
+                    });
+        }
+    }
+
+    /** 부서 트리를 루트까지 올라가며 최상위 부서 코드를 반환 */
+    private String findRootDeptCd(String deptCd) {
+        String cur = deptCd;
+        while (true) {
+            var opt = deptRepo.findById(cur);
+            if (opt.isEmpty() || opt.get().getUpDeptCd() == null) return cur;
+            cur = opt.get().getUpDeptCd();
+        }
+    }
+
+    /** rootDeptCd 하위 전체 부서 코드(BFS, useYn='Y' 필터) */
+    private Set<String> collectSubtreeDeptCds(String rootDeptCd) {
+        Set<String> result = new HashSet<>();
+        Queue<String> queue = new ArrayDeque<>();
+        queue.add(rootDeptCd);
+        while (!queue.isEmpty()) {
+            String cd = queue.poll();
+            result.add(cd);
+            deptRepo.findByUpDeptCd(cd).stream()
+                    .filter(d -> "Y".equals(d.getUseYn()))
+                    .map(Department::getDeptCd)
+                    .forEach(queue::add);
+        }
+        return result;
     }
 
     private String resolveUserNm(String userId) {
@@ -386,6 +443,8 @@ public class LeaveReqService {
                 .refUserId(r.getId().getRefUserId())
                 .refUserNm(resolveUserNm(r.getId().getRefUserId()))
                 .qryYn(r.getQryYn())
+                .updAt("Y".equals(r.getQryYn()) && r.getUpdAt() != null
+                        ? r.getUpdAt().toString() : null)
                 .build()).collect(Collectors.toList());
 
         // 모든 날짜에 동일한 시간이 저장되므로 첫 번째 DTL에서 대표 시간 추출
@@ -453,7 +512,10 @@ public class LeaveReqService {
 
     @Getter @Builder
     public static class RefDto {
-        private String refUserId, refUserNm, qryYn;
+        private String refUserId, refUserNm;
+        private String qryYn;
+        /** 조회일자 (qryYn='Y'로 변경된 시점의 UPD_AT, ISO-8601 문자열) */
+        private String updAt;
     }
 
     @Getter

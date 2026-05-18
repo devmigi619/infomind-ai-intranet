@@ -8,5 +8,8 @@ public interface LeaveReqRefRepository extends JpaRepository<LeaveReqRef, LeaveR
 
     List<LeaveReqRef> findByIdReqUserIdAndIdReqSn(String reqUserId, Long reqSn);
 
+    java.util.Optional<LeaveReqRef> findByIdReqUserIdAndIdReqSnAndIdRefUserId(
+            String reqUserId, Long reqSn, String refUserId);
+
     void deleteByIdReqUserIdAndIdReqSn(String reqUserId, Long reqSn);
 }

@@ -27,6 +27,17 @@ public interface LeaveReqMstRepository extends JpaRepository<LeaveReqMst, LeaveR
         """)
     List<LeaveReqMst> findPendingByApprover(@Param("aprvUserId") String aprvUserId);
 
+    /** 수신참조로 지정된 신청 목록 — 반려(9) 제외, 신청일 최신순 */
+    @Query("""
+        SELECT DISTINCT m FROM LeaveReqMst m
+        JOIN LeaveReqRef r ON r.id.reqUserId = m.id.reqUserId
+                           AND r.id.reqSn    = m.id.reqSn
+        WHERE r.id.refUserId = :refUserId
+          AND m.aprvRsltSe <> '9'
+        ORDER BY m.crtAt DESC
+        """)
+    List<LeaveReqMst> findByRefUser(@Param("refUserId") String refUserId);
+
     /** 사용자별 최대 reqSn */
     @Query("SELECT MAX(m.id.reqSn) FROM LeaveReqMst m WHERE m.id.reqUserId = :userId")
     Optional<Long> findMaxReqSn(@Param("userId") String userId);

@@ -33,9 +33,9 @@ public class LeaveReqController {
             @AuthenticationPrincipal String userId,
             @RequestParam(defaultValue = "my") String role) {
         List<LeaveReqService.LeaveReqSummaryDto> list =
-                "approver".equals(role)
-                        ? service.getPendingForApprover(userId)
-                        : service.getMyList(userId);
+                "approver".equals(role) ? service.getPendingForApprover(userId)
+                : "ref".equals(role)    ? service.getRefList(userId)
+                : service.getMyList(userId);
         return ResponseEntity.ok(ApiResponse.ok(list));
     }
 
@@ -43,9 +43,10 @@ public class LeaveReqController {
 
     @GetMapping("/api/leave-req/{reqUserId}/{reqSn}")
     public ResponseEntity<ApiResponse<LeaveReqService.LeaveReqDetailDto>> getDetail(
+            @AuthenticationPrincipal String userId,
             @PathVariable String reqUserId,
             @PathVariable Long reqSn) {
-        return ResponseEntity.ok(ApiResponse.ok(service.getDetail(reqUserId, reqSn)));
+        return ResponseEntity.ok(ApiResponse.ok(service.getDetail(reqUserId, reqSn, userId)));
     }
 
     // ─── 생성 ──────────────────────────────────────────────────────────────────
