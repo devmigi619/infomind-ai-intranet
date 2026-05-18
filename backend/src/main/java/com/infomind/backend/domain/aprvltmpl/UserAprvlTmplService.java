@@ -26,7 +26,7 @@ public class UserAprvlTmplService {
 
     @Transactional(readOnly = true)
     public List<TmplDetailDto> getMyTemplates(String userId) {
-        return tmplRepo.findByIdUserIdOrderByIdAprvlIdAsc(userId)
+        return tmplRepo.findByIdUserIdOrderByCrtAtDesc(userId)
                 .stream()
                 .map(t -> toDetail(t,
                         aprvRepo.findByIdAprvlIdAndIdUserIdOrderByAprvOrdAsc(t.getId().getAprvlId(), userId),
@@ -44,6 +44,7 @@ public class UserAprvlTmplService {
                 UserAprvlTmpl.builder()
                         .id(new UserAprvlTmplId(aprvlId, userId))
                         .aprvlNm(req.getAprvlNm())
+                        .deptRefYn(req.getDeptRefYn() != null ? req.getDeptRefYn() : "N")
                         .build());
 
         saveAprvList(aprvlId, userId, req.getAprvList());
@@ -61,7 +62,7 @@ public class UserAprvlTmplService {
         UserAprvlTmpl tmpl = tmplRepo.findById(new UserAprvlTmplId(aprvlId, userId))
                 .orElseThrow(() -> new IllegalArgumentException("템플릿을 찾을 수 없습니다."));
 
-        tmpl.update(req.getAprvlNm());
+        tmpl.update(req.getAprvlNm(), req.getDeptRefYn());
 
         aprvRepo.deleteByIdAprvlIdAndIdUserId(aprvlId, userId);
         refRepo.deleteByIdAprvlIdAndIdUserId(aprvlId, userId);
@@ -133,6 +134,7 @@ public class UserAprvlTmplService {
                 .aprvlId(tmpl.getId().getAprvlId())
                 .userId(tmpl.getId().getUserId())
                 .aprvlNm(tmpl.getAprvlNm())
+                .deptRefYn(tmpl.getDeptRefYn())
                 .aprvList(aprvDtos)
                 .refList(refDtos)
                 .build();
@@ -145,6 +147,7 @@ public class UserAprvlTmplService {
         private String aprvlId;
         private String userId;
         private String aprvlNm;
+        private String deptRefYn;
         private List<AprvEntryDto> aprvList;
         private List<RefEntryDto>  refList;
     }
@@ -163,6 +166,7 @@ public class UserAprvlTmplService {
     @Getter
     public static class TmplCreateRequest {
         @NotBlank private String aprvlNm;
+        private String deptRefYn;
         private List<AprvEntryRequest> aprvList;
         private List<String>           refList;
     }

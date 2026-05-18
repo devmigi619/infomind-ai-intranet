@@ -33,7 +33,8 @@ public class UserAprvlTmpl extends BaseEntity {
     @Column(name = "RMK", columnDefinition = "text")
     private String rmk;
 
-    public void update(String aprvlNm) {
+    public void update(String aprvlNm, String deptRefYn) {
         this.aprvlNm = aprvlNm;
+        if (deptRefYn != null) this.deptRefYn = deptRefYn;
     }
 }

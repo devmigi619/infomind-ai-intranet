@@ -1,5 +1,6 @@
 package com.infomind.backend.domain.aprvltmpl;
 
+import com.infomind.backend.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -9,7 +10,7 @@ import lombok.*;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class UserAprvlTmplAprv {
+public class UserAprvlTmplAprv extends BaseEntity {
 
     @EmbeddedId
     private UserAprvlTmplAprvId id;

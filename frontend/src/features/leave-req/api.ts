@@ -54,6 +54,15 @@ export interface LeaveReqDetailDto extends LeaveReqSummaryDto {
   refList: LeaveRefDto[];
 }
 
+// ─── 결재선 공통 엔트리 (AprvlTmplModal / LeaveReqFormScreen 공용) ──────────────
+
+export interface AprvEntry {
+  aprvUserId: string;
+  aprvUserNm: string;
+  deptNm?: string;
+  jbgdNm?: string;
+}
+
 // ─── 결재선 템플릿 DTOs ───────────────────────────────────────────────────────
 
 export interface AprvTmplEntryDto {
@@ -71,6 +80,7 @@ export interface UserAprvlTmplDto {
   aprvlId: string;
   userId: string;
   aprvlNm: string;
+  deptRefYn: string;   // 'Y' | 'N'
   aprvList: AprvTmplEntryDto[];
   refList: RefTmplEntryDto[];
 }
@@ -92,6 +102,7 @@ export interface LeaveReqCreateData {
 
 export interface TmplCreateData {
   aprvlNm: string;
+  deptRefYn?: string;  // 'Y' | 'N'
   aprvList: { aprvUserId: string }[];
   refList: string[];
 }
