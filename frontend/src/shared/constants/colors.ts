@@ -1,7 +1,8 @@
 /**
- * @deprecated Phase 2 다크모드 마이그레이션 완료로 더 이상 사용되지 않습니다.
- * 모든 컴포넌트는 `useTheme()` 훅과 `themes.ts`의 시맨틱 토큰을 사용합니다.
- * 다음 정리 시점에 이 파일을 삭제하세요.
+ * 색상 상수 모음
+ * - `colors`: 다크모드 마이그레이션 이전의 정적 팔레트 (시맨틱 토큰은 `themes.ts` 사용)
+ * - `deptColors` / `getDeptColor` / `getDeptColorSoft`: 캘린더 부서별 색상 (테마와 무관한 도메인 색)
+ * - `mineHighlight`: 내 일정 강조 색
  */
 export const colors = {
   brand: {
@@ -50,3 +51,37 @@ export const colors = {
   black: '#000000',
   white: '#FFFFFF',
 };
+
+/** 캘린더 부서별 색 토큰 (알려진 부서코드용) */
+export const deptColors: Record<string, string> = {
+  ALL: '#64748B',   // 전사 — 회색
+  HR: '#EC4899',    // 인사 — 분홍
+  DEV: '#2563EB',   // 개발 — 파랑
+  SEC: '#8B5CF6',   // 보안 — 보라
+  SALES: '#F59E0B', // 영업 — 노랑
+  MNGT: '#10B981',  // 경영 — 초록
+  DSN: '#06B6D4',   // 디자인 — 시안
+};
+
+/** DB에 없는 부서코드용 해시 기반 폴백 팔레트 */
+const DEPT_PALETTE = [
+  '#2563EB', '#8B5CF6', '#F59E0B', '#10B981', '#EC4899',
+  '#06B6D4', '#F97316', '#6366F1',
+];
+
+/** 부서코드 → 색상 (알려진 코드는 deptColors, 미지 코드는 해시 폴백) */
+export function getDeptColor(deptCd: string | null): string {
+  if (!deptCd) return deptColors.ALL;
+  if (deptColors[deptCd]) return deptColors[deptCd];
+  let hash = 0;
+  for (const ch of deptCd) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
+  return DEPT_PALETTE[Math.abs(hash) % DEPT_PALETTE.length];
+}
+
+/** 부서색의 연한 버전 (배경용, ~10% opacity) */
+export function getDeptColorSoft(deptCd: string | null): string {
+  return getDeptColor(deptCd) + '18';
+}
+
+/** 내 일정 하이라이트 색 */
+export const mineHighlight = '#8b5cf6';

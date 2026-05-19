@@ -30,6 +30,7 @@ import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersS
 import { AdminBoardsScreen } from './src/features/admin-boards/screens/AdminBoardsScreen';
 import { VehicleScreen } from './src/features/vehicle/screens/VehicleScreen';
 import { MtgrScreen } from './src/features/mtgr/screens/MtgrScreen';
+import { CalendarScreen } from './src/features/calendar/screens/CalendarScreen';
 import { AdminLeaveScreen } from './src/features/admin-leave/screens/AdminLeaveScreen';
 import { LeaveReqScreen } from './src/features/leave-req/screens/LeaveReqScreen';
 import { LeaveReqFormScreen } from './src/features/leave-req/screens/LeaveReqFormScreen';
@@ -64,6 +65,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   boards: <AdminBoardsScreen />,
   vehicle: <VehicleScreen />,
   meeting: <MtgrScreen />,
+  calendar: <CalendarScreen />,
   leave: <AdminLeaveScreen />,
   'leave-req': <LeaveReqScreen />,
   'leave-req-form': <LeaveReqFormScreen />,

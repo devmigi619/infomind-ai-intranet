@@ -123,7 +123,7 @@
 
 ## Phase 2
 
-- [ ] 캘린더 / 일정관리
+- [x] 캘린더 / 일정관리 — 백엔드 + 프론트엔드 완료
 - [x] 회의실 예약 (MtgrScreen grid/my/form, 타임슬롯 그리드, 충돌 검사, 연장·취소)
 - [x] 차량 예약 (VehicleScreen grid/my/form, 오늘~+7일 예약, 타임슬롯 그리드, 충돌 검사, 반납·연장·취소)
 - [ ] 통합검색 (TopHeader 검색바 동작 — 키워드 풀텍스트, PostgreSQL 풀텍스트 또는 ElasticSearch)

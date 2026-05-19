@@ -520,6 +520,58 @@ LP 헤더 "열기" 버튼 → `setBoardLpHandoff({ brdId, pstSn? })` + `setActiv
 | `GET /api/files/{afileId}` | GET | 그룹 내 파일 목록 |
 | `DELETE /api/files/{afileId}/{sn}` | DELETE | 소프트 삭제 (`del_yn='Y'`) |
 
+## Schedule (캘린더) 도메인
+
+일정 등록·수정·삭제 + 반복 일정 + 참석자 관리.
+
+### 테이블 구조
+
+| 테이블 | 엔티티 | 키 | 비고 |
+|---|---|---|---|
+| `INT_SCHD` | `Schedule` | `SCHD_SN` (Long) | 일정 본체. 반복 여부 `LOOP_YN` |
+| `INT_SCHD_ATTD` | `ScheduleAttd` | `(SCHD_SN, ATTD_USER_ID)` | 참석자. `USER_ATTD_YN` / `USER_QRY_YN` |
+| `INT_SCHD_EXCP` | `ScheduleExcp` | `(SCHD_SN, EXCP_YMD)` | 반복 예외. `END_YN='N'` = skip, `END_YN='Y'` = 시리즈 종료 마커 |
+
+### 반복 일정 처리 패턴
+
+반복 일정은 시리즈 row 1개(`LOOP_YN='Y'`)로 저장하고, 예외(skip·종료)는 `INT_SCHD_EXCP`로 표현한다. 실제 발생 인스턴스는 조회 시점에 서비스에서 펼친다(`ScheduleService.findByRange`).
+
+### 부서 권한 정책
+
+- `DEPT_CD = null` → 전사 공개
+- 일반 사용자 조회 범위: 자기 부서 + 전사(`null`) + 참석자로 포함된 일정
+- 서버에서 부서 강제 필터링은 미구현 (클라이언트가 `dept` 파라미터로 제어)
+
+### API
+
+| 경로 | 설명 |
+|---|---|
+| `GET /api/schedules?st=&end=&dept=&mine=` | 기간 조회 + 반복 펼치기 |
+| `GET /api/schedules/{schdSn}` | 단건 조회 |
+| `POST /api/schedules` | 일정 등록 |
+| `PUT /api/schedules/{schdSn}` | 전체 수정 (시리즈 전체 교체) |
+| `DELETE /api/schedules/{schdSn}` | 시리즈 전체 삭제 (excp·참석자 포함) |
+| `DELETE /api/schedules/{schdSn}/occurrences/{occurrenceYmd}` | 반복 단일 인스턴스 삭제 (`int_schd_excp` end_yn='N' INSERT) |
+| `PUT /api/schedules/{schdSn}/occurrences/{occurrenceYmd}` | 반복 단일 인스턴스 수정 (excp INSERT + 새 단발 row INSERT, 한 트랜잭션) |
+| `PUT /api/schedules/{schdSn}/from-occurrence/{occurrenceYmd}` | 그 발생일 이후 시리즈 교체 (excp end_yn='Y' INSERT + 새 시리즈 row INSERT, 한 트랜잭션) |
+| `POST /api/schedules/{schdSn}/viewed` | 조회 마킹 (참석자별 user_qry_yn) |
+| `POST /api/schedules/{schdSn}/respond?attended=` | 참석/불참 응답 |
+
+> "이 일정부터 이후 전부 삭제"(`DELETE /from-occurrence/...`)는 백엔드 구현 완료. 프론트엔드에서 아직 미노출.
+
+### 일반 사용자용 부서 조회
+
+`GET /api/org/departments` — 인증된 모든 사용자가 접근 가능. `USE_YN='Y'`인 부서만 반환. 일정 등록 시 부서 선택 콤보용. 관리자 전용 `/api/admin/departments`(비활성 포함)와 분리된 별도 엔드포인트.
+
+### 프론트엔드 연동
+
+| 파일 | 역할 |
+|---|---|
+| `features/calendar/api.ts` | HTTP 함수 + React Query 훅 전체 |
+| `features/calendar/screens/CalendarScreen.tsx` | 풀뷰 컨테이너 (4뷰 토글 + 필터) |
+| `features/calendar/components/` | MonthView / WeekView / WeekListView / DayView / ListView / 모달류 |
+| `features/calendar/components/CalendarQuickPanel.tsx` | LeftPanel 퀵뷰 |
+
 ## Menu 도메인
 
 NavRail/모바일 메뉴 목록을 DB(`INT_MENU`)에서 관리한다. 하드코딩 없이 DB INSERT만으로 메뉴 추가·변경 가능.
