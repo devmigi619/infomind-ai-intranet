@@ -9,6 +9,8 @@
 .vscode/
 *.iml
 
+ai/app/hj
+
 # OS
 .DS_Store
 Thumbs.db

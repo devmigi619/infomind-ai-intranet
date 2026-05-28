@@ -15,6 +15,9 @@ interface ChatMessageProps {
   onActionPress?: (target: string) => void;
   isStreaming?: boolean;
   isThinking?: boolean;
+  interruptType?: 'human' | 'excu';
+  onInterruptApprove?: () => void;
+  onInterruptCancel?: () => void;
 }
 
 // Three-dot thinking indicator. Each dot pulses with a 0.2s delay,
@@ -74,6 +77,35 @@ function ThinkingDots({ theme }: { theme: AppTheme }) {
   );
 }
 
+// Single pulsing dot — used alongside progress text.
+function ThinkingDot({ theme }: { theme: AppTheme }) {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 560, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0, duration: 840, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [anim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.dot,
+        { backgroundColor: theme.text.subtle },
+        {
+          opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
+          transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
+        },
+      ]}
+    />
+  );
+}
+
 // Streaming cursor — blinks at 1s cycle.
 function StreamingCursor({ theme }: { theme: AppTheme }) {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -109,15 +141,32 @@ export function ChatMessage({
   onActionPress,
   isStreaming,
   isThinking,
+  interruptType,
+  onInterruptApprove,
+  onInterruptCancel,
 }: ChatMessageProps) {
   const isUser = role === 'user';
   const theme = useTheme();
 
-  // Thinking bubble: AI side, dots only (no text content yet).
+  // Thinking bubble: progress 텍스트가 있으면 텍스트+점, 없으면 3점 애니메이션
   if (isThinking) {
     return (
       <View style={[styles.row, styles.rowAssistant]}>
-        <ThinkingDots theme={theme} />
+        {content ? (
+          <View style={[styles.thinkingBubble, { backgroundColor: theme.bg.surfaceMute }]}>
+            <ThinkingDot theme={theme} />
+            <Text
+              style={[
+                styles.progressText,
+                { color: theme.text.subtle },
+              ]}
+            >
+              {content}
+            </Text>
+          </View>
+        ) : (
+          <ThinkingDots theme={theme} />
+        )}
       </View>
     );
   }
@@ -151,6 +200,29 @@ export function ChatMessage({
               </TouchableOpacity>
             ))}
           </View>
+        )}
+        {interruptType === 'excu' && (
+          <View style={styles.actions}>
+            <TouchableOpacity
+              onPress={onInterruptApprove}
+              style={[styles.actionButton, { backgroundColor: theme.semantic.success, borderColor: theme.semantic.success }]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.actionText, { color: '#fff' }]}>승인</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={onInterruptCancel}
+              style={[styles.actionButton, { borderColor: theme.border.default }]}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.actionText, { color: theme.text.body }]}>취소</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {interruptType === 'human' && (
+          <Text style={[styles.interruptHint, { color: theme.text.subtle }]}>
+            아래 입력창에 답변을 입력해주세요
+          </Text>
         )}
       </View>
     </View>
@@ -220,6 +292,22 @@ const styles = StyleSheet.create({
   },
   actionText: {
     fontSize: 12,
+    fontFamily: Platform.select({
+      web: "'Noto Sans KR', sans-serif",
+      default: undefined,
+    }),
+  },
+  interruptHint: {
+    fontSize: 12,
+    marginTop: 8,
+    fontFamily: Platform.select({
+      web: "'Noto Sans KR', sans-serif",
+      default: undefined,
+    }),
+  },
+  progressText: {
+    fontSize: 13,
+    lineHeight: 20,
     fontFamily: Platform.select({
       web: "'Noto Sans KR', sans-serif",
       default: undefined,

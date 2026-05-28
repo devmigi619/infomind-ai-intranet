@@ -16,7 +16,7 @@ interface MobileAppProps {
   onNavigate: (target: string) => void;
 }
 
-export function MobileApp({ user, onLogout }: MobileAppProps) {
+export function MobileApp({ user, onLogout, onNavigate }: MobileAppProps) {
   const theme = useTheme();
   const openSettingsScreen = useUiStore((s) => s.openSettingsScreen);
   const isCustomizationOpen = useUiStore((s) => s.isCustomizationOpen);
@@ -38,7 +38,7 @@ export function MobileApp({ user, onLogout }: MobileAppProps) {
 
           {/* Body: 메인 영역 — 풀뷰는 이 안에서만 슬라이드 (헤더/탭바 침범 X) */}
           <View style={styles.body}>
-            <MobileMainScreen userName={user.name} />
+            <MobileMainScreen user={user} onNavigate={onNavigate} />
             {/* 풀뷰 — body 자식, absolute fill로 부모 영역 안에 갇힘 */}
             <MobileFullScreenRouter />
           </View>

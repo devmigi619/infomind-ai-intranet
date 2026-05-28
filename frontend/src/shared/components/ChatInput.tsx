@@ -17,6 +17,7 @@ interface ChatInputProps {
   onSend: () => void;
   disabled?: boolean;
   theme?: AppTheme;
+  placeholder?: string;
 }
 
 // 1줄 ≈ lineHeight(21) + padding(top 6 + bottom 6) = 33px
@@ -24,7 +25,7 @@ interface ChatInputProps {
 const MIN_HEIGHT = 33;
 const MAX_HEIGHT = 117;
 
-export function ChatInput({ value, onChangeText, onSend, disabled, theme }: ChatInputProps) {
+export function ChatInput({ value, onChangeText, onSend, disabled, theme, placeholder }: ChatInputProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [inputHeight, setInputHeight] = useState(MIN_HEIGHT); // Native 전용
   const inputRef = useRef<TextInput>(null);
@@ -112,7 +113,7 @@ export function ChatInput({ value, onChangeText, onSend, disabled, theme }: Chat
           ]}
           value={value}
           onChangeText={onChangeText}
-          placeholder="무엇이든 물어보세요"
+          placeholder={placeholder ?? '무엇이든 물어보세요'}
           placeholderTextColor={placeholderColor}
           multiline
           editable={!disabled}

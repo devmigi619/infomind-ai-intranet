@@ -1,12 +1,36 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, Platform } from 'react-native';
-import { Sparkles } from 'lucide-react-native';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Platform,
+  TouchableOpacity,
+  Animated,
+  Easing,
+  Pressable,
+} from 'react-native';
+import { Sparkles, Menu } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatMessage } from '../../../shared/components/ChatMessage';
 import { ChatInput } from '../../../shared/components/ChatInput';
 import { FloatingResetButton } from '../../../shared/components/FloatingResetButton';
 import { useUiStore } from '../../../store/uiStore';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useResponsive } from '../../../shared/hooks/useResponsive';
+import { ChatHistorySidebar } from '../components/ChatHistorySidebar';
+import { ChatAprvModal } from '../components/ChatAprvModal';
+import { InterruptReplyPanel } from '../components/InterruptReplyPanel';
+import { useChatSessionMessages } from '../api';
+import { useCurrentUser } from '../../auth/api';
+import type { AprvEntry } from '../../leave-req/api';
+
+const generateSessionId = (): string => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+};
 
 interface ActionLink {
   label: string;
@@ -20,6 +44,7 @@ interface Message {
   actions?: ActionLink[];
   isStreaming?: boolean;
   isThinking?: boolean;
+  interruptType?: 'human' | 'excu';
 }
 
 interface MainScreenProps {
@@ -28,65 +53,142 @@ interface MainScreenProps {
   onAiResponseComplete?: () => void;
 }
 
+const THINKING_ID = 'thinking';
+const STREAMING_ID = 'streaming';
+const DRAWER_WIDTH = 260;
+
 export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScreenProps) {
+  const { isMobile } = useResponsive();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [pendingInterrupt, setPendingInterrupt] = useState<'human' | 'excu' | null>(null);
+  const [humanInterruptQuestion, setHumanInterruptQuestion] = useState<string>('');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // ─── 결재선 interrupt 상태 ───────────────────────────────────────────────
+  // interrupt payload에 aprvl_list가 포함된 경우에만 non-null.
+  const [interruptAprvlList, setInterruptAprvlList] = useState<AprvEntry[] | null>(null);
+  const [interruptRefList,   setInterruptRefList]   = useState<AprvEntry[]>([]);
+  const [showAprvModal,      setShowAprvModal]       = useState(false);
+
+  // 현재 사용자 ID (AprvLineEditorPanel에서 본인 제외용)
+  const { data: currentUser } = useCurrentUser();
+
+  // ─── 세션 관리 ───────────────────────────────────────────────────────────
+  const [activeSessionId, setActiveSessionId] = useState<string>(() => generateSessionId());
+  const sessionIdRef = useRef<string>(activeSessionId);
+  // turnIdRef: /chat SSE의 turn_id 이벤트로 수신한 값
+  // MemorySaver 체크포인트 식별용 — /chat/resume 시 전송
+  const turnIdRef = useRef<string>('');
+
+  // 이력에서 세션 선택 시 메시지 로딩용
+  const [selectedSessId, setSelectedSessId] = useState<string | null>(null);
+  const { data: historyData } = useChatSessionMessages(selectedSessId);
+
   const scrollRef = useRef<ScrollView>(null);
+
   const setLastUserMessage = useUiStore((s) => s.setLastUserMessage);
   const markAiUnread = useUiStore((s) => s.markAiUnread);
+  const chatResetCounter = useUiStore((s) => s.chatResetCounter);
   const theme = useTheme();
 
-  const sendMessage = useCallback(
-    async (text: string) => {
-      if (!text.trim() || isStreaming) return;
-      setLastUserMessage(text.trim());
+  // ─── 드로어 애니메이션 (모바일) ───────────────────────────────────────────
+  const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
 
-      const userMsgId = `u-${Date.now()}`;
-      const thinkingId = 'thinking';
+  useEffect(() => {
+    Animated.timing(drawerAnim, {
+      toValue: drawerOpen ? 0 : -DRAWER_WIDTH,
+      duration: 240,
+      easing: Easing.bezier(0.16, 1, 0.3, 1),
+      useNativeDriver: false,
+    }).start();
+  }, [drawerOpen, drawerAnim]);
 
-      const userMsg: Message = {
-        id: userMsgId,
-        role: 'user',
-        content: text.trim(),
-      };
-      const thinkingMsg: Message = {
-        id: thinkingId,
-        role: 'assistant',
-        content: '',
-        isThinking: true,
-      };
+  // ─── 이력 세션 메시지 로딩 ───────────────────────────────────────────────
+  useEffect(() => {
+    if (!selectedSessId || !historyData || historyData.length === 0) return;
+    setMessages(
+      historyData.map((m) => ({
+        id: `h-${m.chatSn}`,
+        role: m.chatSe === 'U' ? 'user' : 'assistant',
+        content: m.chatDesc,
+      })),
+    );
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
+  }, [selectedSessId, historyData]);
 
-      setMessages((prev) => [...prev, userMsg, thinkingMsg]);
-      setInputText('');
+  // ─── 리셋 ────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (chatResetCounter === 0) return;
+    const newId = generateSessionId();
+    sessionIdRef.current = newId;
+    setActiveSessionId(newId);
+    setSelectedSessId(null);
+    setMessages([]);
+    setPendingInterrupt(null);
+    setHumanInterruptQuestion('');
+    setInterruptAprvlList(null);
+    setInterruptRefList([]);
+    setShowAprvModal(false);
+  }, [chatResetCounter]);
+
+  // ─── 핸들러: 새 세션 ─────────────────────────────────────────────────────
+  const handleNewSession = useCallback(() => {
+    const newId = generateSessionId();
+    sessionIdRef.current = newId;
+    setActiveSessionId(newId);
+    setSelectedSessId(null);
+    setMessages([]);
+    setPendingInterrupt(null);
+    setHumanInterruptQuestion('');
+    setInterruptAprvlList(null);
+    setInterruptRefList([]);
+    setShowAprvModal(false);
+    setDrawerOpen(false);
+  }, []);
+
+  // ─── 핸들러: 세션 선택 ───────────────────────────────────────────────────
+  const handleSelectSession = useCallback((sessId: string) => {
+    sessionIdRef.current = sessId;
+    setActiveSessionId(sessId);
+    setSelectedSessId(sessId);
+    setMessages([]); // 로딩 중 클리어
+    setPendingInterrupt(null);
+    setDrawerOpen(false);
+  }, []);
+
+  // ─── SSE 스트림 ──────────────────────────────────────────────────────────
+  const _runSseStream = useCallback(
+    async (url: string, body: object, token: string | null) => {
+      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.191:8000';
+
+      setMessages((prev) => [
+        ...prev,
+        { id: THINKING_ID, role: 'assistant', content: '', isThinking: true },
+      ]);
       setIsStreaming(true);
 
       try {
-        const token = await AsyncStorage.getItem('token');
-        const history = messages.map((m) => ({
-          role: m.role,
-          content: m.content,
-        }));
-
-        const response = await fetch('http://localhost/ai/chat', {
+        const response = await fetch(`${AI_URL}${url}`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
             Accept: 'text/event-stream',
           },
-          body: JSON.stringify({ message: text.trim(), history }),
+          body: JSON.stringify(body),
         });
 
-        if (!response.ok || !response.body) {
-          throw new Error('SSE connection failed');
-        }
+        if (!response.ok || !response.body) throw new Error('SSE connection failed');
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let actions: ActionLink[] = [];
         let firstTokenReceived = false;
-        const streamingId = 'streaming';
+        let detectedInterrupt: 'human' | 'excu' | null = null;
+        let interruptQuestion: string | null = null; // interrupt payload의 question/preview 텍스트
 
         for (;;) {
           const { done, value } = await reader.read();
@@ -96,59 +198,109 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
             if (!line.startsWith('data: ')) continue;
             try {
               const data = JSON.parse(line.slice(6));
-              if (data.type === 'meta') {
-                actions = data.actions || [];
+              if (data.type === 'turn_id') {
+                // 백엔드가 매 턴마다 생성한 MemorySaver thread_id
+                turnIdRef.current = data.turn_id;
+              } else if (data.type === 'meta') {
+                actions = data.actions ?? [];
+              } else if (data.type === 'progress') {
+                // thinking 버블 텍스트를 진행 상태로 업데이트
+                setMessages((prev) =>
+                  prev.map((m) =>
+                    m.id === THINKING_ID ? { ...m, content: data.status } : m,
+                  ),
+                );
               } else if (data.type === 'token') {
                 if (!firstTokenReceived) {
                   firstTokenReceived = true;
                   setMessages((prev) =>
                     prev.map((m) =>
-                      m.id === thinkingId
-                        ? {
-                            id: streamingId,
-                            role: 'assistant',
-                            content: data.content,
-                            isStreaming: true,
-                          }
+                      m.id === THINKING_ID
+                        ? { id: STREAMING_ID, role: 'assistant', content: data.content, isStreaming: true }
                         : m,
                     ),
                   );
                 } else {
                   setMessages((prev) =>
                     prev.map((m) =>
-                      m.id === streamingId ? { ...m, content: m.content + data.content } : m,
+                      m.id === STREAMING_ID
+                        ? { ...m, content: m.content + data.content }
+                        : m,
                     ),
                   );
                 }
+              } else if (data.type === 'interrupt') {
+                detectedInterrupt = data.interrupt_type as 'human' | 'excu';
+                // node_excu_preflight처럼 토큰 스트리밍 없이 interrupt가 발생한 경우
+                // question/preview 텍스트를 payload에서 직접 추출한다.
+                interruptQuestion = data.question ?? data.preview ?? null;
+                // human interrupt라면 패널에 표시할 질문 텍스트를 state에 저장
+                if (data.interrupt_type === 'human' && interruptQuestion) {
+                  setHumanInterruptQuestion(interruptQuestion);
+                }
+                // 결재선 데이터가 있으면 저장 (excu + 결재선 필요 intent일 때만 포함)
+                if (data.interrupt_type === 'excu' && data.aprvl_list !== undefined) {
+                  setInterruptAprvlList(data.aprvl_list as AprvEntry[]);
+                  setInterruptRefList((data.ref_list ?? []) as AprvEntry[]);
+                } else {
+                  setInterruptAprvlList(null);
+                  setInterruptRefList([]);
+                }
               } else if (data.type === 'done') {
+                const ts = `a-${Date.now()}`;
                 setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === streamingId
-                      ? {
-                          ...m,
-                          id: `a-${Date.now()}`,
-                          actions,
-                          isStreaming: false,
-                        }
-                      : m,
-                  ),
+                  prev.map((m) => {
+                    if (m.id === STREAMING_ID) {
+                      // 토큰이 스트리밍된 정상 경로
+                      return {
+                        ...m,
+                        id: ts,
+                        actions,
+                        isStreaming: false,
+                        interruptType: detectedInterrupt ?? undefined,
+                      };
+                    }
+                    if (m.id === THINKING_ID) {
+                      // 토큰 없이 interrupt된 경우 (node_excu_preflight 등)
+                      // question 텍스트를 content로 세팅하고 thinking 상태 해제
+                      return {
+                        ...m,
+                        id: ts,
+                        content: interruptQuestion ?? m.content,
+                        isThinking: false,
+                        isStreaming: false,
+                        actions,
+                        interruptType: detectedInterrupt ?? undefined,
+                      };
+                    }
+                    return m;
+                  }),
                 );
+                if (detectedInterrupt) setPendingInterrupt(detectedInterrupt);
               }
             } catch {
-              // ignore parse errors for incomplete chunks
+              // incomplete chunk — skip
             }
           }
         }
 
+        // done 이벤트 없이 스트림 종료 시 정리
+        // THINKING_ID 도 함께 처리 — interrupt 없이 스트림이 끊긴 경우 thinking 상태 해제
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === streamingId ? { ...m, id: `a-${Date.now()}`, isStreaming: false } : m,
-          ),
+          prev.map((m) => {
+            if (m.id === STREAMING_ID) {
+              return { ...m, id: `a-${Date.now()}`, isStreaming: false };
+            }
+            if (m.id === THINKING_ID) {
+              return { ...m, id: `a-${Date.now()}`, isThinking: false, isStreaming: false };
+            }
+            return m;
+          }),
         );
       } catch {
         setMessages((prev) =>
           prev.map((m) =>
-            m.id === 'thinking' || m.id === 'streaming'
+            m.id === THINKING_ID || m.id === STREAMING_ID
               ? {
                   id: `a-${Date.now()}`,
                   role: 'assistant',
@@ -166,7 +318,62 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         onAiResponseComplete?.();
       }
     },
-    [isStreaming, messages, onAiResponseComplete, setLastUserMessage, markAiUnread],
+    [markAiUnread, onAiResponseComplete],
+  );
+
+  const sendMessage = useCallback(
+    async (text: string) => {
+      if (!text.trim() || isStreaming) return;
+      setLastUserMessage(text.trim());
+
+      const history = messages.map((m) => ({ role: m.role, content: m.content }));
+      setMessages((prev) => [
+        ...prev,
+        { id: `u-${Date.now()}`, role: 'user', content: text.trim() },
+      ]);
+      setInputText('');
+
+      const token = await AsyncStorage.getItem('token');
+      await _runSseStream(
+        '/ai/chat',
+        { message: text.trim(), history, session_id: sessionIdRef.current },
+        token,
+      );
+    },
+    [isStreaming, messages, setLastUserMessage, _runSseStream],
+  );
+
+  const sendResume = useCallback(
+    async (resumeValue: string) => {
+      if (isStreaming) return;
+
+      setMessages((prev) =>
+        prev.map((m, i) =>
+          i === prev.length - 1 && m.role === 'assistant'
+            ? { ...m, interruptType: undefined }
+            : m,
+        ),
+      );
+
+      setMessages((prev) => [
+        ...prev,
+        { id: `u-${Date.now()}`, role: 'user', content: resumeValue },
+      ]);
+      setInputText('');
+      setPendingInterrupt(null);
+      setHumanInterruptQuestion('');
+      setInterruptAprvlList(null);
+      setInterruptRefList([]);
+      setShowAprvModal(false);
+
+      const token = await AsyncStorage.getItem('token');
+      await _runSseStream(
+        '/ai/chat/resume',
+        { turn_id: turnIdRef.current, resume_value: resumeValue },
+        token,
+      );
+    },
+    [isStreaming, _runSseStream],
   );
 
   const handleSend = useCallback(() => {
@@ -175,11 +382,21 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
 
   const isEmpty = messages.length === 0;
 
-  return (
+  // ─── 사이드바 (공통) ─────────────────────────────────────────────────────
+  const sidebar = (
+    <ChatHistorySidebar
+      activeSessId={activeSessionId}
+      onSelectSession={handleSelectSession}
+      onNewSession={handleNewSession}
+    />
+  );
+
+  // ─── 채팅 영역 ────────────────────────────────────────────────────────────
+  const chatArea = (
     <View
       style={[
-        styles.container,
-        isEmpty && styles.containerEmpty,
+        styles.chatArea,
+        isEmpty && styles.chatAreaEmpty,
         { backgroundColor: theme.bg.surface },
       ]}
     >
@@ -188,12 +405,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
           <View style={[styles.iconWrap, { backgroundColor: theme.brand.primaryTint }]}>
             <Sparkles size={32} color={theme.brand.primary} />
           </View>
-          <Text
-            style={[
-              styles.welcomeTitle,
-              { color: theme.text.primary },
-            ]}
-          >
+          <Text style={[styles.welcomeTitle, { color: theme.text.primary }]}>
             안녕하세요, {user?.name ?? ''}님
           </Text>
           <Text style={[styles.welcomeSubtitle, { color: theme.text.muted }]}>
@@ -216,30 +428,169 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
               onActionPress={(target) => onNavigate(target)}
               isStreaming={msg.isStreaming}
               isThinking={msg.isThinking}
+              interruptType={msg.interruptType}
+              onInterruptApprove={() => {
+                if (interruptAprvlList !== null) {
+                  // 결재선 편집 모달 열기
+                  setShowAprvModal(true);
+                } else {
+                  // 결재선 없는 일반 excu / human — 바로 resume
+                  sendResume('승인');
+                }
+              }}
+              onInterruptCancel={() => sendResume('취소')}
             />
           ))}
         </ScrollView>
       )}
 
-      {/* Floating reset button — 채팅창 우측 하단 */}
       <FloatingResetButton />
 
-      <ChatInput
-        value={inputText}
-        onChangeText={setInputText}
-        onSend={handleSend}
-        disabled={isStreaming}
-        theme={theme}
-      />
+      {pendingInterrupt === 'human' ? (
+        <InterruptReplyPanel
+          question={humanInterruptQuestion}
+          theme={theme}
+          onSend={(answer) => sendResume(answer)}
+          onCancel={() => sendResume('취소')}
+        />
+      ) : (
+        <ChatInput
+          value={inputText}
+          onChangeText={setInputText}
+          onSend={handleSend}
+          disabled={isStreaming || pendingInterrupt === 'excu'}
+          theme={theme}
+        />
+      )}
+    </View>
+  );
+
+  // ─── 결재선 편집 모달 (공통) ─────────────────────────────────────────────
+  const aprvModal = (
+    <ChatAprvModal
+      visible={showAprvModal}
+      initialAprvList={interruptAprvlList ?? []}
+      initialRefList={interruptRefList}
+      currentUserId={currentUser?.userId}
+      onApprove={(editedAprvList, editedRefList) => {
+        // 편집된 결재선을 JSON으로 직렬화해 resume_value로 전송
+        const resumeValue = JSON.stringify({
+          decision:   '승인',
+          aprvl_list: editedAprvList.map((a) => ({ aprvUserId: a.aprvUserId })),
+          ref_list:   editedRefList.map((r) => r.aprvUserId),
+        });
+        sendResume(resumeValue);
+      }}
+      onCancel={() => {
+        setShowAprvModal(false);
+      }}
+    />
+  );
+
+  // ─── PC 레이아웃 ─────────────────────────────────────────────────────────
+  if (!isMobile) {
+    return (
+      <View style={styles.pcContainer}>
+        {sidebar}
+        {chatArea}
+        {aprvModal}
+      </View>
+    );
+  }
+
+  // ─── 모바일 레이아웃 ─────────────────────────────────────────────────────
+  return (
+    <View style={styles.mobileContainer}>
+      {aprvModal}
+      {/* 햄버거 버튼 */}
+      <TouchableOpacity
+        style={[styles.hamburger, { backgroundColor: theme.bg.surface }]}
+        onPress={() => setDrawerOpen(true)}
+        activeOpacity={0.7}
+        hitSlop={8}
+      >
+        <Menu size={18} color={theme.text.muted} />
+      </TouchableOpacity>
+
+      {chatArea}
+
+      {/* 드로어 오버레이 */}
+      {drawerOpen && (
+        <Pressable
+          style={[styles.overlay]}
+          onPress={() => setDrawerOpen(false)}
+        >
+          <View style={[styles.overlayBg, { backgroundColor: 'rgba(0,0,0,0.35)' }]} />
+        </Pressable>
+      )}
+
+      {/* 드로어 패널 */}
+      <Animated.View
+        style={[
+          styles.drawer,
+          { backgroundColor: theme.bg.surfaceAlt },
+          { transform: [{ translateX: drawerAnim }] },
+        ]}
+        pointerEvents={drawerOpen ? 'auto' : 'none'}
+      >
+        {sidebar}
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  // ─── PC ────────────────────────────────────────────────────────────────
+  pcContainer: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  // ─── Mobile ────────────────────────────────────────────────────────────
+  mobileContainer: {
+    flex: 1,
+    position: 'relative',
+  },
+  hamburger: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10,
+    width: 34,
+    height: 34,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 20,
+  },
+  overlayBg: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  drawer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    bottom: 0,
+    width: DRAWER_WIDTH,
+    zIndex: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 2, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  // ─── 채팅 영역 ─────────────────────────────────────────────────────────
+  chatArea: {
     flex: 1,
   },
-  containerEmpty: {
+  chatAreaEmpty: {
     justifyContent: 'flex-end',
   },
   welcome: {
