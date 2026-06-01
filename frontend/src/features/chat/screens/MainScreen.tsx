@@ -45,6 +45,7 @@ interface Message {
   isStreaming?: boolean;
   isThinking?: boolean;
   interruptType?: 'human' | 'excu';
+  progressSteps?: string[]; // detail_status 누적 (thinking 단계 동안만 유지)
 }
 
 interface MainScreenProps {
@@ -162,7 +163,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   // ─── SSE 스트림 ──────────────────────────────────────────────────────────
   const _runSseStream = useCallback(
     async (url: string, body: object, token: string | null) => {
-      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.191:8000';
+      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.159:8000';
 
       setMessages((prev) => [
         ...prev,
@@ -204,12 +205,19 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
               } else if (data.type === 'meta') {
                 actions = data.actions ?? [];
               } else if (data.type === 'progress') {
-                // thinking 버블 텍스트를 진행 상태로 업데이트
-                setMessages((prev) =>
-                  prev.map((m) =>
-                    m.id === THINKING_ID ? { ...m, content: data.status } : m,
-                  ),
-                );
+                // detail_status(상세)를 우선 사용, 없으면 status(coarse)로 폴백.
+                // thinking 버블에 단계를 누적 — 직전 단계와 동일하면 무시(중복 제거).
+                const label: string | undefined = data.detail_status ?? data.status;
+                if (label) {
+                  setMessages((prev) =>
+                    prev.map((m) => {
+                      if (m.id !== THINKING_ID) return m;
+                      const steps = m.progressSteps ?? [];
+                      if (steps[steps.length - 1] === label) return m;
+                      return { ...m, content: label, progressSteps: [...steps, label] };
+                    }),
+                  );
+                }
               } else if (data.type === 'token') {
                 if (!firstTokenReceived) {
                   firstTokenReceived = true;
@@ -344,7 +352,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   );
 
   const sendResume = useCallback(
-    async (resumeValue: string) => {
+    async (resumeValue: string, displayText?: string) => {
       if (isStreaming) return;
 
       setMessages((prev) =>
@@ -357,7 +365,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
 
       setMessages((prev) => [
         ...prev,
-        { id: `u-${Date.now()}`, role: 'user', content: resumeValue },
+        { id: `u-${Date.now()}`, role: 'user', content: displayText ?? resumeValue },
       ]);
       setInputText('');
       setPendingInterrupt(null);
@@ -428,6 +436,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
               onActionPress={(target) => onNavigate(target)}
               isStreaming={msg.isStreaming}
               isThinking={msg.isThinking}
+              progressSteps={msg.progressSteps}
               interruptType={msg.interruptType}
               onInterruptApprove={() => {
                 if (interruptAprvlList !== null) {
@@ -474,12 +483,13 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       currentUserId={currentUser?.userId}
       onApprove={(editedAprvList, editedRefList) => {
         // 편집된 결재선을 JSON으로 직렬화해 resume_value로 전송
+        // displayText('승인')를 별도 전달해 채팅 버블에는 JSON 대신 '승인'만 표시
         const resumeValue = JSON.stringify({
           decision:   '승인',
           aprvl_list: editedAprvList.map((a) => ({ aprvUserId: a.aprvUserId })),
           ref_list:   editedRefList.map((r) => r.aprvUserId),
         });
-        sendResume(resumeValue);
+        sendResume(resumeValue, '승인');
       }}
       onCancel={() => {
         setShowAprvModal(false);

@@ -33,7 +33,7 @@ backend/uploads/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
-ai/.venv/
+ai/venv
 
 # Claude Code
 .claude/

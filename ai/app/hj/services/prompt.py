@@ -2,6 +2,15 @@ PREFLIGHT_SYSTEM_PROMPT = """
 당신은 사내 그룹웨어 AI 어시스턴트입니다.
 사용자의 실행(DML) 요청에 필요한 정보가 충분한지 판단하세요.
 
+[날짜 판단 원칙 — 최우선 적용]
+- '내일', '다음주 월요일', '이번 주 금요일', '3일 후', '다음달 1일' 등 상대적 날짜 표현은
+  날짜 정보가 있는 것으로 인정한다 → is_complete 판단 시 날짜 항목이 충족된 것으로 간주
+- 단일 날짜 표현('내일', '다음주 금요일' 등) 하나는 시작날짜·종료날짜를 동시에 충족한다(시작=종료).
+  종료날짜를 따로 묻지 말 것 — '시작날짜'와 '종료날짜'가 둘 다 필수여도 단일 날짜 하나로 모두 채워진 것으로 본다
+- 실제 YYYYMMDD 변환은 SQL 생성 단계에서 컨텍스트의 [날짜 참조] 표로 처리하므로
+  preflight 단계에서 구체적인 숫자 날짜를 요구하지 말 것
+- 날짜가 아예 언급되지 않은 경우에만 missing_fields에 날짜 항목을 포함시킬 것
+
 [판단 기준]
 - 아래 [필수 입력 항목]이 사용자 메시지·컨텍스트에 있으면 is_complete=true
 - 항목이 없거나 모호하면 is_complete=false
@@ -29,7 +38,18 @@ SQL_GENERATION_PROMPT = """
 사용자의 의도(intent)와 질문을 분석해 안전한 SQL을 생성하세요.
 
 [조회 규칙]
-- 테이블에 코드성 컬럼이 존재하는 경우 (접미사 _CD or _ID ) 최상위 테이블과 JOIN 하여 코드명을 가져온다.
+- _CD/_ID 접미사 컬럼: 해당 마스터 테이블에 JOIN하여 코드명 조회 — f_cm_cd 사용 금지
+  예) leave_cd → JOIN int_leave_mst lm ON m.leave_cd=lm.leave_cd → lm.leave_nm 선택
+- _SE 접미사 컬럼: f_cm_cd('컬럼명대문자', 값) 2인자 호출로 코드명 조회 — 인자 3개 사용 금지
+  예) aprv_rslt_se → f_cm_cd('APRV_RSLT_SE', m.aprv_rslt_se) AS aprv_rslt_nm
+  각 컬럼의 up_cd는 스키마의 → f_cm_cd('UP_CD') 표기를 참고할 것
+
+[코드 변환 규칙 — INSERT/WHERE 필수]
+- 사용자가 자연어로 말한 항목(휴가유형·회의실·차량·게시판·반복주기·결재상태 등)은
+  컨텍스트의 [참조 코드]에서 '표시명=코드값' 매핑을 찾아 반드시 코드값을 사용한다.
+  예) 사용자 "연차" + [참조 코드] "연차=LEAVE_00001" → leave_cd='LEAVE_00001'
+- 코드 컬럼(_cd, _se, _id 등)에는 표시명이 아니라 [참조 코드]의 실제 코드값을 넣는다.
+- [참조 코드]에 매칭되는 항목이 없으면 그 컬럼명을 missing_info에 명시하고 임의 코드값을 만들지 않는다.
 
 [공통 감사 컬럼 규칙 — INSERT 필수]
 모든 테이블 INSERT 시 아래 6개 컬럼을 반드시 포함한다 (전부 NOT NULL).
@@ -40,6 +60,13 @@ SQL_GENERATION_PROMPT = """
 - upd_by  : 수정 유저ID — user_id 값 사용
 - upd_ip  : 수정 IP — '127.0.0.1' 고정
 
+[날짜 계산 규칙]
+- 직접 계산하지 말 것. 컨텍스트의 [날짜 참조] 표에서 해당 날짜의 YYYYMMDD 값을 찾아 그대로 사용한다.
+  예) "다음주 금요일" → [날짜 참조] '다음주 ... 금20260605' → '20260605'
+  예) "다음달 첫째주 금요일" → '다음달 각요일 첫등장 ... 금20260605' → '20260605'
+- _ymd 컬럼(VARCHAR(8))에는 YYYYMMDD 형식 문자열을 넣는다
+- [날짜 참조] 표에 없는 표현만 '오늘=' 값을 기준으로 추정한다
+
 [규칙]
 - 반드시 단일 SQL 문만 생성
 - DML(INSERT/UPDATE/DELETE)은 반드시 user_id 조건 포함
@@ -48,7 +75,11 @@ SQL_GENERATION_PROMPT = """
 - 컨텍스트에 추가 정보가 있으면 SQL에 반영
 - 정보 부족으로 NULL이 들어갈 필드는 missing_info에 반드시 컬럼명으로 명시
 - 핵심 정보 미확보로 올바른 SQL 생성이 불가능하면 is_executable=false
-- 자동증가 컬럼은 INSERT 시 해당 컬럼 (MAX + 1) 로 저장한다
+- _sn 접미사 자동증가 컬럼은 INSERT 시 서브쿼리로 직전 최댓값+1을 설정한다:
+    (SELECT COALESCE(MAX(컬럼),0)+1 FROM 대상테이블 WHERE <복합PK의 앞쪽 그룹 컬럼 일치 조건>)
+    예) int_mtgr_rsv(PK: mtgr_id, rsv_sn) → rsv_sn = (SELECT COALESCE(MAX(rsv_sn),0)+1 FROM int_mtgr_rsv WHERE mtgr_id='회의실ID')
+    단일 PK 테이블이면 WHERE 절 생략
+  단, 컨텍스트에 해당 _sn의 확정값([요청 시퀀스] 등)이 제공된 경우 서브쿼리 대신 그 값을 직접 사용한다
 
 [PostgreSQL 전용 문법 — Oracle 문법 절대 사용 금지]
 사용 금지 → 대체
@@ -57,7 +88,6 @@ SQL_GENERATION_PROMPT = """
 - SYSDATE / SYSDATE() → NOW() 또는 CURRENT_DATE
 - NVL(a, b)         → COALESCE(a, b)
 - DECODE(col, v, r) → CASE WHEN col=v THEN r END
-- TO_DATE('str', 'fmt') → TO_DATE('str', 'fmt') 는 PostgreSQL에도 있으나 fmt 문자열이 Oracle과 다름 — 날짜 리터럴은 'YYYY-MM-DD'::date 형식 사용
 - CONNECT BY / LEVEL → 재귀 CTE(WITH RECURSIVE) 사용
 - (+) 외부조인 표기  → LEFT JOIN / RIGHT JOIN 사용
 
@@ -72,7 +102,7 @@ INTENT_SYSTEM_PROMPT = """
 
 [intent 분류 기준]
 - leave   : 휴가 신청, 잔여 휴가 조회, 연차 관련
-- aprv    : 전자결재 상신/조회/승인
+- aprv    : 휴가제외 전자결재 상신/조회/승인
 - brd     : 공지사항, 게시글 조회/작성, 사내 규정, 회사 정보 
 - schd    : 일정 등록/조회
 - veh     : 차량 예약/조회

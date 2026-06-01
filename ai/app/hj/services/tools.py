@@ -1,11 +1,11 @@
+import calendar
 import re
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from typing import TypeVar
 
 from langchain_core.tools import tool
 from pydantic import BaseModel
 
-from app.hj.core.config import settings
 from app.hj.core.database import get_pool
 from app.hj.models.intent import SqlResult
 
@@ -46,10 +46,84 @@ def parse_llm_json(raw: str, model_cls: type[_M]) -> _M:
 def get_current_date() -> str:
     """현재 날짜와 시간을 반환합니다.
 
-    Note: 파이프라인에서는 node_enrich_context가 datetime.now()를 직접 사용한다.
+    Note: 파이프라인에서는 node_enrich_context가 build_date_reference()를 사용한다.
           이 tool은 향후 LLM agent 방식으로 전환 시 재활용용으로 보존한다.
     """
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S (%A)")
+
+
+# ── 결정론적 날짜 참조 빌더 ───────────────────────────────────────────────────
+# SLM은 "다음주 금요일", "다음달 첫째주 금요일" 같은 날짜 계산을 자주 틀린다.
+# Python으로 주요 상대날짜를 미리 계산해 표로 주입 → SLM은 조회만 하면 됨(계산 금지).
+# 형식은 YYYYMMDD (대부분의 _ymd 컬럼이 VARCHAR(8) YYYYMMDD).
+
+_WD = ["월", "화", "수", "목", "금", "토", "일"]  # Monday=0 .. Sunday=6
+
+
+def _ymd(d: date) -> str:
+    return d.strftime("%Y%m%d")
+
+
+def _first_weekdays(year: int, month: int) -> dict[int, date]:
+    """해당 월에서 각 요일이 처음 등장하는 날짜 (예: 첫째주 금요일)."""
+    res: dict[int, date] = {}
+    ndays = calendar.monthrange(year, month)[1]
+    first = date(year, month, 1)
+    for i in range(ndays):
+        cur = first + timedelta(days=i)
+        res.setdefault(cur.weekday(), cur)
+        if len(res) == 7:
+            break
+    return res
+
+
+def _last_weekdays(year: int, month: int) -> dict[int, date]:
+    """해당 월에서 각 요일이 마지막으로 등장하는 날짜 (예: 마지막 주 금요일)."""
+    res: dict[int, date] = {}
+    ndays = calendar.monthrange(year, month)[1]
+    last = date(year, month, ndays)
+    for i in range(ndays):
+        cur = last - timedelta(days=i)
+        res.setdefault(cur.weekday(), cur)
+        if len(res) == 7:
+            break
+    return res
+
+
+def build_date_reference(now: datetime | None = None) -> str:
+    """오늘 기준 핵심 상대날짜를 YYYYMMDD 표로 반환한다."""
+    today = (now or datetime.now()).date()
+    wd = today.weekday()
+    this_mon = today - timedelta(days=wd)
+    next_mon = this_mon + timedelta(days=7)
+
+    if today.month == 12:
+        ny, nm = today.year + 1, 1
+    else:
+        ny, nm = today.year, today.month + 1
+    last_this = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+    last_next = date(ny, nm, calendar.monthrange(ny, nm)[1])
+
+    def week_line(label: str, monday: date) -> str:
+        days = [monday + timedelta(days=i) for i in range(7)]
+        return label + ": " + " ".join(f"{_WD[i]}{_ymd(days[i])}" for i in range(7))
+
+    def wd_line(label: str, mapping: dict[int, date]) -> str:
+        return label + ": " + " ".join(f"{_WD[w]}{_ymd(mapping[w])}" for w in range(7))
+
+    return "\n".join([
+        "[날짜 참조] 아래 값을 그대로 사용(직접 계산 금지). 형식 YYYYMMDD, 괄호=요일",
+        f"오늘={_ymd(today)}({_WD[wd]}) 내일={_ymd(today + timedelta(days=1))} "
+        f"모레={_ymd(today + timedelta(days=2))} 어제={_ymd(today - timedelta(days=1))}",
+        week_line("이번주", this_mon),
+        week_line("다음주", next_mon),
+        f"이번달: 1일={_ymd(today.replace(day=1))} 말일={_ymd(last_this)}",
+        f"다음달: 1일={_ymd(date(ny, nm, 1))} 말일={_ymd(last_next)}",
+        wd_line("이번달 각요일 첫등장", _first_weekdays(today.year, today.month)),
+        wd_line("이번달 각요일 마지막등장", _last_weekdays(today.year, today.month)),
+        wd_line("다음달 각요일 첫등장", _first_weekdays(ny, nm)),
+        wd_line("다음달 각요일 마지막등장", _last_weekdays(ny, nm)),
+    ])
 
 
 # ── 벡터 검색 대상 intent ────────────────────────────────────────────────────
@@ -103,13 +177,17 @@ async def generate_sql(
     user_message: str,
     user_id: str,
     context: str = "",
+    date_reference: str = "",
 ) -> SqlResult:
     """
     intent와 사용자 메시지를 기반으로 LLM이 SQL을 생성합니다. (Text-to-SQL)
     structured output(SqlResult)으로 반환 — sql · missing_info · is_executable 포함.
+
+    date_reference: node_enrich_context가 계산한 날짜 참조 표.
+                    context(DB 조회 결과)보다 앞에 주입해 LLM이 날짜를 먼저 인식하도록 한다.
     """
     from langchain_core.messages import HumanMessage, SystemMessage
-    from langchain_ollama import ChatOllama
+    from app.hj.core.llm import get_sql_slm, is_dev
     from app.hj.services.prompt import SQL_GENERATION_PROMPT
     from app.hj.services.schema import get_schema_for_intent
 
@@ -117,45 +195,40 @@ async def generate_sql(
     prompt = SQL_GENERATION_PROMPT.format(schema=schema)
 
     human_content = f"intent={intent}, action_type={action_type}, user_id={user_id}\n질문: {user_message}"
+    if date_reference:
+        human_content += f"\n\n{date_reference}"
     if context:
         human_content += f"\n\n[추가 컨텍스트]\n{context}"
 
-    # format=SqlResult.model_json_schema(): Ollama constrained generation
-    #   - tool call 감지 로직을 건너뜀 → 마크다운 래핑 불가
     # tags=["sql_generation"]: astream_events 에서 SQL 토큰 필터링
-    llm = ChatOllama(
-        base_url=settings.ollama_url,
-        model=settings.llm_model,
-        streaming=False,
-        format=SqlResult.model_json_schema(),
-    )
-    slm = ChatOllama(
-        base_url=settings.ollama_url,
-        model=settings.slm_model,
-        streaming=False,
-        format=SqlResult.model_json_schema(),
-    )
+    # prod(Ollama): format 제약으로 JSON 강제 → response.content 파싱 필요
+    # dev(OpenAI):  with_structured_output → SqlResult 직접 반환
+    slm = get_sql_slm(SqlResult)
 
     response = await slm.with_config(tags=["sql_generation"]).ainvoke([
         SystemMessage(content=prompt),
         HumanMessage(content=human_content),
     ])
 
-    # format 제약을 모델이 무시하고 마크다운 블록(```sql ... ```)을 반환하는 경우 폴백 처리
-    # 예: gemma4:32b 가 간헐적으로 JSON 대신 마크다운 SQL을 출력할 수 있음
-    raw = response.content
-    try:
-        result = SqlResult.model_validate_json(raw)
-    except Exception:
-        import re
-        # ```sql ... ``` 또는 ``` ... ``` 블록에서 SQL 추출
-        m = re.search(r"```(?:sql)?\s*([\s\S]+?)```", raw, re.IGNORECASE)
-        if m:
-            extracted_sql = m.group(1).strip()
-            result = SqlResult(sql=extracted_sql, missing_info=[], is_executable=True)
-        else:
-            # 마크다운도 없는 경우 — 실행 불가 결과 반환 (그래프가 node_generate로 라우팅)
-            result = SqlResult(sql="", missing_info=[], is_executable=False)
+    if is_dev():
+        # OpenAI with_structured_output: SqlResult 직접 반환
+        result = response
+    else:
+        # prod(Ollama): format 제약을 모델이 무시하고 마크다운을 반환하는 경우 폴백 처리
+        # 예: gemma4:32b 가 간헐적으로 JSON 대신 마크다운 SQL을 출력할 수 있음
+        raw = response.content
+        try:
+            result = SqlResult.model_validate_json(raw)
+        except Exception:
+            import re
+            # ```sql ... ``` 또는 ``` ... ``` 블록에서 SQL 추출
+            m = re.search(r"```(?:sql)?\s*([\s\S]+?)```", raw, re.IGNORECASE)
+            if m:
+                extracted_sql = m.group(1).strip()
+                result = SqlResult(sql=extracted_sql, missing_info=[], is_executable=True)
+            else:
+                # 마크다운도 없는 경우 — 실행 불가 결과 반환 (그래프가 node_generate로 라우팅)
+                result = SqlResult(sql="", missing_info=[], is_executable=False)
 
     # LLM이 단일 따옴표를 '' 로 이중 생성하는 경우 보정
     # (PostgreSQL 문자열 이스케이프 관례를 함수 인자 따옴표에 잘못 적용하는 문제)
@@ -178,7 +251,7 @@ DML_ALLOWED_TABLES: set[str] = {
     # "int_aprv",            # 전자결재
     "int_mtgr_rsv",          # 회의실 예약 (본인만)
     "int_veh_rsv",           # 차량 예약 (본인만)
-    # "int_schd",            # 일정
+    "int_schd",            # 일정
 }
 
 

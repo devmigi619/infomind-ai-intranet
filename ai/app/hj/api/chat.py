@@ -65,6 +65,54 @@ def _build_interrupt_event(interrupt_type: str, interrupt_value: dict) -> str:
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
 
+# ── 진행 상태(progress) 라벨 ──────────────────────────────────────────────────
+# status        : 노드 이름 기반 coarse 라벨 (하위 호환 유지)
+# detail_status : intent를 반영한 상세 라벨 — 프론트 누적 타임라인용
+#   주의) 여기서 쓰는 status는 GraphState.system_status("OK"/"BLOCKED")와 무관하다.
+
+_COARSE_STATUS: dict[str, str] = {
+    "guardrail_input":     "요청 점검 중...",
+    "classify":            "분석 중...",
+    "node_enrich_context": "참조 정보 조회 중...",
+    "node_excu_preflight": "정보 확인 중...",
+    "node_search":         "데이터 조회 중...",
+    "node_excu":           "처리 내용 확인 중...",
+    "node_excu_confirm":   "실행 대기 중...",
+    "node_human":          "추가 정보 확인 중...",
+    "node_generate":       "답변 생성 중...",
+}
+
+_INTENT_LABEL: dict[str, str] = {
+    "leave": "휴가", "aprv": "전자결재", "brd": "게시판", "schd": "일정",
+    "veh": "차량", "mtgr": "회의실", "rpt": "보고서", "general": "",
+}
+
+
+def _build_detail_status(name: str, node_input) -> str | None:
+    """노드 이름 + (가능하면) intent를 반영한 상세 진행 라벨을 만든다.
+
+    node_input은 on_chain_start 이벤트의 입력 state(dict)다.
+    classify 이전 노드는 intent가 아직 없으므로 일반 문구로 폴백한다.
+    """
+    state = node_input if isinstance(node_input, dict) else {}
+    label = _INTENT_LABEL.get(state.get("intent") or "", "")
+    sp = f"{label} " if label else ""
+
+    builders: dict[str, str] = {
+        "guardrail_input":     "요청을 점검하고 있어요",
+        "classify":            "요청 의도를 파악하고 있어요",
+        "node_enrich_context": f"{sp}관련 정보를 모으고 있어요",
+        "node_search":         f"{sp}내역을 조회하고 있어요",
+        "node_excu_preflight": f"{sp}신청에 필요한 정보를 확인하고 있어요",
+        "node_excu":           f"{sp}실행 내용을 작성하고 있어요",
+        "node_excu_confirm":   "실행을 준비하고 있어요",
+        "node_human":          "추가로 여쭤볼 내용을 정리하고 있어요",
+        "node_generate":       "답변을 작성하고 있어요",
+        "node_general":        "답변을 정리하고 있어요",
+    }
+    return builders.get(name)
+
+
 async def _sse_stream(input_, config: dict, turn_id: str | None = None):
     """
     input_   : GraphState(최초 실행) 또는 Command(resume=...) (재개 실행)
@@ -103,18 +151,15 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
 
         # ── 노드 시작 → 진행 상태 이벤트 ────────────────────────────────────────
         if kind == "on_chain_start":
-            status = {
-                "classify":            "분석 중...",
-                "node_enrich_context": "참조 정보 조회 중...",
-                "node_excu_preflight": "정보 확인 중...",
-                "node_search":         "데이터 조회 중...",
-                "node_excu":           "처리 내용 확인 중...",
-                "node_excu_confirm":   "실행 대기 중...",
-                "node_human":          "추가 정보 확인 중...",
-                "node_generate":       "답변 생성 중...",
-            }.get(name)
-            if status:
-                yield f"data: {json.dumps({'type': 'progress', 'status': status})}\n\n"
+            coarse = _COARSE_STATUS.get(name)
+            detail = _build_detail_status(name, event.get("data", {}).get("input"))
+            if coarse or detail:
+                payload = {"type": "progress"}
+                if coarse:
+                    payload["status"] = coarse          # 하위 호환
+                if detail:
+                    payload["detail_status"] = detail   # 누적 타임라인용
+                yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
         # ── 가드레일 차단 감지 ──────────────────────────────────────────────────
         if kind == "on_chain_end" and name in ("guardrail_input", "guardrail_output"):
@@ -235,6 +280,7 @@ async def chat(request: dict, user=Depends(verify_token)):
         "intent":         None,
         "action_type":    None,
         "context":        None,
+        "date_reference": None,
         "generated_sql":        None,
         "pending_excu_preview": None,
         "pending_aprvl_list":   None,

@@ -6,7 +6,8 @@ class GraphState(MessagesState):
     session_id: str
     intent: str | None          # 인텐트 분류 결과
     action_type: str | None     # 행동 분류 결과 (search/excu/human/general)
-    context: str | None         # RAG/DB 조회 결과
+    context: str | None         # DB 조회 결과 / 비즈니스 데이터
+    date_reference: str | None  # node_enrich_context가 1회 계산한 날짜 참조 표 (이후 불변)
     actions: list[dict]         # meta 이벤트용 액션 링크
     generated_sql: str | None   # excu/search 노드에서 생성된 일반 SQL
     pending_excu_preview: str | None  # node_excu가 생성한 미리보기 텍스트 (interrupt 간 유지용)

@@ -5,9 +5,8 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import Command, interrupt
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
-from langchain_ollama import ChatOllama
 
-from app.hj.core.config import settings
+from app.hj.core.llm import get_llm, get_slm, get_structured_slm, count_tokens, is_dev
 from app.hj.models.state import GraphState
 from app.hj.models.intent import IntentResult
 from app.hj.services.guardrail import check_guardrail
@@ -22,17 +21,8 @@ from app.hj.services.schema import get_schema_for_intent, get_preflight_fields
 from app.hj.models.intent import PreflightResult
 from app.hj.services.tools import parse_llm_json
 
-llm = ChatOllama(
-    base_url=settings.ollama_url,
-    model=settings.llm_model,
-    streaming=True,
-)
-
-slm = ChatOllama(
-    base_url=settings.ollama_url,
-    model=settings.slm_model,
-    streaming=True,
-)
+llm = get_llm(streaming=True)
+slm = get_slm(streaming=True)
 
 BLOCK_MESSAGES = {
     "A": "개인정보 보호를 위해 해당 내용에 답변드리기 어렵습니다.",
@@ -82,17 +72,19 @@ async def node_guardrail_output(state: GraphState) -> Command:
 
 async def node_classify(state: GraphState) -> Command:
     """인텐트 + action_type 분류 — history 포함 전체 대화를 LLM에 전달"""
-    slm_classify = ChatOllama(
-        base_url=settings.ollama_url,
-        model=settings.slm_model,
-        format=IntentResult.model_json_schema(),
-    )
+    structured = get_structured_slm(IntentResult)
     messages = [SystemMessage(content=INTENT_SYSTEM_PROMPT)] + list(state["messages"])
-    response = await slm_classify.ainvoke(messages)
 
     try:
-        result = parse_llm_json(response.content, IntentResult)
-    except ValueError:
+        response = await structured.ainvoke(messages)
+        if is_dev():
+            result = response          # OpenAI: Pydantic 모델 직접 반환
+            tokens = 0
+        else:
+            result = parse_llm_json(response.content, IntentResult)
+            meta = response.response_metadata or {}
+            tokens = count_tokens(meta)
+    except Exception:
         return Command(
             goto="save_history",
             update={
@@ -100,8 +92,6 @@ async def node_classify(state: GraphState) -> Command:
                 "messages": [AIMessage("죄송합니다. 서버 오류로 인해 답변드리기 어렵습니다.")],
             },
         )
-    meta = response.response_metadata or {}
-    tokens = meta.get("eval_count", 0) + meta.get("prompt_eval_count", 0)
 
     return Command(
         goto="route",
@@ -140,9 +130,10 @@ async def node_enrich_context(state: GraphState) -> Command:
     """
     search / excu 공통 컨텍스트 보강 노드.
 
-    1. 현재 날짜 주입 — LLM이 "오늘", "이번 주" 등 상대 날짜를 SQL로 변환 가능
-    2. intent별 참조 쿼리 병렬 실행 — DB에 실제 존재하는 코드값·ID 목록 제공
-       (회의실 목록, 휴가유형 등 마스터 데이터)
+    1. [날짜 참조] 주입 — build_date_reference()로 상대날짜를 YYYYMMDD로 사전계산
+       (SLM이 직접 계산하지 않고 표에서 조회하도록 함)
+    2. [참조 코드] 주입 — intent별 마스터 조회 후 "표시명=코드값" 컴팩트 매핑
+       (회의실, 휴가유형 등 — SLM이 사용자 표현을 코드값으로 변환하기 쉬움)
 
     참조 쿼리 실패 시 해당 결과를 조용히 건너뛰고 계속 진행한다.
 
@@ -151,8 +142,7 @@ async def node_enrich_context(state: GraphState) -> Command:
       action_type == search → node_search
     """
     import asyncio
-    from datetime import datetime
-    from app.hj.services.tools import execute_sql, VECTOR_SEARCH_INTENTS, APRVL_LINE_INTENTS, APRVL_TABLE_MAP, fetch_default_aprvl_line
+    from app.hj.services.tools import execute_sql, build_date_reference, VECTOR_SEARCH_INTENTS, APRVL_LINE_INTENTS, APRVL_TABLE_MAP, fetch_default_aprvl_line
     from app.hj.services.schema import get_reference_queries
     from app.hj.services.guardrail import embed_text
     from app.hj.core.database import get_pool
@@ -164,24 +154,31 @@ async def node_enrich_context(state: GraphState) -> Command:
 
     parts: list[str] = []
 
-    # ── 1. 현재 날짜 ──────────────────────────────────────────────────────────
-    now = datetime.now()
-    parts.append(f"[현재 날짜] {now.strftime('%Y-%m-%d (%A)')}")
+    # ── 1. 날짜 참조 (결정론적 사전계산) — state 전용 필드로 분리 ──────────────
+    # context(DB 조회 결과)와 분리해 date_reference 필드에 저장.
+    # node_search/excu/excu_preflight/node_generate 에서 별도로 참조한다.
+    date_ref = build_date_reference()
 
-    # ── 2. 참조 쿼리 병렬 실행 ───────────────────────────────────────────────
-    ref_queries = get_reference_queries(intent)
-    if ref_queries:
-        async def _run(sql: str) -> str | None:
+    # ── 2. 참조 코드 병렬 조회 → "표시명=코드값" 컴팩트 매핑 ───────────────────
+    ref_specs = get_reference_queries(intent)
+    if ref_specs:
+        async def _run(spec: dict) -> str | None:
             try:
-                rows = await execute_sql.ainvoke({"sql": sql, "user_id": user_id})
-                return json.dumps(rows, ensure_ascii=False, default=str) if rows else None
+                rows = await execute_sql.ainvoke({"sql": spec["sql"], "user_id": user_id})
+                if not rows:
+                    return None
+                pairs = ", ".join(f"{r.get('nm')}={r.get('cd')}" for r in rows)
+                return f"{spec['label']}: {pairs}"
             except Exception:
                 return None  # 실패 시 무시
 
-        results = await asyncio.gather(*[_run(q) for q in ref_queries])
+        results = await asyncio.gather(*[_run(s) for s in ref_specs])
         ref_lines = [r for r in results if r]
         if ref_lines:
-            parts.append("[참조 데이터]\n" + "\n".join(ref_lines))
+            parts.append(
+                "[참조 코드] 사용자 표현과 일치하는 항목의 코드값(= 뒤)을 INSERT/WHERE에 사용\n"
+                + "\n".join(ref_lines)
+            )
 
     # ── 3. (context 병합은 모든 parts 수집 후 마지막에 한 번만 수행) ──────────
 
@@ -228,10 +225,17 @@ async def node_enrich_context(state: GraphState) -> Command:
                 f"(INSERT SQL에서 이 값을 직접 사용할 것 — 서브쿼리 금지)"
             )
 
-            # 결재자가 있으면 context에도 요약 노출 (LLM이 미리보기에서 결재자명 언급 가능)
+            # 결재자가 있으면 context에도 노출 — 미리보기에서 결재자명 언급용(참고 정보).
+            # 결재라인 INSERT는 시스템이 자동 처리하므로 LLM은 이 정보로 SQL을 만들지 않는다.
             if pending_aprvl_list:
-                names = ", ".join(a["aprvUserNm"] for a in pending_aprvl_list if a.get("aprvUserNm"))
-                parts.append(f"[기본 결재자] {names}")
+                names = ", ".join(
+                    a.get("aprvUserNm", "")
+                    for a in pending_aprvl_list if a.get("aprvUserNm")
+                )
+                parts.append(
+                    f"[기본 결재자] {names} "
+                    f"(미리보기 표시용 — int_leave_req_aprv INSERT는 생성하지 말 것)"
+                )
         except Exception:
             pass  # 조회 실패 시 결재선 없이 진행 (aprv/ref INSERT 생략됨)
 
@@ -244,6 +248,7 @@ async def node_enrich_context(state: GraphState) -> Command:
         goto=next_node,
         update={
             "context":           new_context,
+            "date_reference":    date_ref,        # 날짜 참조 표 — 별도 state 필드
             "user_embedding":    user_embedding,
             "pending_aprvl_list": pending_aprvl_list,
             "pending_ref_list":   pending_ref_list,
@@ -263,7 +268,7 @@ async def node_human(state: GraphState) -> Command:
     clarify_question = response.content.strip().strip('"\'').strip()
 
     meta = response.response_metadata or {}
-    tokens = meta.get("eval_count", 0) + meta.get("prompt_eval_count", 0)
+    tokens = count_tokens(meta)
 
     # 그래프 일시정지 — SSE 어댑터가 on_interrupt 이벤트로 감지 후 프론트에 전달
     user_answer = interrupt({
@@ -279,14 +284,18 @@ async def node_human(state: GraphState) -> Command:
             update={"messages": [AIMessage("요청이 취소되었습니다.")]},
         )
 
-    # 재개: 사용자 답변을 새 HumanMessage로 추가하고 classify 재진입.
+    # 재개: AI 질문 + 사용자 답변을 순서대로 messages에 추가하고 classify 재진입.
+    # AI 질문(AIMessage)을 함께 저장해야 classify/이후 노드에서 답변의 맥락을 파악 가능.
     # node_route에서 intent=general → node_general 분기가 생겼으므로
     # 이 시점의 사용자 답변(명확화된 의도)을 다시 분류해 올바른 흐름으로 보낸다.
     # context는 초기화 — node_enrich_context에서 새 intent 기준으로 재보강됨.
     return Command(
         goto="classify",
         update={
-            "messages":  [HumanMessage(content=str(user_answer))],
+            "messages": [
+                AIMessage(content=clarify_question),      # AI 질문 먼저 저장
+                HumanMessage(content=str(user_answer)),   # 사용자 답변
+            ],
             "context":   "",
             "tk_use_cnt": state.get("tk_use_cnt", 0) + tokens,
         },
@@ -311,21 +320,19 @@ async def node_excu_preflight(state: GraphState) -> Command:
     preflight_prompt = PREFLIGHT_SYSTEM_PROMPT.format(required_fields=required_fields)
 
     human_content = f"intent={intent}, user_id={state['user_id']}\n질문: {user_message}"
+    if date_ref := state.get("date_reference"):
+        human_content += f"\n\n{date_ref}"
     if context:
         human_content += f"\n\n[추가 컨텍스트]\n{context}"
 
-    slm_pf = ChatOllama(
-        base_url=settings.ollama_url,
-        model=settings.slm_model,
-        format=PreflightResult.model_json_schema(),
-    )
+    slm_pf = get_structured_slm(PreflightResult, "llm")
     response = await slm_pf.ainvoke([
         SystemMessage(content=preflight_prompt),
         HumanMessage(content=human_content),
     ])
     try:
-        result = parse_llm_json(response.content, PreflightResult)
-    except ValueError:
+        result = response if is_dev() else parse_llm_json(response.content, PreflightResult)
+    except Exception:
         return Command(
             goto="save_history",
             update={"messages": [AIMessage("죄송합니다. 서버 오류로 인해 답변드리기 어렵습니다.")]},
@@ -362,11 +369,7 @@ async def node_excu_preflight(state: GraphState) -> Command:
     # 전체 히스토리 + 새 답변을 SLM에 넣어 intent/action_type이 바뀌었는지 확인.
     # 짧은 단답("연차요")은 기존 intent로 그대로 분류되고,
     # 완전히 다른 요청("아니면 회의실 예약해줘")은 다른 intent로 분류된다.
-    slm_recheck = ChatOllama(
-        base_url=settings.ollama_url,
-        model=settings.slm_model,
-        format=IntentResult.model_json_schema(),
-    )
+    slm_recheck = get_structured_slm(IntentResult)
     recheck_msgs = (
         [SystemMessage(content=INTENT_SYSTEM_PROMPT)]
         + list(state["messages"])
@@ -374,7 +377,7 @@ async def node_excu_preflight(state: GraphState) -> Command:
     )
     recheck_resp = await slm_recheck.ainvoke(recheck_msgs)
     try:
-        recheck = parse_llm_json(recheck_resp.content, IntentResult)
+        recheck = recheck_resp if is_dev() else parse_llm_json(recheck_resp.content, IntentResult)
         if recheck.intent != intent or recheck.action_type != state.get("action_type"):
             # 완전히 다른 요청 → 새 HumanMessage로 추가하고 node_route 재진입
             return Command(
@@ -393,9 +396,10 @@ async def node_excu_preflight(state: GraphState) -> Command:
     except ValueError:
         pass  # 재분류 실패 시 기존 preflight 흐름 유지
 
-    # 사용자 답변을 context에 추가 후 preflight 재진입
-    new_context = (f"{context}\n[추가 정보] {user_answer}".strip()
-                   if context else f"[추가 정보] {user_answer}")
+    # AI 질문 + 사용자 답변을 Q&A 쌍으로 context에 누적 후 preflight 재진입.
+    # 질문 없이 답변만 저장하면 LLM이 "어떤 맥락의 답변인지" 알 수 없으므로 함께 기록.
+    qa_entry = f"[추가 정보]\nQ: {question}\nA: {user_answer}"
+    new_context = f"{context}\n{qa_entry}".strip() if context else qa_entry
     return Command(
         goto="node_excu_preflight",
         update={
@@ -426,6 +430,7 @@ async def node_search(state: GraphState) -> Command:
         user_message=user_message,
         user_id=user_id,
         context=ctx,
+        date_reference=state.get("date_reference") or "",
     )
     sql = sql_result.sql
 
@@ -519,6 +524,7 @@ async def node_excu(state: GraphState) -> Command:
         user_message=user_message,
         user_id=user_id,
         context=ctx,
+        date_reference=state.get("date_reference") or "",
     )
     sql = sql_result.sql
 
@@ -540,7 +546,7 @@ async def node_excu(state: GraphState) -> Command:
     preview_text = preview_response.content.strip().strip('"\'').strip()
 
     meta = preview_response.response_metadata or {}
-    tokens = meta.get("eval_count", 0) + meta.get("prompt_eval_count", 0)
+    tokens = count_tokens(meta)
 
     # SQL과 미리보기를 state에 저장한 뒤 confirm 노드로 라우팅
     # → interrupt/resume 사이에 generate_sql()이 재실행되지 않도록 보장
@@ -664,14 +670,18 @@ async def node_generate(state: GraphState) -> Command:
     """컨텍스트 기반 LLM 응답 생성 — 생성 후 guardrail_output으로 라우팅"""
     intent = state.get("intent", "general").strip()
     action_type = state.get("action_type", "general").strip()
-    context = state.get("context") or "관련 정보를 찾을 수 없습니다."
-    system_msg = f"{GENERATE_SYSTEM_PROMPT}\n\n[컨텍스트]\n{context}\n====추가내용====\n[intent]\n{intent}\n[action_type]\n{action_type}"
+    context   = state.get("context") or "관련 정보를 찾을 수 없습니다."
+    date_ref  = state.get("date_reference") or ""
+    # node_search/excu 이후 context는 SQL 결과로 교체되어 날짜 참조가 사라지므로
+    # date_reference 필드에서 별도 주입해 응답 생성 시 날짜 정보가 유지되도록 한다.
+    full_context = f"{date_ref}\n\n{context}" if date_ref else context
+    system_msg = f"{GENERATE_SYSTEM_PROMPT}\n\n[컨텍스트]\n{full_context}\n====추가내용====\n[intent]\n{intent}\n[action_type]\n{action_type}"
 
     messages = [SystemMessage(content=system_msg)] + list(state["messages"])
     response = await slm.ainvoke(messages)
 
     meta = response.response_metadata or {}
-    tokens = meta.get("eval_count", 0) + meta.get("prompt_eval_count", 0)
+    tokens = count_tokens(meta)
 
     return Command(
         goto="guardrail_output",

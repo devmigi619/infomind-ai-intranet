@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
+import { Check } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import type { AppTheme } from '../hooks/useTheme';
 
@@ -15,6 +16,7 @@ interface ChatMessageProps {
   onActionPress?: (target: string) => void;
   isStreaming?: boolean;
   isThinking?: boolean;
+  progressSteps?: string[];
   interruptType?: 'human' | 'excu';
   onInterruptApprove?: () => void;
   onInterruptCancel?: () => void;
@@ -106,6 +108,66 @@ function ThinkingDot({ theme }: { theme: AppTheme }) {
   );
 }
 
+// Progress timeline — 진행 단계를 누적 표시. 마지막 단계는 활성(애니메이션 점),
+// 이전 단계는 완료(체크)로 흐리게 표시한다. 새 단계는 fade+slide 로 등장.
+function ProgressStep({
+  text,
+  done,
+  theme,
+}: {
+  text: string;
+  done: boolean;
+  theme: AppTheme;
+}) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, {
+      toValue: 1,
+      duration: 280,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [anim]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.stepRow,
+        {
+          opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0, done ? 0.55 : 1] }),
+          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }],
+        },
+      ]}
+    >
+      <View style={styles.stepIcon}>
+        {done ? (
+          <Check size={12} color={theme.text.subtle} strokeWidth={3} />
+        ) : (
+          <ThinkingDot theme={theme} />
+        )}
+      </View>
+      <Text style={[styles.progressText, { color: done ? theme.text.subtle : theme.text.body }]}>
+        {text}
+      </Text>
+    </Animated.View>
+  );
+}
+
+function ProgressTimeline({ steps, theme }: { steps: string[]; theme: AppTheme }) {
+  return (
+    <View style={[styles.timelineBubble, { backgroundColor: theme.bg.surfaceMute }]}>
+      {steps.map((text, i) => (
+        <ProgressStep
+          key={`${i}-${text}`}
+          text={text}
+          done={i < steps.length - 1}
+          theme={theme}
+        />
+      ))}
+    </View>
+  );
+}
+
 // Streaming cursor — blinks at 1s cycle.
 function StreamingCursor({ theme }: { theme: AppTheme }) {
   const opacity = useRef(new Animated.Value(1)).current;
@@ -141,6 +203,7 @@ export function ChatMessage({
   onActionPress,
   isStreaming,
   isThinking,
+  progressSteps,
   interruptType,
   onInterruptApprove,
   onInterruptCancel,
@@ -148,21 +211,19 @@ export function ChatMessage({
   const isUser = role === 'user';
   const theme = useTheme();
 
-  // Thinking bubble: progress 텍스트가 있으면 텍스트+점, 없으면 3점 애니메이션
+  // Thinking bubble:
+  //  - progressSteps 누적 → 타임라인 (체크/활성 점)
+  //  - content만 있으면 단일 라인 (폴백)
+  //  - 둘 다 없으면 3점 애니메이션
   if (isThinking) {
     return (
       <View style={[styles.row, styles.rowAssistant]}>
-        {content ? (
+        {progressSteps && progressSteps.length > 0 ? (
+          <ProgressTimeline steps={progressSteps} theme={theme} />
+        ) : content ? (
           <View style={[styles.thinkingBubble, { backgroundColor: theme.bg.surfaceMute }]}>
             <ThinkingDot theme={theme} />
-            <Text
-              style={[
-                styles.progressText,
-                { color: theme.text.subtle },
-              ]}
-            >
-              {content}
-            </Text>
+            <Text style={[styles.progressText, { color: theme.text.subtle }]}>{content}</Text>
           </View>
         ) : (
           <ThinkingDots theme={theme} />
@@ -312,5 +373,24 @@ const styles = StyleSheet.create({
       web: "'Noto Sans KR', sans-serif",
       default: undefined,
     }),
+  },
+  timelineBubble: {
+    maxWidth: '80%',
+    borderRadius: 16,
+    borderBottomLeftRadius: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  stepIcon: {
+    width: 14,
+    height: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

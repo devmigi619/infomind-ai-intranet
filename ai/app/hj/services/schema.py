@@ -32,19 +32,13 @@ COMMON_TABLES: list[str] = [
     "-- int_com_code: 공통코드 마스터 | PK: (up_cd, cd)\n"
     " 컬럼: up_cd(VARCHAR 코드그룹명=컬럼명과 동일), cd(VARCHAR 코드값), cd_nm(VARCHAR 코드명),\n"
     "        use_yn(VARCHAR: 'Y'/'N'), cd_ord(INT 정렬순서)\n"
-    " 구조: up_cd=cd인 행은 카테고리 행, up_cd≠cd인 행이 실제 코드 (카테고리 행 조회 제외)\n"
-    " 함수: f_cm_cd(p_up_cd VARCHAR, p_cd VARCHAR) → VARCHAR\n"
-    "        INT_COM_CODE에서 USE_YN='Y'이고 UP_CD=p_up_cd, CD=p_cd인 CD_NM 반환. 매칭 없으면 NULL.\n"
-    "-- [_SE 컬럼 규칙] 테이블의 모든 _SE 접미사 컬럼은 up_cd=컬럼명으로 코드명 조회 가능:\n"
-    "   int_user.user_se  → f_cm_cd('USER_SE', u.user_se)   AS user_se_nm\n"
-    "   int_user.gndr_se  → f_cm_cd('GNDR_SE', u.gndr_se)   AS gndr_se_nm\n"
-    " [사용 원칙] SELECT 시 코드값(_SE 컬럼) 대신 반드시 f_cm_cd로 코드명을 함께 조회할 것:\n"
-    "   SELECT u.user_nm, f_cm_cd('USER_SE', u.user_se) AS user_se_nm,\n"
-    "          d.dept_nm, j.jbgd_nm\n"
-    "   FROM int_user u\n"
-    "   JOIN int_dept d ON u.dept_cd = d.dept_cd\n"
-    "   JOIN int_jbgd j ON u.jbgd_cd = j.jbgd_cd\n"
-    "   f_cm_cd 파라미터의 따옴표는 단일 따옴표 하나만 사용한다 ('' 사용 금지): f_cm_cd('USER_SE', col)",
+    " 함수: f_cm_cd(p_up_cd VARCHAR, p_cd VARCHAR) → VARCHAR  [인자 반드시 2개]\n"
+    "        USE_YN='Y' AND UP_CD=p_up_cd AND CD=p_cd인 CD_NM 반환. 매칭 없으면 NULL.\n"
+    "-- [_SE 컬럼 규칙] 모든 _SE 접미사 컬럼은 f_cm_cd('컬럼명대문자', 값) AS 컬럼명_nm 로 조회\n"
+    "   인자 2개 고정(3개 금지). 따옴표 단일 따옴표만 사용('' 금지)\n"
+    "   예) t.user_se → f_cm_cd('USER_SE', t.user_se) AS user_se_nm\n"
+    "   예) t.gndr_se → f_cm_cd('GNDR_SE', t.gndr_se) AS gndr_se_nm\n"
+    "   각 컬럼의 up_cd는 해당 컬럼 설명의 → f_cm_cd('UP_CD') 표기를 참고",
 ]
 
 # ── intent별 전용 테이블 ──────────────────────────────────────────────────────
@@ -53,20 +47,24 @@ COMMON_TABLES: list[str] = [
 INTENT_SCHEMAS: dict[str, list[str]] = {
     "leave": [
         # 휴가신청 마스터
-        "-- int_leave_req_mst: 휴가신청 마스터 | PK: (req_user_id, req_sn) | FK: req_user_id → int_user.user_id, leave_cd → int_leave_mst.leave_cd, leave_dtl_cd → int_leave_dtl.leave_dtl_cd\n"
+        "-- int_leave_req_mst: 휴가신청 마스터 | PK: (req_user_id, req_sn)\n"
+        "   FK(물리): (leave_cd, leave_dtl_cd) → int_leave_dtl(leave_cd, leave_dtl_cd) [복합 FK — 두 값이 한 쌍으로 존재해야 함]\n"
+        "   JOIN 힌트: req_user_id ↔ int_user.user_id, leave_cd ↔ int_leave_mst.leave_cd\n"
         " 컬럼: req_user_id(VARCHAR 신청자ID), req_sn(BIGINT 자동증가), leave_rsn(VARCHAR 사유),\n"
-        "        aprv_rslt_se(VARCHAR 결재 결과 구분 코드),\n"
+        "        aprv_rslt_se(VARCHAR → f_cm_cd('APRV_RSLT_SE')),\n"
         "        leave_cd(VARCHAR 휴가코드), leave_dtl_cd(VARCHAR 휴가 상세 코드), leave_use_dcnt(NUMERIC 사용일수),\n"
-        "        dept_ref_yn(VARCHAR: 'Y'/'N')",
+        "        afile_id(VARCHAR 첨부파일그룹ID NULL 허용), dept_ref_yn(VARCHAR: 'Y'/'N')\n"
+        "   [INSERT 주의] leave_cd·leave_dtl_cd는 int_leave_dtl에 함께 존재하는 쌍만 허용 (참조코드의 leave_cd= 표기 참고)",
 
         # 휴가신청 일별 상세
         "-- int_leave_req_dtl: 휴가신청 일별 상세 | PK: (req_user_id, req_sn, leave_use_ymd) | FK: (req_user_id, req_sn) → int_leave_req_mst\n"
         " 컬럼: leave_use_ymd(VARCHAR(8) YYYYMMDD 사용날짜), leave_st_hhmm(VARCHAR(4) HHMM 시작시간), leave_end_hhmm(VARCHAR(4) HHMM 종료시간)\n"
+        " ※ 위 3개(+감사컬럼)가 전부 — leave_use_dcnt·leave_cd 등은 이 테이블에 없음(마스터 소속)\n"
         " 날짜 비교: TO_DATE(leave_use_ymd, 'YYYYMMDD')",
 
         # 결재라인
         "-- int_leave_req_aprv: 휴가결재라인 | PK: (req_user_id, req_sn, aprv_user_id) | FK: (req_user_id, req_sn) → int_leave_req_mst\n"
-        " 컬럼: aprv_user_id(VARCHAR 결재자ID), aprv_se(VARCHAR 결재 결과코드),\n"
+        " 컬럼: aprv_user_id(VARCHAR 결재자ID), aprv_se(VARCHAR → f_cm_cd('APRV_SE')),\n"
         "        aprv_ymd(VARCHAR(8) YYYYMMDD 결재일), aprv_ord(BIGINT 결재순서), rmk(TEXT 의견 또는 반려사유)",
 
         # 휴가유형 마스터
@@ -76,7 +74,7 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
 
         # 휴가유형 상세
         "-- int_leave_dtl: 휴가유형 상세 | PK: (leave_cd, leave_dtl_cd) | FK: leave_cd → int_leave_mst.leave_cd\n"
-        " 컬럼: leave_dtl_cd(VARCHAR 휴가 상세 코드), leave_dtl_nm(VARCHAR 휴가 상세명), leave_se(VARCHAR 종일/부분 코드),\n"
+        " 컬럼: leave_dtl_cd(VARCHAR 휴가 상세 코드), leave_dtl_nm(VARCHAR 휴가 상세명), leave_se(VARCHAR → f_cm_cd('LEAVE_SE') F=종일 H=부분),\n"
         "        use_avl_dcnt(NUMERIC 사용가능일수 NULL이면 무제한), use_yn(VARCHAR: 'Y'/'N')",
 
         # 연차정책 + f_leave_calc 함수
@@ -95,11 +93,17 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         " 컬럼: ref_user_id(VARCHAR 참조자ID), qry_yn(VARCHAR: 'Y'=조회함 'N'=미조회)",
 
         # 휴가신청 INSERT 비즈니스 규칙
-        "-- [INSERT 규칙]\n"
-        " 1. 사유(leave_rsn): 사용자가 명시하지 않은 경우 '개인 사정으로 휴가 신청합니다' 를 기본값으로 사용\n"
-        " 2. 날짜: '내일', '다음주 월요일' 등 단일 날짜 표현이면 rsv_st_ymd = rsv_end_ymd (같은 날)\n"
-        " 3. 시작·종료시간(leave_st_hhmm, leave_end_hhmm): 반차 등 시간단위 신청인 경우만 입력, 종일이면 NULL\n"
-        " 4. leave_use_dcnt: 종일=1.0, 반차=0.5, 시간단위=(종료-시작)시간/8",
+        "-- [INSERT 규칙] 휴가신청 SQL은 마스터(int_leave_req_mst) + 일별상세(int_leave_req_dtl) 2개 테이블만 생성. 컬럼을 테이블 간 섞지 말 것\n"
+        "   ★ int_leave_req_aprv(결재라인)·int_leave_req_ref(참조자) INSERT는 절대 생성하지 말 것 — 사용자 결재선 확정 후 시스템이 자동 삽입함\n"
+        " · int_leave_req_mst (1행) — 컬럼: req_user_id, req_sn, leave_cd, leave_dtl_cd, leave_rsn, aprv_rslt_se, leave_use_dcnt(+감사컬럼)\n"
+        "    - leave_cd·leave_dtl_cd: [참조 코드]에서 같은 쌍 선택 (예: 연차 종일 → LEAVE_00001 + LEAVE_00011 / 연차 반차 → LEAVE_00001 + LEAVE_00021)\n"
+        "    - leave_rsn: 미입력 시 '개인 사정으로 휴가 신청합니다'\n"
+        "    - aprv_rslt_se: 신규 신청은 '1'(신청)\n"
+        "    - leave_use_dcnt(※마스터 전용 컬럼): 종일=1.0, 반차=0.5, 시간단위=(종료-시작)시간/8\n"
+        " · int_leave_req_dtl (신청일 수만큼 N행) — 컬럼은 leave_use_ymd, leave_st_hhmm, leave_end_hhmm 이 전부(+감사컬럼)\n"
+        "    - leave_use_dcnt·leave_cd 등 다른 컬럼은 이 테이블에 존재하지 않으니 절대 넣지 말 것\n"
+        "    - 신청 기간의 날짜별로 1행씩, 단일 날짜면 1행. 시간은 반차 등 시간단위에만 입력하고 종일이면 NULL\n"
+        " · req_sn: 컨텍스트의 [요청 시퀀스] 값을 마스터·상세에 동일하게 사용(서브쿼리 금지)",
     ],
     "aprv": [
         # 전자결재 테이블 확정 후 추가
@@ -108,7 +112,7 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         # 게시판 마스터
         "-- int_brd: 게시판 마스터 | PK: brd_id\n"
         " 컬럼: brd_id(VARCHAR 게시판 아이디),\n"
-        "        brd_se(VARCHAR 게시판 구분 코드), brd_nm(VARCHAR 게시판명),\n"
+        "        brd_se(VARCHAR → f_cm_cd('BRD_SE')), brd_nm(VARCHAR 게시판명),\n"
         "        file_use_yn(VARCHAR: 'Y'/'N' 첨부파일사용), cmt_use_yn(VARCHAR: 'Y'/'N' 댓글사용), use_yn(VARCHAR: 'Y'/'N')",
 
         # 게시글
@@ -122,7 +126,7 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         " 날짜 비교: TO_DATE(pub_st_ymd, 'YYYYMMDD')",
 
         # 댓글
-        "-- int_pst_cmt: 게시글 댓글 | PK: (brd_id, pst_sn, cmt_sn) | FK: (brd_id, pst_sn) → int_pst, user_id → int_user.user_id\n"
+        "-- int_pst_cmt: 게시글 댓글 | PK: (pst_sn, brd_id, cmt_sn) | FK(물리): (brd_id, pst_sn) → int_pst | JOIN 힌트: user_id ↔ int_user.user_id\n"
         " 컬럼: cmt_sn(INT 댓글번호), cmt_lvl(INT: 1=댓글 2=대댓글), up_cmt_sn(INT 부모댓글번호 대댓글일 때),\n"
         "        cmt_desc(TEXT 내용), user_id(VARCHAR 작성자),\n"
         "        del_yn(VARCHAR: 'Y'=삭제 'N'=정상 — 조회 시 del_yn='N' 조건 필수), like_cnt(INT 좋아요수)",
@@ -147,6 +151,10 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         "   WHERE 1-(emb_rslt <=> $1::vector) >= 0.7\n"
         "   ORDER BY similarity DESC LIMIT 5",
 
+        # 게시글/댓글 INSERT 규칙
+        "-- [INSERT 규칙]\n"
+        " 1. pst_sn: (SELECT COALESCE(MAX(pst_sn),0)+1 FROM int_pst WHERE brd_id='대상게시판ID') 서브쿼리로 설정\n"
+        " 2. cmt_sn: (SELECT COALESCE(MAX(cmt_sn),0)+1 FROM int_pst_cmt WHERE brd_id='대상게시판ID' AND pst_sn=대상게시글번호) 서브쿼리로 설정",
     ],
     "schd": [
         # 일정 마스터
@@ -155,7 +163,7 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         "        schd_nm(일정명), rmk(상세내용),\n"
         "        schd_st_ymd(VARCHAR(8) YYYYMMDD 시작일), schd_st_hr(VARCHAR(4) HHMM 시작시간 NULL=종일),\n"
         "        schd_end_ymd(VARCHAR(8) YYYYMMDD 종료일), schd_end_hr(VARCHAR(4) HHMM 종료시간 NULL=종일),\n"
-        "        loop_yn('Y'=반복 'N'=단일), loop_se(반복주기 DAY/WEEK/MONTH/YEAR loop_yn='Y'일 때만 유효)\n"
+        "        loop_yn('Y'=반복 'N'=단일), loop_se(VARCHAR → f_cm_cd('LOOP_SE') DAY=매일 WEEK=매주 MONTH=매월 YEAR=매년, loop_yn='Y'일 때만 유효)\n"
         " [반복 일정] schd_end_ymd는 각 발생 건의 기간(길이)이며 반복 종료일이 아님. 반복 종료는 int_schd_excp.end_yn='Y'로 제어",
 
         # 반복 일정 예외
@@ -180,12 +188,13 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         # 일정 INSERT 규칙
         "-- [INSERT 규칙]\n"
         " 1. 날짜: '내일', '다음주 월요일' 등 단일 날짜 표현이면 schd_st_ymd = schd_end_ymd (같은 날)\n"
+        " 2. schd_sn: (SELECT COALESCE(MAX(schd_sn),0)+1 FROM int_schd) 서브쿼리로 설정",
     ],
     "veh": [
         # 차량 마스터
         "-- int_veh: 차량 마스터 | PK: veh_id\n"
         " 컬럼: veh_id(VARCHAR 차량 아이디), veh_nm(VARCHAR 차량명), veh_no(VARCHAR 차량번호),\n"
-        "        veh_se(VARCHAR 차량 사용구분 코드), dept_cd(VARCHAR 차량 사용 부서코드), use_yn(VARCHAR: 'Y'/'N')",
+        "        veh_se(VARCHAR → f_cm_cd('VEH_SE')), dept_cd(VARCHAR 차량 사용 부서코드), use_yn(VARCHAR: 'Y'/'N')",
 
         # 차량 예약
         "-- int_veh_rsv: 차량예약 | PK: (veh_id, rsv_sn) | FK: veh_id → int_veh.veh_id, user_id → int_user.user_id\n"
@@ -196,13 +205,14 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         "        rtn_yn(VARCHAR: 'Y'=반납완료 'N'=미반납), rtn_ymd(VARCHAR(8) YYYYMMDD 반납일), rtn_hhmm(VARCHAR(4) HHMM 반납시간), rtn_plc(TEXT 반납장소),\n"
         "        rmk(TEXT 비고)\n"
         "-- 날짜 비교: TO_DATE(rsv_st_ymd, 'YYYYMMDD')\n"
-        "-- DML: 본인 예약만 허용 (user_id 조건 필수)",
+        "-- DML: 본인 예약만 허용 (user_id 조건 필수)\n"
+        "-- [INSERT 규칙] rsv_sn: (SELECT COALESCE(MAX(rsv_sn),0)+1 FROM int_veh_rsv WHERE veh_id='선택차량ID') 서브쿼리로 설정",
     ],
     "mtgr": [
         # 회의실 마스터
         "-- int_mtgr: 회의실 마스터 | PK: mtgr_id\n"
         " 컬럼: mtgr_id(VARCHAR 회의실 아이디), mtgr_nm(VARCHAR 회의실명), mtgr_plc(VARCHAR 위치),\n"
-        "        mtgr_se(VARCHAR 회의실 사용구분 코드), dept_cd(VARCHAR 회의실 사용 부서코드), use_yn(VARCHAR: 'Y'/'N')",
+        "        mtgr_se(VARCHAR → f_cm_cd('MTGR_SE')), dept_cd(VARCHAR 회의실 사용 부서코드), use_yn(VARCHAR: 'Y'/'N')",
 
         # 회의실 예약
         "-- int_mtgr_rsv: 회의실예약 | PK: (mtgr_id, rsv_sn) | FK: mtgr_id → int_mtgr.mtgr_id, user_id → int_user.user_id\n"
@@ -213,7 +223,8 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         "        rmk(TEXT 비고)\n"
         "-- 날짜 비교: TO_DATE(rsv_st_ymd, 'YYYYMMDD')\n"
         "-- 중복 예약 확인: rsv_st_ymd/hhmm ~ rsv_end_ymd/hhmm 범위 겹침 여부 체크 필수\n"
-        "-- DML: 본인 예약만 허용 (user_id 조건 필수)",
+        "-- DML: 본인 예약만 허용 (user_id 조건 필수)\n"
+        "-- [INSERT 규칙] rsv_sn: (SELECT COALESCE(MAX(rsv_sn),0)+1 FROM int_mtgr_rsv WHERE mtgr_id='선택회의실ID') 서브쿼리로 설정",
     ],
     "rpt": [
         # 보고서 테이블 확정 후 추가
@@ -241,43 +252,51 @@ def get_schema_for_intent(intent: str) -> str:
 # LLM에게 DB에 실제 존재하는 코드값·ID 목록을 제공한다.
 # 쿼리는 경량 마스터 조회만 허용 (WHERE use_yn='Y' 필수).
 
-INTENT_REFERENCE_QUERIES: dict[str, list[str]] = {
+# 각 항목: {"label": 표시용 라벨, "sql": nm(표시명)·cd(코드값) 2컬럼 SELECT}
+# node_enrich_context가 결과를 "표시명=코드값" 컴팩트 매핑으로 포맷해 주입한다.
+# → SLM이 사용자 표현("연차")을 코드값('LEAVE_00001')으로 변환하기 쉬움.
+# SELECT는 반드시 nm, cd 두 컬럼으로 alias 할 것.
+
+INTENT_REFERENCE_QUERIES: dict[str, list[dict]] = {
     "leave": [
-        # 사용 가능한 휴가유형 목록
-        "SELECT leave_cd, leave_nm, ded_yn, paid_yn "
-        "FROM int_leave_mst WHERE use_yn='Y' ORDER BY leave_cd",
-        # 유형별 세부 코드 목록 (종일/반차 구분)
-        "SELECT lm.leave_nm, ld.leave_dtl_cd, ld.leave_dtl_nm, ld.leave_se "
-        "FROM int_leave_dtl ld "
-        "JOIN int_leave_mst lm ON ld.leave_cd = lm.leave_cd "
-        "WHERE ld.use_yn='Y' ORDER BY ld.leave_cd, ld.leave_dtl_cd",
-        "SELECT CD, UP_CD, CD_NM FROM INT_COM_CODE WHERE USE_YN = 'Y' AND UP_CD = 'APRV_RSLT_SE' AND CD_LVL = '2' "
+        {"label": "휴가유형(leave_cd)",
+         "sql": "SELECT leave_nm AS nm, leave_cd AS cd FROM int_leave_mst "
+                "WHERE use_yn='Y' ORDER BY leave_cd"},
+        {"label": "휴가상세(leave_dtl_cd) — 표기: 휴가명 상세명(leave_cd=상위코드)=leave_dtl_cd",
+         "sql": "SELECT lm.leave_nm||' '||ld.leave_dtl_nm||'(leave_cd='||ld.leave_cd||')' AS nm, "
+                "ld.leave_dtl_cd AS cd "
+                "FROM int_leave_dtl ld JOIN int_leave_mst lm ON ld.leave_cd = lm.leave_cd "
+                "WHERE ld.use_yn='Y' ORDER BY ld.leave_cd, ld.leave_dtl_cd"},
+        {"label": "결재결과(aprv_rslt_se)",
+         "sql": "SELECT cd_nm AS nm, cd AS cd FROM int_com_code "
+                "WHERE use_yn='Y' AND up_cd='APRV_RSLT_SE' AND cd_lvl='2'"},
     ],
     "mtgr": [
-        # 예약 가능한 회의실 목록
-        "SELECT mtgr_id, mtgr_nm, mtgr_plc, mtgr_se "
-        "FROM int_mtgr WHERE use_yn='Y' ORDER BY mtgr_id",
+        {"label": "회의실(mtgr_id)",
+         "sql": "SELECT mtgr_nm AS nm, mtgr_id AS cd FROM int_mtgr "
+                "WHERE use_yn='Y' ORDER BY mtgr_id"},
     ],
     "veh": [
-        # 사용 가능한 차량 목록
-        "SELECT veh_id, veh_nm, veh_no, veh_se "
-        "FROM int_veh WHERE use_yn='Y' ORDER BY veh_id",
+        {"label": "차량(veh_id)",
+         "sql": "SELECT veh_nm AS nm, veh_id AS cd FROM int_veh "
+                "WHERE use_yn='Y' ORDER BY veh_id"},
     ],
     "brd": [
-        # 게시판 목록
-        "SELECT schd_sn, brd_nm, brd_se "
-        "FROM int_brd WHERE use_yn='Y' ORDER BY brd_id",
+        {"label": "게시판(brd_id)",
+         "sql": "SELECT brd_nm AS nm, brd_id AS cd FROM int_brd "
+                "WHERE use_yn='Y' ORDER BY brd_id"},
     ],
     "schd": [
-        # 일정 목록
-        "SELECT CD, UP_CD, CD_NM FROM INT_COM_CODE WHERE USE_YN = 'Y' AND UP_CD = 'LOOP_SE' AND CD_LVL = '2' "
+        {"label": "반복주기(loop_se)",
+         "sql": "SELECT cd_nm AS nm, cd AS cd FROM int_com_code "
+                "WHERE use_yn='Y' AND up_cd='LOOP_SE' AND cd_lvl='2'"},
     ],
-    # aprv / schd / rpt / general: 참조 데이터 불필요 → 미정의(빈 리스트 반환)
+    # aprv / rpt / general: 참조 데이터 불필요 → 미정의(빈 리스트 반환)
 }
 
 
-def get_reference_queries(intent: str) -> list[str]:
-    """intent에 해당하는 참조 쿼리 목록을 반환한다. 없으면 빈 리스트."""
+def get_reference_queries(intent: str) -> list[dict]:
+    """intent에 해당하는 참조 쿼리 스펙(label+sql) 목록을 반환한다. 없으면 빈 리스트."""
     return INTENT_REFERENCE_QUERIES.get(intent, [])
 
 
@@ -290,16 +309,14 @@ PREFLIGHT_REQUIRED_FIELDS: dict[str, str] = {
         "필수: 시작날짜, 종료날짜\n"
         "조건부: 시작시간·종료시간 (반차 등 시간단위 신청인 경우만)\n"
         "선택: 사유 (미입력이어도 is_complete=true — 기본값은 SQL 생성 시 자동 적용)\n"
-        "[자동판단] 휴가유형: 사용자 표현('연차','반차' 등)과 참조데이터(int_leave_mst·int_leave_dtl)로 자동 결정 — 사용자에게 따로 묻지 않음\n"
-        "[날짜규칙] '내일','다음주 월요일' 등 단일 날짜 표현이면 시작날짜=종료날짜로 처리"
+        "[자동판단] 휴가유형: 사용자 표현('연차','반차' 등)과 참조데이터(int_leave_mst·int_leave_dtl)로 자동 결정 — 사용자에게 따로 묻지 않음"
     ),
     "mtgr": "필수: 예약날짜, 시작시간, 종료시간\n"
             "[자동판단] 회의실 : 사용자가 따로 회의실을 지정하지 않았을 경우 참조데이터 (int_mtgr·int_mtgr_rsv)로 자동결정 - 사용하는 첫번째 회의실로 결정 ",
-    "veh":  "필수: 차량, 예약 시작일시(날짜+시간), 예약 종료일시(날짜+시간)",
+    "veh":  "필수: 차량, 예약 시작일자, 시작시간, 종료시간",
     "brd":  "필수: 게시판, 제목, 본문",
     "schd":  "필수: 일정이름, 일정시작일자, 일정종료일자\n"
-             "[규칙] 반복일정으로 판단 된다면 공통코드 LOOP_SE 를 판단하여 반복주기 입력필수\n"
-             "[날짜규칙] '내일','다음주 월요일' 등 단일 날짜 표현이면 시작날짜=종료날짜로 처리",
+             "[규칙] 반복일정으로 판단되면 공통코드 LOOP_SE를 판단하여 반복주기 입력 필수",
 }
 
 
