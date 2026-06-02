@@ -11,6 +11,8 @@ export type PanelId =
   | 'users'
   | 'roles'
   | 'boards'
+  | 'aprv-form'
+  | 'approval-form'
   | 'approval-line'
   | 'common-code'
   | 'job-grade'

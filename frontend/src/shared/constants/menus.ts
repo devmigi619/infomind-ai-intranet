@@ -66,6 +66,7 @@ export const MENU_ICON_NAME: Record<string, string> = {
   leave: 'TreePalm',
   'leave-req': 'TreePalm',
   'approval-line': 'FileText',
+  'aprv-form': 'FileCheck',
   'common-code': 'BookA',
   'job-grade': 'GraduationCap',
   dept: 'Network',

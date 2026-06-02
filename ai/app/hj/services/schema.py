@@ -106,7 +106,42 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         " · req_sn: 컨텍스트의 [요청 시퀀스] 값을 마스터·상세에 동일하게 사용(서브쿼리 금지)",
     ],
     "aprv": [
-        # 전자결재 테이블 확정 후 추가
+        # 결재 양식 마스터
+        "-- int_aprv_form_mst: 결재 양식 마스터 | PK: aprv_form_id\n"
+        " 컬럼: aprv_form_nm(VARCHAR 양식명), file_yn(VARCHAR: 'Y'/'N' 파일첨부가능), rmk(TEXT 비고), del_yn(VARCHAR: 'Y'/'N')",
+
+        # 결재 양식 항목 (EAV 패턴)
+        "-- int_aprv_form_dtl: 결재 양식 항목 | PK: (aprv_form_id, aprv_ref_cd) | FK: aprv_form_id → int_aprv_form_mst\n"
+        " 컬럼: aprv_ref_nm(VARCHAR 항목명), aprv_ref_se(VARCHAR 항목구분/타입), reqd_yn(VARCHAR: 'Y'=필수 'N'=선택), del_yn(VARCHAR: 'Y'/'N')\n"
+        " 용도: 양식별 입력 항목 정의 (EAV 패턴) — reqd_yn='Y' 항목이 사용자 필수 입력값",
+
+        # 결재 요청
+        "-- int_aprv_req: 결재 요청 | PK: (aprv_form_id, req_user_id, aprv_req_sn) | FK: aprv_form_id → int_aprv_form_mst\n"
+        " 컬럼: aprv_req_desc(JSONB 양식 항목값 {aprv_ref_cd: 입력값}),\n"
+        "        aprv_rslt_se(VARCHAR → f_cm_cd('APRV_RSLT_SE') 결재결과),\n"
+        "        req_sum(TEXT 요약/제목), req_ymd(VARCHAR(8) YYYYMMDD 요청일),\n"
+        "        afile_id(VARCHAR 첨부파일그룹ID NULL허용), dept_ref_yn(VARCHAR: 'Y'/'N'), del_yn(VARCHAR: 'Y'/'N')\n"
+        " [JSONB 예시] aprv_req_desc = '{\"ref001\": \"출장 목적\", \"ref002\": \"20250610\"}'::jsonb",
+
+        # 결재자 (시스템 자동 삽입)
+        "-- int_aprv_req_aprv: 결재자 | PK: (aprv_form_id, req_user_id, aprv_req_sn, aprv_user_id)\n"
+        " FK: (aprv_form_id, req_user_id, aprv_req_sn) → int_aprv_req\n"
+        " 컬럼: aprv_ord(BIGINT 결재순서), aprv_se(VARCHAR → f_cm_cd('APRV_SE') NULL=미처리),\n"
+        "        aprv_ymd(VARCHAR(8) YYYYMMDD 결재일), rmk(TEXT 의견/반려사유)",
+
+        # 참조자 (시스템 자동 삽입)
+        "-- int_aprv_req_ref: 참조자 | PK: (aprv_form_id, req_user_id, aprv_req_sn, ref_user_id)\n"
+        " FK: (aprv_form_id, req_user_id, aprv_req_sn) → int_aprv_req\n"
+        " 컬럼: qry_yn(VARCHAR: 'Y'=조회함 'N'=미조회)",
+
+        # INSERT 규칙
+        "-- [INSERT 규칙] 결재신청 SQL은 int_aprv_req 1개 테이블만 생성\n"
+        "   ★ int_aprv_req_aprv(결재라인)·int_aprv_req_ref(참조자) INSERT는 절대 생성하지 말 것 — 사용자 결재선 확정 후 시스템이 자동 삽입함\n"
+        " · int_aprv_req (1행) — 컬럼: aprv_form_id, req_user_id, aprv_req_sn, aprv_req_desc, aprv_rslt_se, req_sum, req_ymd(+감사컬럼)\n"
+        "    - aprv_req_desc: JSONB 캐스트 필수 — '{\"aprv_ref_cd\": \"입력값\", ...}'::jsonb\n"
+        "    - aprv_rslt_se: 신규 신청은 '1'(신청)\n"
+        "    - req_ymd: 오늘 날짜 YYYYMMDD\n"
+        " · aprv_req_sn: 컨텍스트의 [요청 시퀀스] 값을 직접 사용(서브쿼리 금지)",
     ],
     "brd": [
         # 게시판 마스터
@@ -291,7 +326,20 @@ INTENT_REFERENCE_QUERIES: dict[str, list[dict]] = {
          "sql": "SELECT cd_nm AS nm, cd AS cd FROM int_com_code "
                 "WHERE use_yn='Y' AND up_cd='LOOP_SE' AND cd_lvl='2'"},
     ],
-    # aprv / rpt / general: 참조 데이터 불필요 → 미정의(빈 리스트 반환)
+    "aprv": [
+        {"label": "결재양식(aprv_form_id)",
+         "sql": "SELECT aprv_form_nm AS nm, aprv_form_id AS cd FROM int_aprv_form_mst "
+                "WHERE del_yn='N' ORDER BY aprv_form_id"},
+        {"label": "양식항목(aprv_ref_cd) — 표기: 양식명 항목명(reqd_yn=필수여부)(aprv_form_id=양식코드)=항목코드",
+         "sql": "SELECT m.aprv_form_nm||' '||d.aprv_ref_nm||'(reqd_yn='||d.reqd_yn||')(aprv_form_id='||d.aprv_form_id||')' AS nm, "
+                "d.aprv_ref_cd AS cd "
+                "FROM int_aprv_form_dtl d JOIN int_aprv_form_mst m ON d.aprv_form_id = m.aprv_form_id "
+                "WHERE d.del_yn='N' AND m.del_yn='N' ORDER BY d.aprv_form_id, d.aprv_ref_cd"},
+        {"label": "결재결과(aprv_rslt_se)",
+         "sql": "SELECT cd_nm AS nm, cd AS cd FROM int_com_code "
+                "WHERE use_yn='Y' AND up_cd='APRV_RSLT_SE' AND cd_lvl='2'"},
+    ],
+    # rpt / general: 참조 데이터 불필요 → 미정의(빈 리스트 반환)
 }
 
 
@@ -314,6 +362,11 @@ PREFLIGHT_REQUIRED_FIELDS: dict[str, str] = {
     "mtgr": "필수: 예약날짜, 시작시간, 종료시간\n"
             "[자동판단] 회의실 : 사용자가 따로 회의실을 지정하지 않았을 경우 참조데이터 (int_mtgr·int_mtgr_rsv)로 자동결정 - 사용하는 첫번째 회의실로 결정 ",
     "veh":  "필수: 차량, 예약 시작일자, 시작시간, 종료시간",
+    "aprv": (
+        "필수: 결재양식 선택, 해당 양식의 reqd_yn='Y' 항목 모두 입력\n"
+        "[자동판단] 양식: [참조 코드]의 결재양식 목록에서 사용자 요청에 맞는 양식 자동 결정 — 따로 묻지 않음\n"
+        "[자동판단] 항목값: [참조 코드 - 양식항목]에서 reqd_yn='Y'인 항목만 사용자에게 확인. 'N' 항목은 생략 가능"
+    ),
     "brd":  "필수: 게시판, 제목, 본문",
     "schd":  "필수: 일정이름, 일정시작일자, 일정종료일자\n"
              "[규칙] 반복일정으로 판단되면 공통코드 LOOP_SE를 판단하여 반복주기 입력 필수",

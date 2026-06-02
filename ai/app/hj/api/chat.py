@@ -74,7 +74,8 @@ _COARSE_STATUS: dict[str, str] = {
     "guardrail_input":     "요청 점검 중...",
     "classify":            "분석 중...",
     "node_enrich_context": "참조 정보 조회 중...",
-    "node_excu_preflight": "정보 확인 중...",
+    "node_excu_preflight":     "정보 확인 중...",
+    "node_excu_preflight_ask": "추가 정보 대기 중...",
     "node_search":         "데이터 조회 중...",
     "node_excu":           "처리 내용 확인 중...",
     "node_excu_confirm":   "실행 대기 중...",
@@ -103,8 +104,9 @@ def _build_detail_status(name: str, node_input) -> str | None:
         "classify":            "요청 의도를 파악하고 있어요",
         "node_enrich_context": f"{sp}관련 정보를 모으고 있어요",
         "node_search":         f"{sp}내역을 조회하고 있어요",
-        "node_excu_preflight": f"{sp}신청에 필요한 정보를 확인하고 있어요",
-        "node_excu":           f"{sp}실행 내용을 작성하고 있어요",
+        "node_excu_preflight":     f"{sp}신청에 필요한 정보를 확인하고 있어요",
+        "node_excu_preflight_ask": f"{sp}추가 정보를 기다리고 있어요",
+        "node_excu":               f"{sp}실행 내용을 작성하고 있어요",
         "node_excu_confirm":   "실행을 준비하고 있어요",
         "node_human":          "추가로 여쭤볼 내용을 정리하고 있어요",
         "node_generate":       "답변을 작성하고 있어요",
@@ -178,7 +180,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
         # on_chain_end에서 messages를 꺼내 직접 token 이벤트로 전달한다.
         # node_excu_preflight: 파싱 오류 시 오류 메시지를 담아 save_history로 직행.
         # (node_excu는 SQL+미리보기 생성 후 node_excu_confirm으로 라우팅만 하므로 messages 없음)
-        if kind == "on_chain_end" and name in ("node_general", "node_excu_confirm", "node_excu_preflight"):
+        if kind == "on_chain_end" and name in ("node_general", "node_excu_confirm", "node_excu_preflight", "node_excu_preflight_ask"):
             update = _extract_update(event["data"]["output"])
             msgs = update.get("messages", [])
             if msgs:
@@ -293,8 +295,9 @@ async def chat(request: dict, user=Depends(verify_token)):
         "grdl_se":        None,
         "grdl_nm":        None,
         "tk_use_cnt":     0,
-        "system_status":  "OK",
-        "preflight_retry": 0,
+        "system_status":             "OK",
+        "preflight_retry":           0,
+        "pending_preflight_question": None,
     }
     return StreamingResponse(
         _sse_stream(state, config, turn_id=turn_id),

@@ -304,12 +304,18 @@ async def node_human(state: GraphState) -> Command:
 
 async def node_excu_preflight(state: GraphState) -> Command:
     """
-    excu 실행 전 사전 검증
+    excu 실행 전 사전 검증 — SLM 검증만 담당.
 
     흐름:
-      정보 충분 → node_excu / 부족 → interrupt(human) → 재진입, 무한반복
+      정보 충분 → node_excu
+      정보 부족 → question을 GraphState에 저장 후 node_excu_preflight_ask로 라우팅
+
+    [노드 분리 이유]
+    MemorySaver resume 시 이 노드가 처음부터 재실행되면서 SLM이 비결정적으로
+    is_complete=true를 반환하면 Q&A 코드가 우회된다. interrupt()를 별도 노드
+    (node_excu_preflight_ask)로 분리하면, resume 시 ask 노드만 재실행되고
+    interrupt()가 즉시 user_answer를 반환하므로 Q&A가 항상 정상 처리된다.
     """
-    retry = state.get("preflight_retry", 0)
     intent = state.get("intent") or "general"
     context = state.get("context") or ""
     user_message = state["messages"][-1].content
@@ -339,19 +345,39 @@ async def node_excu_preflight(state: GraphState) -> Command:
         )
 
     # ── 라우팅 결정 ──────────────────────────────────────────────────────────
-    #충분한 정보가 나올떄까지 진행한다.
     if result.is_complete:
-        return Command(goto="node_excu", update={"preflight_retry": 0})
+        return Command(goto="node_excu", update={"preflight_retry": 0, "pending_preflight_question": None})
 
-    # 정보 부족 — 사용자에게 추가 질문
+    # 정보 부족 — 질문 텍스트 조립
     question = result.question or (
         f"다음 정보를 알려주세요: {', '.join(result.missing_fields)}"
         if result.missing_fields else "조금 더 자세히 설명해 주시겠어요?"
     )
-    # missing_fields와 관련된 참조 데이터 선택지가 있으면 질문 텍스트에 병합
     if result.show_options:
         question += f"\n선택 가능: {', '.join(result.show_options)}"
 
+    # ★ interrupt() 호출 전에 question을 GraphState에 저장하고 ask 노드로 라우팅.
+    # ask 노드에서 interrupt()가 호출되므로, resume 시 ask 노드만 재실행되어
+    # pending_preflight_question을 읽어 Q&A를 항상 정상 처리할 수 있다.
+    return Command(
+        goto="node_excu_preflight_ask",
+        update={"pending_preflight_question": question},
+    )
+
+
+async def node_excu_preflight_ask(state: GraphState) -> Command:
+    """
+    excu preflight interrupt 전담 노드 — 사용자 답변 수집 후 Q&A를 context에 누적.
+
+    MemorySaver resume 시 이 노드만 재실행되어 interrupt()가 즉시 user_answer를 반환.
+    Q&A를 context에 추가한 뒤 node_excu_preflight로 재진입해 완전한 context로 SLM 재검증.
+    """
+    question = state.get("pending_preflight_question") or ""
+    context  = state.get("context") or ""
+    retry    = state.get("preflight_retry", 0)
+    intent   = state.get("intent") or "general"
+
+    # ── 사용자 답변 수집 (interrupt) ─────────────────────────────────────────
     user_answer = interrupt({
         "type": "human",
         "question": question,
@@ -366,9 +392,7 @@ async def node_excu_preflight(state: GraphState) -> Command:
         )
 
     # ── 의도 재확인 ───────────────────────────────────────────────────────────
-    # 전체 히스토리 + 새 답변을 SLM에 넣어 intent/action_type이 바뀌었는지 확인.
-    # 짧은 단답("연차요")은 기존 intent로 그대로 분류되고,
-    # 완전히 다른 요청("아니면 회의실 예약해줘")은 다른 intent로 분류된다.
+    # 짧은 단답("연차요")은 기존 intent 유지, 완전히 다른 요청은 node_route로 분기
     slm_recheck = get_structured_slm(IntentResult)
     recheck_msgs = (
         [SystemMessage(content=INTENT_SYSTEM_PROMPT)]
@@ -379,32 +403,34 @@ async def node_excu_preflight(state: GraphState) -> Command:
     try:
         recheck = recheck_resp if is_dev() else parse_llm_json(recheck_resp.content, IntentResult)
         if recheck.intent != intent or recheck.action_type != state.get("action_type"):
-            # 완전히 다른 요청 → 새 HumanMessage로 추가하고 node_route 재진입
             return Command(
                 goto="node_route",
                 update={
-                    "intent":             recheck.intent,
-                    "action_type":        recheck.action_type,
-                    "context":            "",
-                    "preflight_retry":    0,
-                    "pending_aprvl_list": None,
-                    "pending_ref_list":   None,
-                    "pending_req_sn":     None,
-                    "messages":           [HumanMessage(content=str(user_answer))],
+                    "intent":                    recheck.intent,
+                    "action_type":               recheck.action_type,
+                    "context":                   "",
+                    "preflight_retry":           0,
+                    "pending_preflight_question": None,
+                    "pending_aprvl_list":        None,
+                    "pending_ref_list":          None,
+                    "pending_req_sn":            None,
+                    "messages":                  [HumanMessage(content=str(user_answer))],
                 },
             )
     except ValueError:
         pass  # 재분류 실패 시 기존 preflight 흐름 유지
 
-    # AI 질문 + 사용자 답변을 Q&A 쌍으로 context에 누적 후 preflight 재진입.
-    # 질문 없이 답변만 저장하면 LLM이 "어떤 맥락의 답변인지" 알 수 없으므로 함께 기록.
+    # ── Q&A 쌍을 context에 누적 후 node_excu_preflight 재진입 ─────────────────
+    # Q&A를 먼저 context에 추가한 뒤 SLM을 호출하므로 SLM이 항상 완전한 정보를 봄
     qa_entry = f"[추가 정보]\nQ: {question}\nA: {user_answer}"
     new_context = f"{context}\n{qa_entry}".strip() if context else qa_entry
+
     return Command(
         goto="node_excu_preflight",
         update={
-            "context": new_context,
-            "preflight_retry": retry + 1,
+            "context":                   new_context,
+            "preflight_retry":           retry + 1,
+            "pending_preflight_question": None,
         },
     )
 
@@ -630,8 +656,19 @@ async def node_excu_confirm(state: GraphState) -> Command:
 
         req_sn = state.get("pending_req_sn")
         if intent in APRVL_LINE_INTENTS and req_sn is not None:
+            # aprv intent: 3번째 PK(aprv_form_id)를 LLM 생성 SQL에서 추출
+            form_id: str | None = None
+            if intent == "aprv":
+                import re as _re
+                m = _re.search(
+                    r"INSERT\s+INTO\s+int_aprv_req\s*\([^)]*\)\s*VALUES\s*\(\s*'([^']+)'",
+                    sql, _re.IGNORECASE,
+                )
+                form_id = m.group(1) if m else None
+
             aprvl_sqls = build_aprvl_insert_sqls(
-                intent, user_id, req_sn, aprvl_list, ref_list, user_id
+                intent, user_id, req_sn, aprvl_list, ref_list, user_id,
+                form_id=form_id,
             )
 
         all_sqls = main_sqls + aprvl_sqls
@@ -791,8 +828,9 @@ async def build_graph():
     g.add_node("node_enrich_context", node_enrich_context)
     g.add_node("node_human",          node_human)
     g.add_node("node_search",         node_search)
-    g.add_node("node_excu_preflight", node_excu_preflight)
-    g.add_node("node_excu",           node_excu)
+    g.add_node("node_excu_preflight",     node_excu_preflight)
+    g.add_node("node_excu_preflight_ask", node_excu_preflight_ask)
+    g.add_node("node_excu",               node_excu)
     g.add_node("node_excu_confirm",   node_excu_confirm)
     g.add_node("node_general",        node_general)
     g.add_node("node_generate",       node_generate)

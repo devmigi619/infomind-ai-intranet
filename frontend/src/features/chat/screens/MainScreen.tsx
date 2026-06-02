@@ -16,6 +16,7 @@ import { ChatMessage } from '../../../shared/components/ChatMessage';
 import { ChatInput } from '../../../shared/components/ChatInput';
 import { FloatingResetButton } from '../../../shared/components/FloatingResetButton';
 import { useUiStore } from '../../../store/uiStore';
+import { useChatStore } from '../../../store/chatStore';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { ChatHistorySidebar } from '../components/ChatHistorySidebar';
@@ -24,29 +25,7 @@ import { InterruptReplyPanel } from '../components/InterruptReplyPanel';
 import { useChatSessionMessages } from '../api';
 import { useCurrentUser } from '../../auth/api';
 import type { AprvEntry } from '../../leave-req/api';
-
-const generateSessionId = (): string => {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return crypto.randomUUID();
-  }
-  return Math.random().toString(36).slice(2) + Date.now().toString(36);
-};
-
-interface ActionLink {
-  label: string;
-  target: string;
-}
-
-interface Message {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  actions?: ActionLink[];
-  isStreaming?: boolean;
-  isThinking?: boolean;
-  interruptType?: 'human' | 'excu';
-  progressSteps?: string[]; // detail_status 누적 (thinking 단계 동안만 유지)
-}
+import type { Message } from '../types';
 
 interface MainScreenProps {
   user: { name: string } | null;
@@ -61,28 +40,35 @@ const DRAWER_WIDTH = 260;
 export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScreenProps) {
   const { isMobile } = useResponsive();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  // ─── 영속화 상태 (Zustand + AsyncStorage) ────────────────────────────────
+  // 내비게이션으로 언마운트/리마운트 시에도 대화 이력 및 interrupt 상태 유지
+  const {
+    messages,
+    setMessages,
+    activeSessionId,
+    setActiveSessionId,
+    pendingInterrupt,
+    setPendingInterrupt,
+    humanInterruptQuestion,
+    setHumanInterruptQuestion,
+    turnId,
+    setTurnId,
+    interruptAprvlList,
+    setInterruptAprvlList,
+    interruptRefList,
+    setInterruptRefList,
+    resetSession,
+    hydrateFromStorage,
+  } = useChatStore();
+
+  // ─── 비영속 UI 상태 ───────────────────────────────────────────────────────
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [pendingInterrupt, setPendingInterrupt] = useState<'human' | 'excu' | null>(null);
-  const [humanInterruptQuestion, setHumanInterruptQuestion] = useState<string>('');
+  const [showAprvModal, setShowAprvModal] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  // ─── 결재선 interrupt 상태 ───────────────────────────────────────────────
-  // interrupt payload에 aprvl_list가 포함된 경우에만 non-null.
-  const [interruptAprvlList, setInterruptAprvlList] = useState<AprvEntry[] | null>(null);
-  const [interruptRefList,   setInterruptRefList]   = useState<AprvEntry[]>([]);
-  const [showAprvModal,      setShowAprvModal]       = useState(false);
 
   // 현재 사용자 ID (AprvLineEditorPanel에서 본인 제외용)
   const { data: currentUser } = useCurrentUser();
-
-  // ─── 세션 관리 ───────────────────────────────────────────────────────────
-  const [activeSessionId, setActiveSessionId] = useState<string>(() => generateSessionId());
-  const sessionIdRef = useRef<string>(activeSessionId);
-  // turnIdRef: /chat SSE의 turn_id 이벤트로 수신한 값
-  // MemorySaver 체크포인트 식별용 — /chat/resume 시 전송
-  const turnIdRef = useRef<string>('');
 
   // 이력에서 세션 선택 시 메시지 로딩용
   const [selectedSessId, setSelectedSessId] = useState<string | null>(null);
@@ -94,6 +80,12 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const markAiUnread = useUiStore((s) => s.markAiUnread);
   const chatResetCounter = useUiStore((s) => s.chatResetCounter);
   const theme = useTheme();
+
+  // ─── 마운트 시 이전 상태 복원 ────────────────────────────────────────────
+  useEffect(() => {
+    hydrateFromStorage();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ─── 드로어 애니메이션 (모바일) ───────────────────────────────────────────
   const drawerAnim = useRef(new Animated.Value(-DRAWER_WIDTH)).current;
@@ -118,52 +110,45 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       })),
     );
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 50);
-  }, [selectedSessId, historyData]);
+  }, [selectedSessId, historyData, setMessages]);
 
   // ─── 리셋 ────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (chatResetCounter === 0) return;
-    const newId = generateSessionId();
-    sessionIdRef.current = newId;
-    setActiveSessionId(newId);
+    resetSession();
     setSelectedSessId(null);
-    setMessages([]);
-    setPendingInterrupt(null);
-    setHumanInterruptQuestion('');
-    setInterruptAprvlList(null);
-    setInterruptRefList([]);
     setShowAprvModal(false);
-  }, [chatResetCounter]);
+  }, [chatResetCounter, resetSession]);
 
   // ─── 핸들러: 새 세션 ─────────────────────────────────────────────────────
   const handleNewSession = useCallback(() => {
-    const newId = generateSessionId();
-    sessionIdRef.current = newId;
-    setActiveSessionId(newId);
+    resetSession();
     setSelectedSessId(null);
+    setShowAprvModal(false);
+    setDrawerOpen(false);
+  }, [resetSession]);
+
+  // ─── 핸들러: 세션 선택 ───────────────────────────────────────────────────
+  const handleSelectSession = useCallback((sessId: string) => {
+    // 선택한 이력 세션으로 전환 — interrupt/turnId 초기화 후 DB 메시지 로드
     setMessages([]);
     setPendingInterrupt(null);
     setHumanInterruptQuestion('');
     setInterruptAprvlList(null);
     setInterruptRefList([]);
-    setShowAprvModal(false);
-    setDrawerOpen(false);
-  }, []);
-
-  // ─── 핸들러: 세션 선택 ───────────────────────────────────────────────────
-  const handleSelectSession = useCallback((sessId: string) => {
-    sessionIdRef.current = sessId;
+    setTurnId('');
     setActiveSessionId(sessId);
     setSelectedSessId(sessId);
-    setMessages([]); // 로딩 중 클리어
-    setPendingInterrupt(null);
     setDrawerOpen(false);
-  }, []);
+  }, [
+    setMessages, setPendingInterrupt, setHumanInterruptQuestion,
+    setInterruptAprvlList, setInterruptRefList, setTurnId, setActiveSessionId,
+  ]);
 
   // ─── SSE 스트림 ──────────────────────────────────────────────────────────
   const _runSseStream = useCallback(
     async (url: string, body: object, token: string | null) => {
-      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.159:8000';
+      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://localhost:8000';
 
       setMessages((prev) => [
         ...prev,
@@ -186,7 +171,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let actions: ActionLink[] = [];
+        let actions: { label: string; target: string }[] = [];
         let firstTokenReceived = false;
         let detectedInterrupt: 'human' | 'excu' | null = null;
         let interruptQuestion: string | null = null; // interrupt payload의 question/preview 텍스트
@@ -200,8 +185,8 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
             try {
               const data = JSON.parse(line.slice(6));
               if (data.type === 'turn_id') {
-                // 백엔드가 매 턴마다 생성한 MemorySaver thread_id
-                turnIdRef.current = data.turn_id;
+                // 백엔드가 매 턴마다 생성한 MemorySaver thread_id — /chat/resume 식별용
+                setTurnId(data.turn_id);
               } else if (data.type === 'meta') {
                 actions = data.actions ?? [];
               } else if (data.type === 'progress') {
@@ -326,7 +311,11 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         onAiResponseComplete?.();
       }
     },
-    [markAiUnread, onAiResponseComplete],
+    [
+      setMessages, setTurnId, setHumanInterruptQuestion,
+      setInterruptAprvlList, setInterruptRefList, setPendingInterrupt,
+      markAiUnread, onAiResponseComplete,
+    ],
   );
 
   const sendMessage = useCallback(
@@ -344,11 +333,11 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       const token = await AsyncStorage.getItem('token');
       await _runSseStream(
         '/ai/chat',
-        { message: text.trim(), history, session_id: sessionIdRef.current },
+        { message: text.trim(), history, session_id: activeSessionId },
         token,
       );
     },
-    [isStreaming, messages, setLastUserMessage, _runSseStream],
+    [isStreaming, messages, activeSessionId, setLastUserMessage, setMessages, _runSseStream],
   );
 
   const sendResume = useCallback(
@@ -377,11 +366,16 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       const token = await AsyncStorage.getItem('token');
       await _runSseStream(
         '/ai/chat/resume',
-        { turn_id: turnIdRef.current, resume_value: resumeValue },
+        { turn_id: turnId, resume_value: resumeValue },
         token,
       );
     },
-    [isStreaming, _runSseStream],
+    [
+      isStreaming, turnId,
+      setMessages, setPendingInterrupt, setHumanInterruptQuestion,
+      setInterruptAprvlList, setInterruptRefList,
+      _runSseStream,
+    ],
   );
 
   const handleSend = useCallback(() => {

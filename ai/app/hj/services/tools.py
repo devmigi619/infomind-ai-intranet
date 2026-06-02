@@ -135,7 +135,7 @@ VECTOR_SEARCH_INTENTS: set[str] = {"brd"}
 # excu 실행 시 결재자/참조자 INSERT가 필요한 intent 목록.
 # 새 intent 추가 시: APRVL_LINE_INTENTS와 APRVL_TABLE_MAP에만 항목 추가하면 됨.
 # graph.py / node_excu_confirm 로직 자체는 변경 불필요.
-APRVL_LINE_INTENTS: set[str] = {"leave"}   # "aprv" 테이블 확정 후 추가
+APRVL_LINE_INTENTS: set[str] = {"leave", "aprv"}
 
 APRVL_TABLE_MAP: dict[str, dict] = {
     "leave": {
@@ -149,7 +149,18 @@ APRVL_TABLE_MAP: dict[str, dict] = {
         "aprv_ord_col":  "aprv_ord",
         "ref_user_col":  "ref_user_id",
     },
-    # "aprv": { ... }  ← 전자결재 테이블 확정 후 동일 패턴으로 추가
+    "aprv": {
+        "mst_table":     "int_aprv_req",
+        "aprv_table":    "int_aprv_req_aprv",
+        "ref_table":     "int_aprv_req_ref",
+        "pk_user_col":   "req_user_id",
+        "pk_sn_col":     "aprv_req_sn",          # mst PK (2) — 자동증가
+        "pk_form_col":   "aprv_form_id",         # mst PK (3) — leave에는 없는 양식 코드
+        "pk_sn_query":   "SELECT COALESCE(MAX(aprv_req_sn),0)+1 FROM int_aprv_req WHERE req_user_id=$1",
+        "aprv_user_col": "aprv_user_id",
+        "aprv_ord_col":  "aprv_ord",
+        "ref_user_col":  "ref_user_id",
+    },
 }
 
 # ── 벡터 검색 고정 SQL 템플릿 ────────────────────────────────────────────────
@@ -248,7 +259,9 @@ DML_ALLOWED_TABLES: set[str] = {
     "int_leave_req_dtl",     # 휴가신청 일별 상세 (본인만)
     "int_leave_req_aprv",    # 휴가신청 결재라인 (build_aprvl_insert_sqls 전용)
     "int_leave_req_ref",     # 휴가신청 참조자 (build_aprvl_insert_sqls 전용)
-    # "int_aprv",            # 전자결재
+    "int_aprv_req",          # 전자결재 요청
+    "int_aprv_req_aprv",     # 전자결재 결재자 (build_aprvl_insert_sqls 전용)
+    "int_aprv_req_ref",      # 전자결재 참조자 (build_aprvl_insert_sqls 전용)
     "int_mtgr_rsv",          # 회의실 예약 (본인만)
     "int_veh_rsv",           # 차량 예약 (본인만)
     "int_schd",            # 일정
@@ -382,6 +395,7 @@ def build_aprvl_insert_sqls(
     aprvl_list: list[dict],
     ref_list: list[dict],
     executor_id: str,
+    form_id: str | None = None,
 ) -> list[str]:
     """
     APRVL_TABLE_MAP 기반으로 결재자/참조자 INSERT SQL 리스트를 생성한다.
@@ -389,29 +403,49 @@ def build_aprvl_insert_sqls(
 
     aprvl_list 항목: {"aprvUserId": "..."}  (프론트가 전송하는 최소 구조)
     ref_list 항목:   {"aprvUserId": "..."} 또는 단순 문자열 user_id
+    form_id: aprv intent에서 필요한 3번째 PK(aprv_form_id) 값. leave는 None.
     """
-    cfg  = APRVL_TABLE_MAP[intent]
+    cfg          = APRVL_TABLE_MAP[intent]
     sqls: list[str] = []
+    has_form_col = "pk_form_col" in cfg   # aprv=True, leave=False
 
     for i, a in enumerate(aprvl_list, start=1):
         uid = a["aprvUserId"] if isinstance(a, dict) else a
-        sqls.append(
-            f"INSERT INTO {cfg['aprv_table']} "
-            f"({cfg['pk_user_col']},{cfg['pk_sn_col']},{cfg['aprv_user_col']},{cfg['aprv_ord_col']},"
-            f"crt_at,crt_by,crt_ip,upd_at,upd_by,upd_ip) "
-            f"VALUES ('{req_user_id}',{req_sn},'{uid}',{i},"
-            f"NOW(),'{executor_id}','127.0.0.1',NOW(),'{executor_id}','127.0.0.1')"
-        )
+        if has_form_col:
+            sqls.append(
+                f"INSERT INTO {cfg['aprv_table']} "
+                f"({cfg['pk_form_col']},{cfg['pk_user_col']},{cfg['pk_sn_col']},{cfg['aprv_user_col']},{cfg['aprv_ord_col']},"
+                f"crt_at,crt_by,crt_ip,upd_at,upd_by,upd_ip) "
+                f"VALUES ('{form_id}','{req_user_id}',{req_sn},'{uid}',{i},"
+                f"NOW(),'{executor_id}','127.0.0.1',NOW(),'{executor_id}','127.0.0.1')"
+            )
+        else:
+            sqls.append(
+                f"INSERT INTO {cfg['aprv_table']} "
+                f"({cfg['pk_user_col']},{cfg['pk_sn_col']},{cfg['aprv_user_col']},{cfg['aprv_ord_col']},"
+                f"crt_at,crt_by,crt_ip,upd_at,upd_by,upd_ip) "
+                f"VALUES ('{req_user_id}',{req_sn},'{uid}',{i},"
+                f"NOW(),'{executor_id}','127.0.0.1',NOW(),'{executor_id}','127.0.0.1')"
+            )
 
     for r in ref_list:
         uid = r["aprvUserId"] if isinstance(r, dict) else r
-        sqls.append(
-            f"INSERT INTO {cfg['ref_table']} "
-            f"({cfg['pk_user_col']},{cfg['pk_sn_col']},{cfg['ref_user_col']},"
-            f"crt_at,crt_by,crt_ip,upd_at,upd_by,upd_ip) "
-            f"VALUES ('{req_user_id}',{req_sn},'{uid}',"
-            f"NOW(),'{executor_id}','127.0.0.1',NOW(),'{executor_id}','127.0.0.1')"
-        )
+        if has_form_col:
+            sqls.append(
+                f"INSERT INTO {cfg['ref_table']} "
+                f"({cfg['pk_form_col']},{cfg['pk_user_col']},{cfg['pk_sn_col']},{cfg['ref_user_col']},"
+                f"crt_at,crt_by,crt_ip,upd_at,upd_by,upd_ip) "
+                f"VALUES ('{form_id}','{req_user_id}',{req_sn},'{uid}',"
+                f"NOW(),'{executor_id}','127.0.0.1',NOW(),'{executor_id}','127.0.0.1')"
+            )
+        else:
+            sqls.append(
+                f"INSERT INTO {cfg['ref_table']} "
+                f"({cfg['pk_user_col']},{cfg['pk_sn_col']},{cfg['ref_user_col']},"
+                f"crt_at,crt_by,crt_ip,upd_at,upd_by,upd_ip) "
+                f"VALUES ('{req_user_id}',{req_sn},'{uid}',"
+                f"NOW(),'{executor_id}','127.0.0.1',NOW(),'{executor_id}','127.0.0.1')"
+            )
 
     return sqls
 

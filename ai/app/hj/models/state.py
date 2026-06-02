@@ -22,3 +22,4 @@ class GraphState(MessagesState):
     tk_use_cnt: int             # 토큰 사용값
     system_status: str          # 시스템 상태
     preflight_retry: int        # excu preflight 재시도 횟수 (0=미시도)
+    pending_preflight_question: str | None  # interrupt 전 GraphState에 질문 저장 (node_excu_preflight_ask 전달용)

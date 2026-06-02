@@ -5,6 +5,7 @@ import { useTheme } from '../../shared/hooks/useTheme';
 import { useMenuList } from '../../shared/hooks/useMenuList';
 import { BoardScreen } from '../../features/board/screens/BoardScreen';
 import { ApprovalScreen } from '../../features/approval/screens/ApprovalScreen';
+import { ApprovalFormScreen } from '../../features/approval/screens/ApprovalFormScreen';
 import { WeeklyReportScreen } from '../../features/report/screens/WeeklyReportScreen';
 import { SettingsScreen } from '../../features/settings/screens/SettingsScreen';
 import { PlaceholderScreen } from '../../features/placeholder/screens/PlaceholderScreen';
@@ -13,6 +14,7 @@ import { AdminJobGradeScreen } from '../../features/admin-job-grade/screens/Admi
 import { AdminDeptScreen } from '../../features/admin-dept/screens/AdminDeptScreen';
 import { AdminUsersScreen } from '../../features/admin-users/screens/AdminUsersScreen';
 import { AdminBoardsScreen } from '../../features/admin-boards/screens/AdminBoardsScreen';
+import { AdminAprvFormScreen } from '../../features/admin-aprv-form/screens/AdminAprvFormScreen';
 import { VehicleScreen } from '../../features/vehicle/screens/VehicleScreen';
 import { MtgrScreen } from '../../features/mtgr/screens/MtgrScreen';
 import { CalendarScreen } from '../../features/calendar/screens/CalendarScreen';
@@ -24,7 +26,8 @@ import { MobileMenuPanel } from './MobileMenuPanel';
 /** panelId → 실제 화면 컴포넌트 맵 (구현 완료된 패널만 등록) */
 const SCREEN_MAP: Record<string, React.ReactElement> = {
   board: <BoardScreen />,
-  approval: <ApprovalScreen />,
+  approval:        <ApprovalScreen />,
+  'approval-form': <ApprovalFormScreen />,
   report: <WeeklyReportScreen />,
   settings: <SettingsScreen />,
   'common-code': <AdminCommonCodeScreen />,
@@ -32,6 +35,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   dept: <AdminDeptScreen />,
   users: <AdminUsersScreen />,
   boards: <AdminBoardsScreen />,
+  'aprv-form': <AdminAprvFormScreen />,
   vehicle: <VehicleScreen />,
   meeting: <MtgrScreen />,
   calendar: <CalendarScreen />,
