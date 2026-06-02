@@ -140,6 +140,8 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         " · int_aprv_req (1행) — 컬럼: aprv_form_id, req_user_id, aprv_req_sn, aprv_req_desc, aprv_rslt_se, req_sum, req_ymd(+감사컬럼)\n"
         "    - aprv_req_desc: JSONB 캐스트 필수 — '{\"aprv_ref_cd\": \"입력값\", ...}'::jsonb\n"
         "    - aprv_rslt_se: 신규 신청은 '1'(신청)\n"
+        "    - req_sum: 결재신청 내용을 한 줄 요약 — 양식명 + 핵심 항목값 조합\n"
+        "               (예: '품의서 - OO 사유 신청', '출장신청서 - 2025-06-10 서울 출장')\n"
         "    - req_ymd: 오늘 날짜 YYYYMMDD\n"
         " · aprv_req_sn: 컨텍스트의 [요청 시퀀스] 값을 직접 사용(서브쿼리 금지)",
     ],
