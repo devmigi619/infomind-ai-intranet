@@ -197,7 +197,9 @@ toast.success('완료되었습니다.', 5000);
 | `INT_PST_CMT` | `PostComment` | 게시글 댓글 (대댓글 2단계까지) |
 | `INT_BRD` | `Board` | 게시판 |
 | `INT_APV` | `Approval` | 전자결재 |
-| `INT_WKL_RPT` | `WeeklyReport` | 주간보고 |
+| `INT_RPT_FORM` | `ReportForm` | 보고 양식 |
+| `INT_RPT_ROUND` | `ReportRound` | 양식별 보고 회차 |
+| `INT_RPT_DESC` | `ReportDesc` | 회차별 사용자 보고 내용 |
 | `INT_COM_CODE` | `CommonCode` | 공통코드 (상위코드 + 하위코드) |
 | `INT_JBGD` | `JobGrade` | 직급. PK = `JBGD_CD` |
 | `INT_DEPT` | `Department` | 부서 (계층 구조, `UP_DEPT_CD` 자기 참조) |
@@ -444,9 +446,89 @@ JPA 매핑: `@IdClass(PostId)`, `@IdClass(PostCommentId)`로 복합키 처리.
 
 LP 헤더 "열기" 버튼 → `setBoardLpHandoff({ brdId, pstSn? })` + `setActiveFullScreen('board')` → 풀뷰가 핸드오프 컨텍스트를 받아 해당 게시판(또는 글)으로 자동 진입.
 
+## Report 도메인
+
+일간/주간/월간 보고 양식과 회차를 관리하고, 부서별 대상자가 회차별 보고를 임시저장/제출하는 도메인.
+
+### 테이블 구조
+
+| 테이블 | 엔티티 | 키 | 비고 |
+|---|---|---|---|
+| `INT_RPT_FORM` | `ReportForm` | `RPT_FORM_ID` (String) | 보고 양식. 주기/대상부서/관리자/활성상태 관리 |
+| `INT_RPT_ROUND` | `ReportRound` | `(RPT_FORM_ID, ROUND_SN)` 복합키 | 양식별 회차. `ROUND_SN`은 양식별 시퀀스 |
+| `INT_RPT_DESC` | `ReportDesc` | `(RPT_FORM_ID, ROUND_SN, USER_ID)` 복합키 | 회차별 사용자 작성 내용 |
+
+JPA 매핑: `ReportRound`, `ReportDesc`는 `@IdClass`로 복합키 처리. `ROUND_SN`은 양식별 `COALESCE(MAX, 0)+1`로 채번한다.
+
+### 주요 컬럼
+
+| 테이블 | 컬럼 | 설명 |
+|---|---|---|
+| `INT_RPT_FORM` | `RPT_DT_SE` | 보고 주기. 공통코드 `RPT_DT_SE` 사용 |
+| `INT_RPT_FORM` | `DEPT_CD` | 제출 대상 부서 |
+| `INT_RPT_FORM` | `RPT_ADM_ID` | 보고 관리자 |
+| `INT_RPT_FORM` | `OPEN_YN` | 전체 조회 허용 여부 |
+| `INT_RPT_FORM` | `USE_YN` | 양식 활성 여부 |
+| `INT_RPT_ROUND` | `ROUND_YMD` | 회차 기준일 (`YYYYMMDD`) |
+| `INT_RPT_ROUND` | `RPT_SUM` | 회차 요약 |
+| `INT_RPT_DESC` | `EXEC_DESC` | 수행 내용 |
+| `INT_RPT_DESC` | `PLAN_DESC` | 예정 내용 |
+| `INT_RPT_DESC` | `SBMT_YN` | 제출 여부 (`Y` 제출 완료, `N` 임시저장) |
+| `INT_RPT_DESC` | `SBMT_YMD` | 제출일 (`YYYYMMDD`) |
+
+### 비즈니스 규칙
+
+- 양식은 삭제하지 않고 `USE_YN`으로 활성/비활성 전환한다.
+- 보고 주기 선택값은 `GET /api/codes/RPT_DT_SE` 응답을 사용한다.
+- 회차 순번은 양식별 `MAX(ROUND_SN)+1`로 부여한다.
+- 동일 양식에 동일 기준일(`ROUND_YMD`) 회차를 중복 생성하지 않는다.
+- `INT_RPT_DESC`가 하나라도 있으면 해당 회차 수정/삭제를 막는다.
+- 회차가 하나라도 있으면 양식의 `RPT_DT_SE`, `DEPT_CD`, `ST_YMD` 수정은 막는다.
+- 사용자 제출 상태는 미작성(`NOT_WRITTEN`), 임시저장(`DRAFT`), 제출 완료(`SUBMITTED`)로 계산한다.
+- 제출 완료 후 사용자는 다시 수정할 수 없다.
+- 제출 현황의 대상자는 양식의 `DEPT_CD`와 일치하고 `USER_SE != 'INVALID'`인 사용자다.
+- AI 회차 요약은 제출 완료 보고만 대상으로 생성하며, AI 호출 실패 시 기존 `RPT_SUM`은 유지한다.
+
+### 사용자 API
+
+| 경로 | 설명 |
+|---|---|
+| `GET /api/reports/my-rounds` | 본인 부서에 배정된 활성 양식/회차와 본인 작성 상태 조회 |
+| `GET /api/reports/{formId}/rounds/{roundSn}` | 특정 회차의 본인 보고 상태 조회 |
+| `GET /api/reports/{formId}/rounds/{roundSn}/submissions` | 특정 회차의 대상자별 제출 상태/내용 조회 |
+| `PUT /api/reports/{formId}/rounds/{roundSn}/draft` | 본인 보고 임시저장 |
+| `POST /api/reports/{formId}/rounds/{roundSn}/submit` | 본인 보고 제출 |
+
+### 관리자 API
+
+| 경로 | 설명 |
+|---|---|
+| `GET /api/admin/report-forms` | 보고 양식 목록 |
+| `POST /api/admin/report-forms` | 보고 양식 생성 |
+| `PUT /api/admin/report-forms/{formId}` | 보고 양식 수정 |
+| `PATCH /api/admin/report-forms/{formId}/enable` | 보고 양식 활성화 |
+| `PATCH /api/admin/report-forms/{formId}/disable` | 보고 양식 비활성화 |
+| `GET /api/admin/report-forms/{formId}/rounds` | 양식별 회차 목록 |
+| `POST /api/admin/report-forms/{formId}/rounds` | 회차 생성 |
+| `PUT /api/admin/report-forms/{formId}/rounds/{roundSn}` | 회차 수정 |
+| `DELETE /api/admin/report-forms/{formId}/rounds/{roundSn}` | 회차 삭제 |
+| `GET /api/admin/report-forms/{formId}/rounds/{roundSn}/submissions` | 회차별 제출 현황 |
+| `POST /api/admin/report-forms/{formId}/rounds/{roundSn}/summary` | AI 요약 생성 |
+| `PUT /api/admin/report-forms/{formId}/rounds/{roundSn}/summary` | 요약 직접 수정 |
+
+### 프론트엔드 연동
+
+| 파일 | 역할 |
+|---|---|
+| `features/report/api.ts` | 사용자 보고 HTTP 함수 + React Query 훅 |
+| `features/report/screens/ReportScreen.tsx` | 보고 홈 / 보고서 상세 / 회차 상세 풀뷰 |
+| `features/report/components/ReportQuickPanel.tsx` | LeftPanel 퀵뷰 — 현재 시점에 걸린 보고 카드 |
+| `features/admin-report/api.ts` | 관리자 보고 HTTP 함수 + React Query 훅 |
+| `features/admin-report/screens/AdminReportScreen.tsx` | 양식관리 / 회차관리 / 보고관리 탭 화면 |
+
 ## Attachment 도메인
 
-첨부파일 공통 모듈. 게시판/결재/주간보고 등 어느 도메인에서도 사용. RAG 검색을 위한 임베딩 파이프라인 포함.
+첨부파일 공통 모듈. 게시판/결재/보고 등 어느 도메인에서도 사용. RAG 검색을 위한 임베딩 파이프라인 포함.
 
 ### 테이블 구조
 
@@ -617,6 +699,7 @@ NavRail/모바일 메뉴 목록을 DB(`INT_MENU`)에서 관리한다. 하드코�
 | `common-code` | 공통코드 관리 |
 | `job-grade` | 직급 관리 |
 | `dept` | 부서 관리 |
+| `rpt-form` | 보고 관리 |
 | `system` | 시스템 설정 |
 
 ### 새 화면 구현 시 체크리스트
@@ -639,6 +722,7 @@ NavRail/모바일 메뉴 목록을 DB(`INT_MENU`)에서 관리한다. 하드코�
 | `dept` | `/api/admin/departments` | `Department` | `UP_DEPT_CD` 자기 참조 계층 트리, 비활성화 시 하위 부서 cascade |
 | `users` | `/api/admin/users` | `User` | CRUD + 계정 활성/비활성, 비밀번호 초기화 |
 | `boards` | `/api/admin/boards` | `Board` | CRUD + `useYn` 활성/비활성 토글, 첨부/댓글 사용여부 플래그 |
+| `rpt-form` | `/api/admin/report-forms` | `ReportForm` | 보고 양식/회차/제출현황/회차 요약 관리 |
 
 ### 부서 계층 구조
 
@@ -676,6 +760,7 @@ const roleOptions = useCodeList('USER_SE');
 | `UP_CD` | 참조 컬럼 | 설명 |
 |---|---|---|
 | `USER_SE` | `INT_USER.USER_SE` | 사용자 구분 (ADMIN/USER) |
+| `RPT_DT_SE` | `INT_RPT_FORM.RPT_DT_SE` | 보고 주기 |
 
 > 추후 `_SE` 컬럼이 추가될 때마다 공통코드 관리 화면에서 해당 그룹을 등록한다.
 

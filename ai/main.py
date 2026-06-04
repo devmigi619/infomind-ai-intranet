@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.hj.core.config import settings
 # from app.api import chat, files, health
-from app.api import health
+from app.api import health, summaries
 from app.hj.api import chat
 
 app = FastAPI(title="Infomind AI Service")
@@ -21,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(summaries.router, prefix="/ai")
 # app.include_router(chat.router, prefix="/ai")
 # app.include_router(files.router, prefix="/ai")
 app.include_router(chat.router, prefix="/ai")

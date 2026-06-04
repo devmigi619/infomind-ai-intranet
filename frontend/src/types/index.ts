@@ -12,6 +12,7 @@ export type PanelId =
   | 'roles'
   | 'boards'
   | 'aprv-form'
+  | 'rpt-form'
   | 'approval-form'
   | 'approval-line'
   | 'common-code'

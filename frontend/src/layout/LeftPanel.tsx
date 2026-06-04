@@ -17,6 +17,7 @@ import { VehicleQuickPanel } from '../features/vehicle/components/VehicleQuickPa
 import { MtgrQuickPanel } from '../features/mtgr/components/MtgrQuickPanel';
 import { LeaveReqQuickPanel } from '../features/leave-req/components/LeaveReqQuickPanel';
 import { CalendarQuickPanel } from '../features/calendar/components/CalendarQuickPanel';
+import { ReportQuickPanel } from '../features/report/components/ReportQuickPanel';
 
 // ─── 실데이터 QuickPanel 레지스트리 ──────────────────────────────────────────
 // 이 맵에 등록된 패널은 표준 헤더/빈 상태를 우회하고 자체 UI를 렌더합니다.
@@ -27,6 +28,7 @@ const QUICK_PANEL_MAP: Partial<Record<PanelId, React.ComponentType<{ onClose: ()
   meeting:    MtgrQuickPanel,
   'leave-req': LeaveReqQuickPanel,
   calendar:   CalendarQuickPanel,
+  report:     ReportQuickPanel,
 };
 
 interface LeftPanelProps {

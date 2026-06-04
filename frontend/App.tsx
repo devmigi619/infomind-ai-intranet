@@ -21,7 +21,7 @@ import { MainScreen } from './src/features/chat/screens/MainScreen';
 import { BoardScreen } from './src/features/board/screens/BoardScreen';
 import { ApprovalScreen } from './src/features/approval/screens/ApprovalScreen';
 import { ApprovalFormScreen } from './src/features/approval/screens/ApprovalFormScreen';
-import { WeeklyReportScreen } from './src/features/report/screens/WeeklyReportScreen';
+import { ReportScreen } from './src/features/report/screens/ReportScreen';
 import { PlaceholderScreen } from './src/features/placeholder/screens/PlaceholderScreen';
 import { SettingsScreen } from './src/features/settings/screens/SettingsScreen';
 import { AdminCommonCodeScreen } from './src/features/admin-common-code/screens/AdminCommonCodeScreen';
@@ -30,6 +30,7 @@ import { AdminDeptScreen } from './src/features/admin-dept/screens/AdminDeptScre
 import { AdminUsersScreen } from './src/features/admin-users/screens/AdminUsersScreen';
 import { AdminBoardsScreen } from './src/features/admin-boards/screens/AdminBoardsScreen';
 import { AdminAprvFormScreen } from './src/features/admin-aprv-form/screens/AdminAprvFormScreen';
+import { AdminReportScreen } from './src/features/admin-report/screens/AdminReportScreen';
 import { VehicleScreen } from './src/features/vehicle/screens/VehicleScreen';
 import { MtgrScreen } from './src/features/mtgr/screens/MtgrScreen';
 import { CalendarScreen } from './src/features/calendar/screens/CalendarScreen';
@@ -59,7 +60,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   board: <BoardScreen />,
   approval:      <ApprovalScreen />,
   'approval-form': <ApprovalFormScreen />,
-  report: <WeeklyReportScreen />,
+  report: <ReportScreen />,
   settings: <SettingsScreen />,
   'common-code': <AdminCommonCodeScreen />,
   'job-grade': <AdminJobGradeScreen />,
@@ -67,6 +68,7 @@ const SCREEN_MAP: Record<string, React.ReactElement> = {
   users: <AdminUsersScreen />,
   boards: <AdminBoardsScreen />,
   'aprv-form': <AdminAprvFormScreen />,
+  'rpt-form': <AdminReportScreen />,
   vehicle: <VehicleScreen />,
   meeting: <MtgrScreen />,
   calendar: <CalendarScreen />,
