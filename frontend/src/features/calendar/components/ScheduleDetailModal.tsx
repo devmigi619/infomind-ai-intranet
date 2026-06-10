@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  StyleSheet,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
@@ -20,7 +19,7 @@ import {
   X as XIcon,
   Repeat,
 } from 'lucide-react-native';
-import { useTheme, AppTheme } from '../../../shared/hooks/useTheme';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { useToast } from '../../../shared/hooks/useToast';
 import { useConfirm } from '../../../shared/hooks/useConfirm';
@@ -31,6 +30,7 @@ import { radius } from '../../../shared/constants/radius';
 import { getDeptColor } from '../../../shared/constants/colors';
 import { parseYmd, DOW_LABELS } from '../../../shared/utils/date';
 import {
+  useScheduleRange,
   useScheduleDetail,
   useMarkViewed,
   useRespondAttendance,
@@ -92,7 +92,6 @@ export function ScheduleDetailModal({
 }: ScheduleDetailModalProps) {
   const theme = useTheme();
   const { isMobile } = useResponsive();
-  const styles = useMemo(() => makeStyles(theme, isMobile), [theme, isMobile]);
   const toast = useToast();
   const confirm = useConfirm();
 
@@ -210,39 +209,44 @@ export function ScheduleDetailModal({
       onRequestClose={onClose}
     >
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={styles.backdrop}>
+        <View style={{ backgroundColor: 'rgba(15,23,42,0.5)' }} className={isMobile ? "flex-1 items-center justify-start p-4" : "flex-1 items-center justify-center p-6"}>
           <TouchableWithoutFeedback>
-            <View style={styles.modal}>
+            <View
+              style={{
+                backgroundColor: theme.bg.surface,
+                maxHeight: isMobile ? '100%' : '92%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 20 },
+                shadowOpacity: 0.22,
+                shadowRadius: 60,
+                elevation: 20,
+              }}
+              className="w-full max-w-[480px] flex-col rounded-[14px] overflow-hidden"
+            >
               {/* 헤더 */}
               <View
-                style={[
-                  styles.modalHdr,
-                  { borderBottomColor: theme.border.default },
-                ]}
+                style={{ borderBottomColor: theme.border.default }}
+                className="flex-row items-center justify-between px-6 py-3.5 border-b"
               >
-                <Text style={[styles.modalHdrTitle, { color: theme.text.primary }]}>
+                <Text style={{ color: theme.text.primary }} className="text-[16px] font-bold">
                   일정 상세
                 </Text>
-                <View style={styles.modalHdrActions}>
+                <View className="flex-row gap-1.5">
                   {canEditDelete && (
                     <>
                       <TouchableOpacity
                         onPress={handleEdit}
                         activeOpacity={0.7}
-                        style={[
-                          styles.modalIconBtn,
-                          { backgroundColor: theme.brand.primaryTint },
-                        ]}
+                        style={{ backgroundColor: theme.brand.primaryTint }}
+                        className="w-[30px] h-[30px] rounded-md items-center justify-center"
                       >
                         <Pencil size={14} color={theme.brand.primary} />
                       </TouchableOpacity>
                       <TouchableOpacity
                         onPress={handleDelete}
                         activeOpacity={0.7}
-                        style={[
-                          styles.modalIconBtn,
-                          { backgroundColor: theme.semanticTint.danger },
-                        ]}
+                        style={{ backgroundColor: theme.semanticTint.danger }}
+                        className="w-[30px] h-[30px] rounded-md items-center justify-center"
                       >
                         <Trash2 size={14} color={theme.semantic.danger} />
                       </TouchableOpacity>
@@ -251,10 +255,8 @@ export function ScheduleDetailModal({
                   <TouchableOpacity
                     onPress={onClose}
                     activeOpacity={0.7}
-                    style={[
-                      styles.modalIconBtn,
-                      { backgroundColor: theme.bg.surfaceMute },
-                    ]}
+                    style={{ backgroundColor: theme.bg.surfaceMute }}
+                    className="w-[30px] h-[30px] rounded-md items-center justify-center"
                   >
                     <X size={14} color={theme.text.muted} />
                   </TouchableOpacity>
@@ -263,41 +265,35 @@ export function ScheduleDetailModal({
 
               {/* 본문 */}
               {isLoading || !detail ? (
-                <View style={styles.loadingWrap}>
+                <View className="py-8 items-center">
                   <ActivityIndicator size="small" color={theme.brand.primary} />
                 </View>
               ) : (
                 <ScrollView
-                  style={styles.modalBody}
-                  contentContainerStyle={styles.modalBodyContent}
+                  style={{ flexGrow: 0 }}
+                  contentContainerStyle={{ paddingHorizontal: 24, paddingVertical: 14 }}
                 >
                   {/* 헤더 — pill들 + 제목 */}
-                  <View style={styles.detailHead}>
-                    <View style={styles.detailPillRow}>
+                  <View className="gap-1.5 mb-3">
+                    <View className="flex-row flex-wrap gap-1.5 items-center">
                       <View
-                        style={[
-                          styles.detailPill,
-                          {
-                            backgroundColor: deptColor + '1A',
-                          },
-                        ]}
+                        style={{
+                          backgroundColor: deptColor + '1A',
+                        }}
+                        className="px-2 py-[3px] rounded-full"
                       >
-                        <Text style={[styles.detailPillText, { color: deptColor }]}>
+                        <Text style={{ color: deptColor }} className="text-[12px] font-semibold">
                           {detail.deptNm || '전체공개'}
                         </Text>
                       </View>
                       {detail.allday && (
                         <View
-                          style={[
-                            styles.detailPill,
-                            { backgroundColor: theme.bg.surfaceMute },
-                          ]}
+                          style={{ backgroundColor: theme.bg.surfaceMute }}
+                          className="px-2 py-[3px] rounded-full"
                         >
                           <Text
-                            style={[
-                              styles.detailPillText,
-                              { color: theme.text.muted },
-                            ]}
+                            style={{ color: theme.text.muted }}
+                            className="text-[12px] font-semibold"
                           >
                             종일
                           </Text>
@@ -305,16 +301,12 @@ export function ScheduleDetailModal({
                       )}
                       {detail.mine && (
                         <View
-                          style={[
-                            styles.detailPill,
-                            { backgroundColor: theme.brand.primaryTint },
-                          ]}
+                          style={{ backgroundColor: theme.brand.primaryTint }}
+                          className="px-2 py-[3px] rounded-full"
                         >
                           <Text
-                            style={[
-                              styles.detailPillText,
-                              { color: theme.brand.primary },
-                            ]}
+                            style={{ color: theme.brand.primary }}
+                            className="text-[12px] font-semibold"
                           >
                             내가 등록
                           </Text>
@@ -322,22 +314,15 @@ export function ScheduleDetailModal({
                       )}
                       {isLoop && (
                         <View
-                          style={[
-                            styles.detailPill,
-                            {
-                              backgroundColor: theme.bg.surfaceMute,
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 4,
-                            },
-                          ]}
+                          style={{
+                            backgroundColor: theme.bg.surfaceMute,
+                          }}
+                          className="px-2 py-[3px] rounded-full flex-row items-center gap-1"
                         >
                           <Repeat size={10} color={theme.text.muted} />
                           <Text
-                            style={[
-                              styles.detailPillText,
-                              { color: theme.text.muted },
-                            ]}
+                            style={{ color: theme.text.muted }}
+                            className="text-[12px] font-semibold"
                           >
                             반복
                           </Text>
@@ -345,7 +330,8 @@ export function ScheduleDetailModal({
                       )}
                     </View>
                     <Text
-                      style={[styles.detailTitle, { color: theme.text.primary }]}
+                      style={{ color: theme.text.primary }}
+                      className="text-[20px] font-bold mt-0.5"
                     >
                       {detail.schdNm}
                     </Text>
@@ -353,22 +339,21 @@ export function ScheduleDetailModal({
 
                   {/* 정보 박스 */}
                   <View
-                    style={[
-                      styles.detailInfo,
-                      { backgroundColor: theme.bg.surfaceAlt },
-                    ]}
+                    style={{ backgroundColor: theme.bg.surfaceAlt }}
+                    className="rounded-[10px] px-3.5 py-3 mb-3"
                   >
                     {/* 시간 */}
-                    <View style={styles.detailInfoRow}>
-                      <View style={styles.detailInfoIcon}>
+                    <View className="flex-row items-center gap-2.5 py-[5px]">
+                      <View className="mt-0.5">
                         <Clock size={14} color={theme.text.muted} />
                       </View>
-                      <Text style={[styles.detailInfoK, { color: theme.text.muted }]}>
+                      <Text style={{ color: theme.text.muted }} className="w-[50px] shrink-0 text-[10px]">
                         시간
                       </Text>
-                      <View style={styles.detailInfoV}>
+                      <View className="flex-1 min-w-0">
                         <Text
-                          style={[styles.detailInfoVText, { color: theme.text.primary }]}
+                          style={{ color: theme.text.primary }}
+                          className="text-[14px] leading-[20px]"
                         >
                           <Text style={{ fontWeight: fontWeight.semibold }}>
                             {fmtDateRange(displayStYmd, displayEndYmd)}
@@ -378,16 +363,17 @@ export function ScheduleDetailModal({
                       </View>
                     </View>
                     {/* 작성자 */}
-                    <View style={styles.detailInfoRow}>
-                      <View style={styles.detailInfoIcon}>
+                    <View className="flex-row items-center gap-2.5 py-[5px]">
+                      <View className="mt-0.5">
                         <User size={14} color={theme.text.muted} />
                       </View>
-                      <Text style={[styles.detailInfoK, { color: theme.text.muted }]}>
+                      <Text style={{ color: theme.text.muted }} className="w-[50px] shrink-0 text-[10px]">
                         작성자
                       </Text>
-                      <View style={styles.detailInfoV}>
+                      <View className="flex-1 min-w-0">
                         <Text
-                          style={[styles.detailInfoVText, { color: theme.text.primary }]}
+                          style={{ color: theme.text.primary }}
+                          className="text-[14px] leading-[20px]"
                         >
                           {detail.userName}
                           {detail.deptNm ? ` · ${detail.deptNm}` : ''}
@@ -396,16 +382,17 @@ export function ScheduleDetailModal({
                     </View>
                     {/* 비고 (있을 때만) */}
                     {!!detail.rmk && (
-                      <View style={[styles.detailInfoRow, { alignItems: 'flex-start' }]}>
-                        <View style={styles.detailInfoIcon}>
+                      <View className="flex-row items-start gap-2.5 py-[5px]">
+                        <View className="mt-0.5">
                           <AlignLeft size={14} color={theme.text.muted} />
                         </View>
-                        <Text style={[styles.detailInfoK, { color: theme.text.muted }]}>
+                        <Text style={{ color: theme.text.muted }} className="w-[50px] shrink-0 text-[10px]">
                           비고
                         </Text>
-                        <View style={styles.detailInfoV}>
+                        <View className="flex-1 min-w-0">
                           <Text
-                            style={[styles.detailInfoVText, { color: theme.text.primary }]}
+                            style={{ color: theme.text.primary }}
+                            className="text-[14px] leading-[20px]"
                           >
                             {detail.rmk}
                           </Text>
@@ -417,29 +404,24 @@ export function ScheduleDetailModal({
                   {/* 참석 응답 (참석자 본인일 때만) */}
                   {canRespond && (
                     <View
-                      style={[
-                        styles.detailRespond,
-                        {
-                          borderColor: theme.border.default,
-                          backgroundColor: theme.bg.surface,
-                        },
-                      ]}
+                      style={{
+                        borderColor: theme.border.default,
+                        backgroundColor: theme.bg.surface,
+                      }}
+                      className="border rounded-[10px] px-3.5 py-3 mb-3"
                     >
                       <Text
-                        style={[
-                          styles.detailRespondTitle,
-                          { color: theme.text.primary },
-                        ]}
+                        style={{ color: theme.text.primary }}
+                        className="text-[14px] font-bold mb-2"
                       >
                         참석 여부
                       </Text>
-                      <View style={styles.detailRespondRow}>
+                      <View className="flex-row gap-2">
                         <TouchableOpacity
                           onPress={() => handleRespond(true)}
                           activeOpacity={0.7}
                           disabled={respondMutation.isPending}
-                          style={[
-                            styles.respondBtn,
+                          style={
                             myAttendance?.userAttdYn === 'Y'
                               ? {
                                   backgroundColor: theme.semantic.success,
@@ -448,8 +430,9 @@ export function ScheduleDetailModal({
                               : {
                                   backgroundColor: theme.bg.surface,
                                   borderColor: theme.border.default,
-                                },
-                          ]}
+                                }
+                          }
+                          className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-lg border"
                         >
                           <Check
                             size={14}
@@ -460,15 +443,13 @@ export function ScheduleDetailModal({
                             }
                           />
                           <Text
-                            style={[
-                              styles.respondBtnText,
-                              {
-                                color:
-                                  myAttendance?.userAttdYn === 'Y'
-                                    ? '#FFFFFF'
-                                    : theme.text.body,
-                              },
-                            ]}
+                            style={{
+                              color:
+                                myAttendance?.userAttdYn === 'Y'
+                                  ? '#FFFFFF'
+                                  : theme.text.body,
+                            }}
+                            className="text-[14px] font-semibold"
                           >
                             참석
                           </Text>
@@ -477,8 +458,7 @@ export function ScheduleDetailModal({
                           onPress={() => handleRespond(false)}
                           activeOpacity={0.7}
                           disabled={respondMutation.isPending}
-                          style={[
-                            styles.respondBtn,
+                          style={
                             myAttendance?.userAttdYn === 'N'
                               ? {
                                   backgroundColor: theme.semantic.danger,
@@ -487,8 +467,9 @@ export function ScheduleDetailModal({
                               : {
                                   backgroundColor: theme.bg.surface,
                                   borderColor: theme.border.default,
-                                },
-                          ]}
+                                }
+                          }
+                          className="flex-1 flex-row items-center justify-center gap-1.5 py-2.5 rounded-lg border"
                         >
                           <XIcon
                             size={14}
@@ -499,15 +480,13 @@ export function ScheduleDetailModal({
                             }
                           />
                           <Text
-                            style={[
-                              styles.respondBtnText,
-                              {
-                                color:
-                                  myAttendance?.userAttdYn === 'N'
-                                    ? '#FFFFFF'
-                                    : theme.text.body,
-                              },
-                            ]}
+                            style={{
+                              color:
+                                myAttendance?.userAttdYn === 'N'
+                                  ? '#FFFFFF'
+                                  : theme.text.body,
+                            }}
+                            className="text-[14px] font-semibold"
                           >
                             불참
                           </Text>
@@ -520,14 +499,12 @@ export function ScheduleDetailModal({
                   {detail.attendees.length > 0 && (
                     <View style={{ marginTop: 6 }}>
                       <Text
-                        style={[
-                          styles.attdListTitle,
-                          { color: theme.text.muted },
-                        ]}
+                        style={{ color: theme.text.muted }}
+                        className="text-[12px] font-bold tracking-[0.4px] mb-2 uppercase"
                       >
                         참석자 ({detail.attendees.length}명)
                       </Text>
-                      <View style={styles.attdList}>
+                      <View className="gap-1.5">
                         {detail.attendees.map((a) => {
                           const status: 'yes' | 'no' | 'pending' =
                             a.userQryYn === 'N'
@@ -556,48 +533,36 @@ export function ScheduleDetailModal({
                           return (
                             <View
                               key={a.attdUserId}
-                              style={[
-                                styles.attdRow,
-                                { backgroundColor: theme.bg.surfaceAlt },
-                              ]}
+                              style={{ backgroundColor: theme.bg.surfaceAlt }}
+                              className="flex-row items-center gap-2.5 px-2.5 py-1.5 rounded-[9px]"
                             >
                               <View
-                                style={[
-                                  styles.attdAvatar,
-                                  {
-                                    backgroundColor: theme.bg.surfaceMute,
-                                  },
-                                ]}
+                                style={{
+                                  backgroundColor: theme.bg.surfaceMute,
+                                }}
+                                className="w-[26px] h-[26px] rounded-[13px] items-center justify-center"
                               >
                                 <Text
-                                  style={[
-                                    styles.attdAvatarText,
-                                    { color: theme.text.muted },
-                                  ]}
+                                  style={{ color: theme.text.muted }}
+                                  className="text-[11px] font-bold"
                                 >
                                   {a.attdUserName?.[0] ?? '?'}
                                 </Text>
                               </View>
                               <Text
-                                style={[
-                                  styles.attdRowName,
-                                  { color: theme.text.primary },
-                                ]}
+                                style={{ color: theme.text.primary }}
+                                className="flex-1 text-[14px]"
                                 numberOfLines={1}
                               >
                                 {a.attdUserName}
                               </Text>
                               <View
-                                style={[
-                                  styles.attdStatus,
-                                  { backgroundColor: statusBg },
-                                ]}
+                                style={{ backgroundColor: statusBg }}
+                                className="px-2 py-[2px] rounded-full"
                               >
                                 <Text
-                                  style={[
-                                    styles.attdStatusText,
-                                    { color: statusColor },
-                                  ]}
+                                  style={{ color: statusColor }}
+                                  className="text-[12px] font-semibold"
                                 >
                                   {statusLabel}
                                 </Text>
@@ -613,24 +578,21 @@ export function ScheduleDetailModal({
 
               {/* 푸터 — 닫기 */}
               <View
-                style={[
-                  styles.modalFtr,
-                  {
-                    borderTopColor: theme.border.default,
-                    backgroundColor: theme.bg.surfaceAlt,
-                  },
-                ]}
+                style={{
+                  borderTopColor: theme.border.default,
+                  backgroundColor: theme.bg.surfaceAlt,
+                }}
+                className="flex-row justify-end px-6 py-3.5 border-t"
               >
                 <TouchableOpacity
                   onPress={onClose}
                   activeOpacity={0.8}
-                  style={[
-                    styles.closeBtn,
-                    { backgroundColor: theme.brand.primary },
-                  ]}
+                  style={{ backgroundColor: theme.brand.primary }}
+                  className="px-6 py-[9px] rounded-lg"
                 >
                   <Text
-                    style={[styles.closeBtnText, { color: theme.text.onBrand }]}
+                    style={{ color: theme.text.onBrand }}
+                    className="text-[14px] font-semibold"
                   >
                     닫기
                   </Text>
@@ -644,211 +606,3 @@ export function ScheduleDetailModal({
   );
 }
 
-const makeStyles = (theme: AppTheme, isMobile: boolean) =>
-  StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(15,23,42,0.5)',
-      alignItems: 'center',
-      justifyContent: isMobile ? 'flex-start' : 'center',
-      padding: isMobile ? spacing.md : spacing.xl,
-    },
-    modal: {
-      width: '100%',
-      maxWidth: 480,
-      maxHeight: isMobile ? '100%' : '92%',
-      flexDirection: 'column',
-      backgroundColor: theme.bg.surface,
-      borderRadius: 14,
-      overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 20 },
-      shadowOpacity: 0.22,
-      shadowRadius: 60,
-      elevation: 20,
-    },
-    modalHdr: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-    },
-    modalHdrTitle: {
-      fontSize: fontSize.base,
-      fontWeight: fontWeight.bold,
-    },
-    modalHdrActions: {
-      flexDirection: 'row',
-      gap: 6,
-    },
-    modalIconBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    loadingWrap: {
-      paddingVertical: spacing['2xl'],
-      alignItems: 'center',
-    },
-    modalBody: {
-      flexGrow: 0,
-    },
-    modalBodyContent: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.lg - 2,
-    },
-
-    // 헤더 (pill + 제목)
-    detailHead: {
-      gap: 6,
-      marginBottom: 12,
-    },
-    detailPillRow: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      alignItems: 'center',
-    },
-    detailPill: {
-      paddingHorizontal: 9,
-      paddingVertical: 3,
-      borderRadius: radius.full,
-    },
-    detailPillText: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.semibold,
-    },
-    detailTitle: {
-      fontSize: fontSize.heading,
-      fontWeight: fontWeight.bold,
-      marginTop: 2,
-    },
-
-    // 정보 박스
-    detailInfo: {
-      borderRadius: radius.lg + 2,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      marginBottom: 12,
-    },
-    detailInfoRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingVertical: 5,
-    },
-    detailInfoIcon: {
-      marginTop: 2,
-    },
-    detailInfoK: {
-      width: 50,
-      flexShrink: 0,
-      fontSize: fontSize.micro,
-    },
-    detailInfoV: {
-      flex: 1,
-      minWidth: 0,
-    },
-    detailInfoVText: {
-      fontSize: fontSize.small,
-      lineHeight: fontSize.small * 1.45,
-    },
-
-    // 참석 응답
-    detailRespond: {
-      borderWidth: 1,
-      borderRadius: radius.lg + 2,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      marginBottom: 12,
-    },
-    detailRespondTitle: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.bold,
-      marginBottom: 8,
-    },
-    detailRespondRow: {
-      flexDirection: 'row',
-      gap: 8,
-    },
-    respondBtn: {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      paddingVertical: 9,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-    },
-    respondBtnText: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.semibold,
-    },
-
-    // 참석자 명단
-    attdListTitle: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.bold,
-      letterSpacing: 0.4,
-      marginBottom: 8,
-      textTransform: 'uppercase',
-    },
-    attdList: {
-      gap: 5,
-    },
-    attdRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      borderRadius: radius.md + 1,
-    },
-    attdAvatar: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    attdAvatarText: {
-      fontSize: 11,
-      fontWeight: fontWeight.bold,
-    },
-    attdRowName: {
-      flex: 1,
-      fontSize: fontSize.small,
-    },
-    attdStatus: {
-      paddingHorizontal: 8,
-      paddingVertical: 2,
-      borderRadius: radius.full,
-    },
-    attdStatusText: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.semibold,
-    },
-
-    // 푸터
-    modalFtr: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: 14,
-      borderTopWidth: 1,
-    },
-    closeBtn: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: 9,
-      borderRadius: radius.lg,
-    },
-    closeBtnText: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.semibold,
-    },
-  });

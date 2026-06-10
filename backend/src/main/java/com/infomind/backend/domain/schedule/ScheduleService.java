@@ -11,9 +11,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,7 +41,7 @@ public class ScheduleService {
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
 
-    private static final DateTimeFormatter YMD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    // ── 상수 ─────────────────────────────────────────────────────────────────
 
     // ── 생성 ─────────────────────────────────────────────────────────────────
 
@@ -264,7 +261,7 @@ public class ScheduleService {
 
         // 2) body 내용으로 새 시리즈 row INSERT (loopYn='Y' 강제, loopSe 는 body 우선)
         //    schdEndYmd 가 null 이면 원본 schedule 의 endYmd 로 fallback —
-        //    findNonRepeatingInRange/expandOccurrences 양쪽에서 null endYmd 가 조회 누락을 유발하기 때문
+        //    f_schd_qry 에서 null endYmd 는 조회 누락을 유발하기 때문
         //    DISC-1 정신을 시리즈 분기에도 적용 — admin이 남의 시리즈 분기시켜도 새 시리즈 작성자는 원본 사용자
         String newLoopSe = (req.getLoopSe() != null) ? req.getLoopSe() : schedule.getLoopSe();
         String newEndYmd = (req.getSchdEndYmd() != null) ? req.getSchdEndYmd() : schedule.getSchdEndYmd();
@@ -301,155 +298,93 @@ public class ScheduleService {
         return toResponse(schedule, attds, nmMap, deptNmMap, currentUserId, null);
     }
 
-    // ── 기간 조회 + 반복 펼치기 ───────────────────────────────────────────────
+    // ── 기간 조회 (f_schd_qry DB 함수 사용) ──────────────────────────────────
 
     /**
-     * 지정 기간의 일정을 반환한다. 반복 일정은 실제 발생 인스턴스로 펼쳐서 반환.
+     * 지정 기간의 일정을 반환한다.
      *
-     * <p>단발 일정({@code LOOP_YN='N'})은 DB 기간 쿼리로 직접 조회하고,
-     * 반복 일정({@code LOOP_YN='Y'})은 전체 시리즈를 로드한 뒤
-     * {@link #expandOccurrences}로 해당 기간 인스턴스를 계산한다.
-     * excp(end_yn='Y')는 시리즈 종료, excp(end_yn='N')은 해당 날짜 skip.</p>
+     * <p>단일·반복 일정 통합 조회, 반복 발생일 전개, int_schd_excp 예외 처리를
+     * 모두 {@code f_schd_qry} DB 함수에 위임한다.
+     * 반환 결과는 참석자 등록 일정 + 전사 공통(dept_cd IS NULL) + 소속 부서 일정을 포함한다.</p>
+     *
+     * <p>{@code deptFilters}가 지정된 경우 DB 결과를 추가 필터링한다.
+     * {@code mineOnly}는 f_schd_qry 가 이미 사용자 관련 일정만 반환하므로 무시된다.</p>
      */
     @Transactional(readOnly = true)
     public List<ScheduleResponse> findByRange(String stYmd, String endYmd,
                                               List<String> deptFilters,
                                               boolean mineOnly,
                                               String currentUserId) {
-        Map<String, String> nmMap = userNmMap();
+        // 사용자 부서 코드 조회 (f_schd_qry 인자)
+        String deptCd = userRepository.findById(currentUserId)
+                .map(User::getDeptCd)
+                .orElse(null);
+
+        // DB 함수 호출 — 단일+반복 통합, 발생일 전개, 예외 처리 모두 DB 내부 처리
+        List<SchdQryRow> rows = scheduleRepository.findByFuncQry(
+                currentUserId, deptCd, stYmd, endYmd);
+
+        // 부서 필터 추가 적용 (캘린더 패널에서 특정 부서만 보고 싶을 때)
+        if (deptFilters != null && !deptFilters.isEmpty()) {
+            rows = rows.stream()
+                    .filter(r -> r.getDeptCd() == null || deptFilters.contains(r.getDeptCd()))
+                    .collect(Collectors.toList());
+        }
+
+        // 이름·부서명 맵 & 참석자 맵 (반환된 schdSn 기준으로만 로드)
+        Map<String, String> nmMap    = userNmMap();
         Map<String, String> deptNmMap = deptNmMap();
 
-        // 참석자 맵 (schdSn → list) — 반복 일정 포함 전체 미리 로드
-        Map<Long, List<ScheduleAttd>> attdMap = buildAttdMap();
-        Map<Long, List<ScheduleExcp>> excpMap = buildExcpMap();
+        Set<Long> schdSns = rows.stream().map(SchdQryRow::getSchdSn).collect(Collectors.toSet());
+        Map<Long, List<ScheduleAttd>> attdMap = buildAttdMapForSns(schdSns);
 
-        LocalDate rangeStart = LocalDate.parse(stYmd, YMD);
-        LocalDate rangeEnd   = LocalDate.parse(endYmd, YMD);
-
-        List<ScheduleResponse> result = new ArrayList<>();
-        result.addAll(processNonRepeating(stYmd, endYmd,
-                deptFilters, mineOnly, currentUserId, attdMap, nmMap, deptNmMap));
-        result.addAll(processRepeating(rangeStart, rangeEnd,
-                deptFilters, mineOnly, currentUserId, attdMap, excpMap, nmMap, deptNmMap));
-
-        result.sort(Comparator.comparing(r ->
-                r.getOccurrenceYmd() != null ? r.getOccurrenceYmd() : r.getSchdStYmd()));
-
-        return result;
+        return rows.stream()
+                .map(row -> toResponseFromRow(row, attdMap, nmMap, deptNmMap, currentUserId))
+                .collect(Collectors.toList());
     }
 
-    /** 단발 일정 처리. */
-    private List<ScheduleResponse> processNonRepeating(String stYmd, String endYmd,
-                                                       List<String> deptFilters,
-                                                       boolean mineOnly,
-                                                       String currentUserId,
-                                                       Map<Long, List<ScheduleAttd>> attdMap,
-                                                       Map<String, String> nmMap,
-                                                       Map<String, String> deptNmMap) {
-        List<ScheduleResponse> out = new ArrayList<>();
-        List<Schedule> nonRepeating = scheduleRepository.findNonRepeatingInRange(stYmd, endYmd);
-        for (Schedule s : nonRepeating) {
-            if (!matchDept(s, deptFilters)) continue;
-            if (mineOnly && !isRelated(s, attdMap, currentUserId)) continue;
-            List<ScheduleAttd> attds = attdMap.getOrDefault(s.getSchdSn(), Collections.emptyList());
-            out.add(toResponse(s, attds, nmMap, deptNmMap, currentUserId, null));
-        }
-        return out;
-    }
+    /** f_schd_qry 결과 행 → ScheduleResponse 변환. */
+    private ScheduleResponse toResponseFromRow(SchdQryRow row,
+                                               Map<Long, List<ScheduleAttd>> attdMap,
+                                               Map<String, String> nmMap,
+                                               Map<String, String> deptNmMap,
+                                               String currentUserId) {
+        Long schdSn = row.getSchdSn();
+        List<ScheduleAttd> attds = attdMap.getOrDefault(schdSn, Collections.emptyList());
 
-    /** 반복 일정 펼치기. */
-    private List<ScheduleResponse> processRepeating(LocalDate rangeStart, LocalDate rangeEnd,
-                                                    List<String> deptFilters,
-                                                    boolean mineOnly,
-                                                    String currentUserId,
-                                                    Map<Long, List<ScheduleAttd>> attdMap,
-                                                    Map<Long, List<ScheduleExcp>> excpMap,
-                                                    Map<String, String> nmMap,
-                                                    Map<String, String> deptNmMap) {
-        List<ScheduleResponse> out = new ArrayList<>();
-        List<Schedule> repeating = scheduleRepository.findAllRepeating();
-        for (Schedule s : repeating) {
-            if (!matchDept(s, deptFilters)) continue;
-            if (mineOnly && !isRelated(s, attdMap, currentUserId)) continue;
+        List<AttendeeDto> attendeeDtos = attds.stream()
+                .map(a -> AttendeeDto.builder()
+                        .attdUserId(a.getAttdUserId())
+                        .attdUserName(nmMap.getOrDefault(a.getAttdUserId(), a.getAttdUserId()))
+                        .userAttdYn(a.getUserAttdYn())
+                        .userQryYn(a.getUserQryYn())
+                        .build())
+                .collect(Collectors.toList());
 
-            List<ScheduleExcp> excps = excpMap.getOrDefault(s.getSchdSn(), Collections.emptyList());
-            List<ScheduleAttd> attds = attdMap.getOrDefault(s.getSchdSn(), Collections.emptyList());
+        String deptNm = (row.getDeptCd() != null) ? deptNmMap.get(row.getDeptCd()) : null;
+        boolean isAllDay = (row.getSchdStHr() == null || row.getSchdStHr().isBlank());
 
-            for (String occYmd : expandOccurrences(s, excps, rangeStart, rangeEnd)) {
-                out.add(toResponse(s, attds, nmMap, deptNmMap, currentUserId, occYmd));
-            }
-        }
-        return out;
-    }
-
-    /**
-     * 반복 일정 s 를 [rangeStart, rangeEnd] 구간에서 실제로 발생할 occurrenceYmd 목록으로 펼친다.
-     * 종료 마커(endYn='Y'), skip(endYn='N') 처리 포함.
-     */
-    private List<String> expandOccurrences(Schedule s, List<ScheduleExcp> excps,
-                                            LocalDate rangeStart, LocalDate rangeEnd) {
-        // 반복 종료일: end 마커 중 가장 빠른 날짜 - 1일. 없으면 rangeEnd 까지.
-        Optional<ScheduleExcp> endMarker = excps.stream()
-                .filter(ScheduleExcp::isEnd)
-                .min(Comparator.comparing(ScheduleExcp::getExcpYmd));
-
-        LocalDate loopEnd = endMarker
-                .map(e -> LocalDate.parse(e.getExcpYmd(), YMD).minusDays(1))
-                .orElse(rangeEnd);
-
-        // skip 목록 (endYn='N')
-        Set<String> skipYmds = excps.stream()
-                .filter(e -> !e.isEnd())
-                .map(ScheduleExcp::getExcpYmd)
-                .collect(Collectors.toSet());
-
-        List<String> out = new ArrayList<>();
-        LocalDate seriesStart = LocalDate.parse(s.getSchdStYmd(), YMD);
-
-        // 오래된 DAY 반복은 매 조회마다 수천 회 헛돌이를 일으키므로 rangeStart 직전 발생일로 점프
-        LocalDate cursor = fastForward(seriesStart, rangeStart, s.getLoopSe());
-
-        while (!cursor.isAfter(loopEnd)) {
-            String occYmd = cursor.format(YMD);
-            if (!cursor.isBefore(rangeStart) && !cursor.isAfter(rangeEnd)
-                    && !skipYmds.contains(occYmd)) {
-                out.add(occYmd);
-            }
-            cursor = nextOccurrence(cursor, s.getLoopSe());
-            if (cursor == null) break; // 알 수 없는 loopSe — 무한루프 방지
-        }
-        return out;
-    }
-
-    /**
-     * seriesStart 부터 target 직전 occurrence 로 cursor 를 한 번에 점프.
-     * seriesStart 가 이미 target 이후이거나 같으면 seriesStart 반환.
-     * 알 수 없는 loopSe 는 seriesStart 반환.
-     */
-    private LocalDate fastForward(LocalDate seriesStart, LocalDate target, String loopSe) {
-        if (loopSe == null || !seriesStart.isBefore(target)) {
-            return seriesStart;
-        }
-        switch (loopSe.toUpperCase()) {
-            case "DAY": {
-                long days = ChronoUnit.DAYS.between(seriesStart, target);
-                return seriesStart.plusDays(days);
-            }
-            case "WEEK": {
-                long weeks = ChronoUnit.WEEKS.between(seriesStart, target);
-                return seriesStart.plusWeeks(weeks);
-            }
-            case "MONTH": {
-                long months = ChronoUnit.MONTHS.between(seriesStart, target);
-                return seriesStart.plusMonths(months);
-            }
-            case "YEAR": {
-                long years = ChronoUnit.YEARS.between(seriesStart, target);
-                return seriesStart.plusYears(years);
-            }
-            default:
-                return seriesStart;
-        }
+        return ScheduleResponse.builder()
+                .schdSn(schdSn)
+                .userId(row.getWriterId())
+                .userName(nmMap.getOrDefault(row.getWriterId(), row.getWriterId()))
+                .deptCd(row.getDeptCd())
+                .deptNm(deptNm)
+                .schdNm(row.getSchdNm())
+                .schdStYmd(row.getOccurStYmd())
+                .schdStHr(row.getSchdStHr())
+                .schdEndYmd(row.getOccurEndYmd())
+                .schdEndHr(row.getSchdEndHr())
+                .displayStYmd(row.getOccurStYmd())
+                .displayEndYmd(row.getOccurEndYmd())
+                .allday(isAllDay)
+                .loopYn(row.getLoopYn())
+                .loopSe(row.getLoopSe())
+                .rmk(row.getRmk())
+                .attendees(attendeeDtos)
+                .occurrenceYmd(row.getOccurStYmd())
+                .mine(currentUserId.equals(row.getWriterId()))
+                .build();
     }
 
     // ── 조회 마킹 ─────────────────────────────────────────────────────────────
@@ -530,48 +465,11 @@ public class ScheduleService {
                         (a, b) -> a));
     }
 
-    private Map<Long, List<ScheduleAttd>> buildAttdMap() {
-        return scheduleAttdRepository.findAll().stream()
+    /** 지정된 schdSn 집합에 해당하는 참석자만 맵으로 로드 (전체 로드 대신 범위 한정). */
+    private Map<Long, List<ScheduleAttd>> buildAttdMapForSns(Set<Long> schdSns) {
+        if (schdSns.isEmpty()) return Collections.emptyMap();
+        return scheduleAttdRepository.findBySchdSnIn(schdSns).stream()
                 .collect(Collectors.groupingBy(ScheduleAttd::getSchdSn));
-    }
-
-    private Map<Long, List<ScheduleExcp>> buildExcpMap() {
-        return scheduleExcpRepository.findAll().stream()
-                .collect(Collectors.groupingBy(ScheduleExcp::getSchdSn));
-    }
-
-    private boolean matchDept(Schedule s, List<String> deptFilters) {
-        if (deptFilters == null || deptFilters.isEmpty()) return true;
-        // NULL(전사) 이거나 필터 목록에 포함된 부서
-        return s.getDeptCd() == null || deptFilters.contains(s.getDeptCd());
-    }
-
-    /**
-     * 사용자가 일정과 "관련" 있는지 판단 — mineOnly 필터에 사용.
-     *
-     * 정책: "관련 있음" = 작성자 OR 참석자.
-     *
-     * 참고: admin이 남의 일정을 단일 수정(updateOccurrence)해도 새 row의
-     * 작성자는 원본 시리즈 작성자로 유지됨. 따라서 admin이 자신이 수정한
-     * 일정을 보려면 mineOnly=false로 전체 조회해야 함. mineOnly의 본질은
-     * "내가 작성자/참석자인 일정"이며, "내가 수정 이력이 있는 일정"이 아님.
-     */
-    private boolean isRelated(Schedule s, Map<Long, List<ScheduleAttd>> attdMap,
-                               String currentUserId) {
-        if (s.getUserId().equals(currentUserId)) return true;
-        List<ScheduleAttd> attds = attdMap.getOrDefault(s.getSchdSn(), Collections.emptyList());
-        return attds.stream().anyMatch(a -> a.getAttdUserId().equals(currentUserId));
-    }
-
-    private LocalDate nextOccurrence(LocalDate current, String loopSe) {
-        if (loopSe == null) return null;
-        switch (loopSe.toUpperCase()) {
-            case "DAY":   return current.plusDays(1);
-            case "WEEK":  return current.plusWeeks(1);
-            case "MONTH": return current.plusMonths(1);
-            case "YEAR":  return current.plusYears(1);
-            default:      return null;
-        }
     }
 
     private ScheduleResponse toResponse(Schedule s, List<ScheduleAttd> attds,

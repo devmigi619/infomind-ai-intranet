@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
   Platform,
 } from 'react-native';
 import { ArrowUp, X, MessageCircleQuestion } from 'lucide-react-native';
@@ -20,6 +19,7 @@ interface InterruptReplyPanelProps {
 
 const MIN_HEIGHT = 33;
 const MAX_HEIGHT = 117;
+const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
 /**
  * human interrupt 상태에서 ChatInput 대신 표시되는 인터뷰 패널.
@@ -60,21 +60,44 @@ export function InterruptReplyPanel({ question, theme, onSend, onCancel }: Inter
 
   const canSend = text.trim().length > 0;
 
+  // 포커스 상태 그림자/보더 스타일
+  const focusShadowStyle = isFocused
+    ? Platform.OS === 'web'
+      ? ({ boxShadow: `0 2px 12px ${theme.brand.primaryTint}` } as any)
+      : {
+          shadowColor: theme.brand.primary,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 10,
+          elevation: 2,
+        }
+    : {};
+
   return (
     <View
-      style={[
-        styles.container,
-        { backgroundColor: theme.bg.surface, borderTopColor: theme.brand.primaryTint },
-      ]}
+      style={{
+        backgroundColor: theme.bg.surface,
+        borderTopColor: theme.brand.primaryTint,
+      }}
+      className="px-8 pt-3 pb-6 border-t-2 gap-2.5"
     >
       {/* 질문 레이블 */}
-      <View style={[styles.questionBadge, { backgroundColor: theme.brand.primaryTint }]}>
+      <View
+        style={{ backgroundColor: theme.brand.primaryTint }}
+        className="flex-row items-center self-start px-2.5 py-1 rounded-full gap-1"
+      >
         <MessageCircleQuestion size={13} color={theme.brand.primary} />
-        <Text style={[styles.questionLabel, { color: theme.brand.primary }]}>AI 질문에 답변 중</Text>
+        <Text
+          style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}
+          className="text-[12px] font-semibold"
+        >
+          AI 질문에 답변 중
+        </Text>
       </View>
 
       <Text
-        style={[styles.questionText, { color: theme.text.primary }]}
+        style={{ color: theme.text.primary, fontFamily: WEB_FONT }}
+        className="text-[13px] leading-5"
         numberOfLines={3}
       >
         {question}
@@ -82,34 +105,25 @@ export function InterruptReplyPanel({ question, theme, onSend, onCancel }: Inter
 
       {/* 입력 영역 */}
       <View
-        style={[
-          styles.inputWrap,
-          {
-            backgroundColor: theme.mode === 'dark' ? theme.bg.surfaceAlt : '#F5F5F5',
-            borderColor: isFocused ? theme.brand.primary : 'transparent',
-          },
-          isFocused &&
-            (Platform.OS === 'web'
-              ? ({ boxShadow: `0 2px 12px ${theme.brand.primaryTint}` } as any)
-              : {
-                  shadowColor: theme.brand.primary,
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 10,
-                  elevation: 2,
-                }),
-          isFocused && { backgroundColor: theme.bg.surface },
-        ]}
+        style={{
+          backgroundColor: isFocused
+            ? theme.bg.surface
+            : (theme.mode === 'dark' ? theme.bg.surfaceAlt : '#F5F5F5'),
+          borderColor: isFocused ? theme.brand.primary : 'transparent',
+          ...focusShadowStyle,
+        }}
+        className="flex-row items-end rounded-[18px] pt-2 pr-2 pb-2 pl-[18px] border-[1.5px]"
       >
         <TextInput
           ref={inputRef}
-          style={[
-            styles.input,
-            { color: theme.text.primary },
-            Platform.OS === 'web'
-              ? ({ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT } as any)
-              : { height: inputHeight },
-          ]}
+          style={{
+            color: theme.text.primary,
+            fontFamily: WEB_FONT,
+            ...(Platform.OS === 'web'
+              ? ({ minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT, outlineStyle: 'none', resize: 'none' } as any)
+              : { height: inputHeight }),
+          }}
+          className="flex-1 text-[14px] py-1.5 leading-[21px]"
           value={text}
           onChangeText={setText}
           placeholder="답변을 입력하세요"
@@ -129,26 +143,33 @@ export function InterruptReplyPanel({ question, theme, onSend, onCancel }: Inter
           blurOnSubmit={false}
           autoFocus
         />
-        <View style={styles.actions}>
+        <View className="flex-row items-center gap-1.5">
           {/* 취소 버튼 */}
           <TouchableOpacity
-            style={[styles.cancelButton, { borderColor: theme.text.subtle }]}
+            style={{ borderColor: theme.text.subtle }}
             onPress={onCancel}
             activeOpacity={0.7}
+            className="flex-row items-center gap-1 px-2.5 py-1.5 rounded-xl border"
           >
             <X size={14} color={theme.text.muted} />
-            <Text style={[styles.cancelText, { color: theme.text.muted }]}>취소</Text>
+            <Text
+              style={{ color: theme.text.muted, fontFamily: WEB_FONT }}
+              className="text-[12px]"
+            >
+              취소
+            </Text>
           </TouchableOpacity>
           {/* 전송 버튼 */}
           <TouchableOpacity
             onPress={handleSend}
-            style={[
-              styles.sendButton,
-              { backgroundColor: theme.brand.primary },
-              !canSend && styles.sendButtonDisabled,
-            ]}
+            style={
+              canSend
+                ? { backgroundColor: theme.brand.primary }
+                : { backgroundColor: 'rgba(0,0,0,0.15)' }
+            }
             activeOpacity={0.8}
             disabled={!canSend}
+            className="w-8 h-8 rounded-full items-center justify-center"
           >
             <ArrowUp size={16} color="#ffffff" strokeWidth={2.5} />
           </TouchableOpacity>
@@ -158,90 +179,3 @@ export function InterruptReplyPanel({ question, theme, onSend, onCancel }: Inter
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    paddingHorizontal: 32,
-    paddingTop: 12,
-    paddingBottom: 24,
-    borderTopWidth: 2,
-    gap: 10,
-  },
-  questionBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 5,
-  },
-  questionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  questionText: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    borderRadius: 18,
-    paddingTop: 8,
-    paddingRight: 8,
-    paddingBottom: 8,
-    paddingLeft: 18,
-    borderWidth: 1.5,
-  },
-  input: {
-    flex: 1,
-    fontSize: 14,
-    paddingTop: 6,
-    paddingBottom: 6,
-    lineHeight: 21,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none', resize: 'none' } as any) : {}),
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  cancelButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  cancelText: {
-    fontSize: 12,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  sendButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-  },
-});

@@ -4,12 +4,11 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
-  StyleSheet,
-  ScrollView,
+  Platform,
   ActivityIndicator,
   Modal,
   TextInput,
-  Platform,
+  ScrollView,
 } from 'react-native';
 import { CheckCircle, Clock, XCircle, ChevronRight, Download, FileText } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
@@ -30,6 +29,8 @@ import {
 import { useAttachmentList, type AttachmentFileMeta } from '../../attachment/api';
 import { useDownloadAttachment } from '../../../shared/hooks/useDownloadAttachment';
 import { AttachmentPreviewModal } from '../../../shared/components/AttachmentPreviewModal';
+
+const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
 // ─── 상수 ─────────────────────────────────────────────────────────────────────
 
@@ -55,10 +56,12 @@ function StatusBadge({ se }: { se: string }) {
   };
   const c = colors[se] ?? colors['1'];
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4,
-      backgroundColor: c.bg, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3 }}>
+    <View
+      className="flex-row items-center gap-1 px-2 py-[3px] rounded-full"
+      style={{ backgroundColor: c.bg }}
+    >
       {c.icon}
-      <Text style={{ color: c.text, fontSize: 11, fontWeight: '600' }}>{SE_LABEL[se] ?? se}</Text>
+      <Text className="text-white text-[11px] font-semibold" style={{ fontFamily: WEB_FONT }}>{SE_LABEL[se] ?? se}</Text>
     </View>
   );
 }
@@ -106,7 +109,7 @@ function DetailPanel({
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View className="flex-1 justify-center items-center">
         <ActivityIndicator color={theme.brand.primary} />
       </View>
     );
@@ -161,104 +164,99 @@ function DetailPanel({
     }
   };
 
-  const s = makeDetailStyles(theme);
-
   return (
-    <View style={s.root}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.surface }}>
       {/* 헤더 */}
-      <View style={s.header}>
+      <View className="flex-row items-center gap-2 px-4 py-3 border-b" style={{ borderBottomColor: theme.border.default }}>
         <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
           <ChevronRight size={20} color={theme.text.muted} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>신청 상세</Text>
+        <Text className="flex-1 text-[15px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>신청 상세</Text>
         <StatusBadge se={detail.aprvRsltSe} />
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 16 }}>
         {/* 기본 정보 */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>신청 정보</Text>
-          <View style={s.infoRow}>
-            <Text style={s.infoLabel}>신청자</Text>
-            <Text style={s.infoValue}>{detail.reqUserNm}</Text>
+        <View className="rounded-xl border p-3.5" style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}>
+          <Text className="text-[13px] font-bold mb-2" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>신청 정보</Text>
+          <View className="flex-row gap-2 mb-1">
+            <Text className="w-16 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>신청자</Text>
+            <Text className="text-[13px] font-medium" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{detail.reqUserNm}</Text>
           </View>
-          <View style={s.infoRow}>
-            <Text style={s.infoLabel}>휴가유형</Text>
-            <Text style={s.infoValue}>{detail.leaveMstNm}{detail.leaveDtlNm ? ` / ${detail.leaveDtlNm}` : ''}</Text>
+          <View className="flex-row gap-2 mb-1">
+            <Text className="w-16 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>휴가유형</Text>
+            <Text className="text-[13px] font-medium" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{detail.leaveMstNm}{detail.leaveDtlNm ? ` / ${detail.leaveDtlNm}` : ''}</Text>
           </View>
-          <View style={s.infoRow}>
-            <Text style={s.infoLabel}>사용일수</Text>
-            <Text style={s.infoValue}>{detail.leaveUseDcnt}일</Text>
+          <View className="flex-row gap-2 mb-1">
+            <Text className="w-16 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>사용일수</Text>
+            <Text className="text-[13px] font-medium" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{detail.leaveUseDcnt}일</Text>
           </View>
-          <View style={s.infoRow}>
-            <Text style={s.infoLabel}>사유</Text>
-            <Text style={[s.infoValue, { flex: 1 }]}>{detail.leaveRsn ?? '-'}</Text>
+          <View className="flex-row gap-2 mb-1">
+            <Text className="w-16 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>사유</Text>
+            <Text className="text-[13px] font-medium flex-1" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{detail.leaveRsn ?? '-'}</Text>
           </View>
           {detail.crtAt && (
-            <View style={s.infoRow}>
-              <Text style={s.infoLabel}>신청일</Text>
-              <Text style={s.infoValue}>{detail.crtAt.slice(0, 10)}</Text>
+            <View className="flex-row gap-2 mb-1">
+              <Text className="w-16 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>신청일</Text>
+              <Text className="text-[13px] font-medium" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{detail.crtAt.slice(0, 10)}</Text>
             </View>
           )}
         </View>
 
         {/* 사용 날짜 */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>사용 날짜 ({detail.dates.length}일)</Text>
+        <View className="rounded-xl border p-3.5" style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}>
+          <Text className="text-[13px] font-bold mb-2" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>사용 날짜 ({detail.dates.length}일)</Text>
           {detail.leaveStHhmm && detail.leaveEndHhmm && (
-            <View style={[s.infoRow, { marginBottom: 8 }]}>
-              <Text style={s.infoLabel}>시간</Text>
-              <Text style={[s.infoValue, { color: theme.brand.primary }]}>
+            <View className="flex-row gap-2 mb-2">
+              <Text className="w-16 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>시간</Text>
+              <Text className="text-[13px] font-semibold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>
                 {`${detail.leaveStHhmm.slice(0,2)}:${detail.leaveStHhmm.slice(2,4)}`}
                 {' ~ '}
                 {`${detail.leaveEndHhmm.slice(0,2)}:${detail.leaveEndHhmm.slice(2,4)}`}
               </Text>
             </View>
           )}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+          <View className="flex-row flex-wrap gap-1.5 mt-2">
             {detail.dates.map((d) => (
-              <View key={d} style={s.dateChip}>
-                <Text style={s.dateChipText}>{fmtYmd(d)}</Text>
+              <View key={d} className="rounded-lg px-2 py-[3px]" style={{ backgroundColor: theme.brand.primaryTint }}>
+                <Text className="text-xs" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>{fmtYmd(d)}</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* 결재선 */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>결재선</Text>
+        <View className="rounded-xl border p-3.5" style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}>
+          <Text className="text-[13px] font-bold mb-2" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>결재선</Text>
           {detail.aprvList.map((a, idx) => {
             // 이 결재자보다 앞 순서 중 미처리가 있으면 대기 중
             const isWaiting = a.aprvSe === null &&
               detail.aprvList.some((x) => x.aprvOrd < a.aprvOrd && x.aprvSe === null);
             return (
-              <View key={a.aprvUserId} style={[s.aprvRow, idx === detail.aprvList.length - 1 && { borderBottomWidth: 0 }]}>
+              <View key={a.aprvUserId} className="flex-row items-start gap-3 py-3.5 border-b" style={idx === detail.aprvList.length - 1 ? { borderBottomWidth: 0 } : { borderBottomColor: theme.border.subtle }}>
                 {/* 순번 뱃지 */}
-                <View style={[
-                  s.aprvOrd,
-                  a.aprvSe === '3' && { backgroundColor: '#D1FAE5' },
-                  a.aprvSe === '9' && { backgroundColor: '#FEE2E2' },
-                ]}>
-                  <Text style={[
-                    s.aprvOrdText,
-                    a.aprvSe === '3' && { color: '#10B981' },
-                    a.aprvSe === '9' && { color: '#EF4444' },
-                  ]}>{a.aprvOrd}</Text>
+                <View className="w-6 h-6 rounded-full items-center justify-center" style={{
+                  backgroundColor: a.aprvSe === '3' ? '#D1FAE5' : a.aprvSe === '9' ? '#FEE2E2' : theme.brand.primaryTint
+                }}>
+                  <Text className="text-[11px] font-bold" style={{
+                    color: a.aprvSe === '3' ? '#10B981' : a.aprvSe === '9' ? '#EF4444' : theme.brand.primary,
+                    fontFamily: WEB_FONT
+                  }}>{a.aprvOrd}</Text>
                 </View>
 
                 {/* 이름 + 처리 정보 */}
                 <View style={{ flex: 1, gap: 3 }}>
-                  <Text style={s.aprvNm}>{a.aprvUserNm}</Text>
+                  <Text className="text-[13px] font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{a.aprvUserNm}</Text>
                   {a.aprvSe ? (
-                    <Text style={{ fontSize: 12, color: a.aprvSe === '3' ? '#10B981' : '#EF4444', fontWeight: '500' }}>
+                    <Text className="text-xs" style={{ color: a.aprvSe === '3' ? '#10B981' : '#EF4444', fontWeight: '500', fontFamily: WEB_FONT }}>
                       {APRV_SE_LABEL[a.aprvSe]}{a.aprvYmd ? `  ${fmtYmd(a.aprvYmd)}` : ''}
                     </Text>
                   ) : isWaiting ? (
-                    <Text style={{ fontSize: 12, color: theme.text.subtle }}>이전 결재자 처리 후 가능</Text>
+                    <Text className="text-xs" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>이전 결재자 처리 후 가능</Text>
                   ) : (
-                    <Text style={{ fontSize: 12, color: theme.semantic.warning, fontWeight: '500' }}>결재 대기 중</Text>
+                    <Text className="text-xs" style={{ color: theme.semantic.warning, fontWeight: '500', fontFamily: WEB_FONT }}>결재 대기 중</Text>
                   )}
-                  {a.rmk ? <Text style={{ fontSize: 12, color: theme.text.muted }}>사유: {a.rmk}</Text> : null}
+                  {a.rmk ? <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>사유: {a.rmk}</Text> : null}
                 </View>
 
                 {/* 상태 아이콘 */}
@@ -270,24 +268,18 @@ function DetailPanel({
             );
           })}
           {detail.aprvList.length === 0 && (
-            <Text style={{ color: theme.text.muted, fontSize: 13, marginTop: 8 }}>결재자 없음</Text>
+            <Text style={{ color: theme.text.muted, fontSize: 13, marginTop: 8, fontFamily: WEB_FONT }}>결재자 없음</Text>
           )}
         </View>
 
         {/* 내 차례가 아닌데 결재자로 등록된 경우 안내 */}
         {myAprv && !isMyTurn && (
-          <View style={{
+          <View className="rounded-lg border p-3 flex-row items-center gap-2" style={{
             backgroundColor: theme.bg.surfaceMute,
-            borderRadius: 8,
-            borderWidth: 1,
             borderColor: theme.border.default,
-            padding: 12,
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: 8,
           }}>
             <Clock size={14} color={theme.text.muted} />
-            <Text style={{ fontSize: 13, color: theme.text.muted, flex: 1 }}>
+            <Text className="text-xs flex-1" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
               이전 순서 결재자의 처리가 완료되면 승인/반려가 가능합니다.
             </Text>
           </View>
@@ -295,50 +287,34 @@ function DetailPanel({
 
         {/* 수신참조 */}
         {detail.refList.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>수신참조</Text>
+          <View className="rounded-xl border p-3.5" style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}>
+            <Text className="text-[13px] font-bold mb-2" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>수신참조</Text>
             <View style={{ gap: 6, marginTop: 8 }}>
               {detail.refList.map((r) => (
                 <View
                   key={r.refUserId}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 8,
-                    paddingVertical: 4,
-                    borderBottomWidth: 1,
-                    borderBottomColor: theme.border.subtle,
-                  }}
+                  className="flex-row items-center gap-2 py-1 border-b"
+                  style={{ borderBottomColor: theme.border.subtle }}
                 >
                   {/* 이름 */}
-                  <Text style={{ flex: 1, fontSize: 13, color: theme.text.primary, fontWeight: '500' }}>
+                  <Text className="flex-1 text-[13px] font-medium" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
                     {r.refUserNm}
                   </Text>
                   {/* 조회여부 + 일자 */}
                   {r.qryYn === 'Y' ? (
                     <View style={{ alignItems: 'flex-end', gap: 1 }}>
-                      <View style={{
-                        backgroundColor: '#D1FAE5',
-                        borderRadius: 6,
-                        paddingHorizontal: 7,
-                        paddingVertical: 2,
-                      }}>
-                        <Text style={{ fontSize: 11, color: '#10B981', fontWeight: '600' }}>조회</Text>
+                      <View className="rounded-md px-1.5 py-0.5" style={{ backgroundColor: '#D1FAE5' }}>
+                        <Text className="text-[11px] font-semibold" style={{ color: '#10B981', fontFamily: WEB_FONT }}>조회</Text>
                       </View>
                       {r.updAt && (
-                        <Text style={{ fontSize: 11, color: theme.text.muted }}>
+                        <Text className="text-[11px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                           {r.updAt.slice(0, 10)}
                         </Text>
                       )}
                     </View>
                   ) : (
-                    <View style={{
-                      backgroundColor: theme.bg.surfaceMute,
-                      borderRadius: 6,
-                      paddingHorizontal: 7,
-                      paddingVertical: 2,
-                    }}>
-                      <Text style={{ fontSize: 11, color: theme.text.subtle, fontWeight: '600' }}>미조회</Text>
+                    <View className="rounded-md px-1.5 py-0.5" style={{ backgroundColor: theme.bg.surfaceMute }}>
+                      <Text className="text-[11px] font-semibold" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>미조회</Text>
                     </View>
                   )}
                 </View>
@@ -349,14 +325,14 @@ function DetailPanel({
 
         {/* 첨부파일 */}
         {attachments.length > 0 && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>첨부파일 ({attachments.length})</Text>
+          <View className="rounded-xl border p-3.5" style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}>
+            <Text className="text-[13px] font-bold mb-2" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>첨부파일 ({attachments.length})</Text>
             <View style={{ gap: 6, marginTop: 8 }}>
               {attachments.map((f) => (
-                <View key={f.afileSn} style={[s.fileRow, { borderColor: theme.border.default }]}>
+                <View key={f.afileSn} className="flex-row items-center gap-2 border rounded-[7px] px-2.5 py-2" style={{ borderColor: theme.border.default }}>
                   <FileText size={14} color={theme.text.muted} />
-                  <TouchableOpacity style={{ flex: 1 }} onPress={() => setPreviewFile(f)} activeOpacity={0.7}>
-                    <Text style={[s.fileName, { color: theme.brand.primary }]} numberOfLines={1}>
+                  <TouchableOpacity className="flex-1" onPress={() => setPreviewFile(f)} activeOpacity={0.7}>
+                    <Text className="flex-1 text-[13px]" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }} numberOfLines={1}>
                       {f.oriFileNm}
                     </Text>
                   </TouchableOpacity>
@@ -377,31 +353,34 @@ function DetailPanel({
         )}
 
         {/* 액션 버튼 */}
-        <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+        <View className="flex-row gap-2 mt-1">
           {canApprove && (
             <>
               <TouchableOpacity
-                style={[s.actionBtn, { backgroundColor: '#10B981' }]}
+                className="flex-row items-center gap-1 px-3.5 py-2 rounded-lg flex-1 justify-center"
+                style={{ backgroundColor: '#10B981' }}
                 onPress={handleApprove}
               >
                 <CheckCircle size={14} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>승인</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13, fontFamily: WEB_FONT }}>승인</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.actionBtn, { backgroundColor: '#EF4444' }]}
+                className="flex-row items-center gap-1 px-3.5 py-2 rounded-lg flex-1 justify-center"
+                style={{ backgroundColor: '#EF4444' }}
                 onPress={() => setRejectModalOpen(true)}
               >
                 <XCircle size={14} color="#fff" />
-                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>반려</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13, fontFamily: WEB_FONT }}>반려</Text>
               </TouchableOpacity>
             </>
           )}
           {canCancel && (
             <TouchableOpacity
-              style={[s.actionBtn, { backgroundColor: theme.border.default }]}
+              className="flex-row items-center gap-1 px-3.5 py-2 rounded-lg flex-1 justify-center border"
+              style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}
               onPress={handleCancel}
             >
-              <Text style={{ color: theme.text.body, fontWeight: '600', fontSize: 13 }}>취소</Text>
+              <Text style={{ color: theme.text.body, fontWeight: '600', fontSize: 13, fontFamily: WEB_FONT }}>취소</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -416,11 +395,12 @@ function DetailPanel({
 
       {/* 반려 사유 모달 */}
       <Modal visible={rejectModalOpen} transparent animationType="fade">
-        <View style={s.modalOverlay}>
-          <View style={s.modalBox}>
-            <Text style={s.modalTitle}>반려 사유</Text>
+        <View className="flex-1 bg-black/40 justify-center items-center px-4">
+          <View className="w-full max-w-[400px] rounded-xl p-5" style={{ backgroundColor: theme.bg.surface }}>
+            <Text className="text-base font-bold mb-3" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>반려 사유</Text>
             <TextInput
-              style={s.modalInput}
+              className="border rounded-lg p-2.5 text-sm min-h-[80px]"
+              style={{ color: theme.text.primary, borderColor: theme.border.default, fontFamily: WEB_FONT, textAlignVertical: 'top' }}
               value={rejectRmk}
               onChangeText={setRejectRmk}
               placeholder="반려 사유를 입력하세요 (선택)"
@@ -429,16 +409,18 @@ function DetailPanel({
             />
             <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
               <TouchableOpacity
-                style={[s.modalBtn, { backgroundColor: theme.bg.surfaceMute }]}
+                className="px-4 py-2 rounded-lg"
+                style={{ backgroundColor: theme.bg.surfaceMute }}
                 onPress={() => setRejectModalOpen(false)}
               >
-                <Text style={{ color: theme.text.body, fontWeight: '600' }}>취소</Text>
+                <Text style={{ color: theme.text.body, fontWeight: '600', fontFamily: WEB_FONT }}>취소</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[s.modalBtn, { backgroundColor: '#EF4444' }]}
+                className="px-4 py-2 rounded-lg"
+                style={{ backgroundColor: '#EF4444' }}
                 onPress={handleRejectSubmit}
               >
-                <Text style={{ color: '#fff', fontWeight: '600' }}>반려</Text>
+                <Text style={{ color: '#fff', fontWeight: '600', fontFamily: WEB_FONT }}>반려</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -455,7 +437,7 @@ function LeaveSummaryBanner({ theme }: { theme: ReturnType<typeof useTheme> }) {
 
   if (isLoading) {
     return (
-      <View style={{ padding: 14, alignItems: 'center' }}>
+      <View className="p-3.5 items-center">
         <ActivityIndicator size="small" color={theme.brand.primary} />
       </View>
     );
@@ -471,77 +453,67 @@ function LeaveSummaryBanner({ theme }: { theme: ReturnType<typeof useTheme> }) {
   const fmtDcnt = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(1));
 
   return (
-    <View style={{
-      margin: 14,
-      borderRadius: 12,
-      borderWidth: 1,
+    <View className="m-3.5 rounded-xl border overflow-hidden" style={{
       borderColor: theme.border.default,
       backgroundColor: theme.bg.surfaceMute,
-      overflow: 'hidden',
     }}>
       {/* 올해 요약 */}
-      <View style={{ padding: 14 }}>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: theme.text.muted, marginBottom: 10 }}>
+      <View className="p-3.5">
+        <Text className="text-xs font-bold mb-2.5" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
           {cur.year}년 연차 현황
         </Text>
 
         {/* 수치 행 */}
-        <View style={{ flexDirection: 'row', gap: 0, marginBottom: 12 }}>
+        <View className="flex-row mb-3">
           {/* 기본 일수 */}
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: theme.text.primary }}>
+          <View className="flex-1 items-center">
+            <Text className="text-2xl font-extrabold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
               {fmtDcnt(ent)}
             </Text>
-            <Text style={{ fontSize: 11, color: theme.text.muted, marginTop: 2 }}>기본일수</Text>
+            <Text className="text-[11px] mt-0.5" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>기본일수</Text>
           </View>
-          <View style={{ width: 1, backgroundColor: theme.border.subtle, marginVertical: 4 }} />
+          <View className="w-[1px] m-1" style={{ backgroundColor: theme.border.subtle }} />
           {/* 사용 */}
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: theme.semantic.warning }}>
+          <View className="flex-1 items-center">
+            <Text className="text-2xl font-extrabold" style={{ color: theme.semantic.warning, fontFamily: WEB_FONT }}>
               {fmtDcnt(used)}
             </Text>
-            <Text style={{ fontSize: 11, color: theme.text.muted, marginTop: 2 }}>사용</Text>
+            <Text className="text-[11px] mt-0.5" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>사용</Text>
           </View>
-          <View style={{ width: 1, backgroundColor: theme.border.subtle, marginVertical: 4 }} />
+          <View className="w-[1px] m-1" style={{ backgroundColor: theme.border.subtle }} />
           {/* 잔여 */}
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={{ fontSize: 22, fontWeight: '800', color: theme.semantic.success }}>
+          <View className="flex-1 items-center">
+            <Text className="text-2xl font-extrabold" style={{ color: theme.semantic.success, fontFamily: WEB_FONT }}>
               {fmtDcnt(remaining)}
             </Text>
-            <Text style={{ fontSize: 11, color: theme.text.muted, marginTop: 2 }}>잔여</Text>
+            <Text className="text-[11px] mt-0.5" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>잔여</Text>
           </View>
         </View>
 
         {/* 프로그레스 바 */}
-        <View style={{ height: 8, borderRadius: 4, backgroundColor: theme.border.default, overflow: 'hidden' }}>
-          <View style={{
-            height: '100%',
+        <View className="h-2 rounded-full overflow-hidden" style={{ backgroundColor: theme.border.default }}>
+          <View className="h-full rounded-full" style={{
             width: `${pct}%`,
-            borderRadius: 4,
             backgroundColor: pct >= 80 ? theme.semantic.danger : pct >= 50 ? theme.semantic.warning : theme.brand.primary,
           }} />
         </View>
-        <Text style={{ fontSize: 11, color: theme.text.muted, marginTop: 4, textAlign: 'right' }}>
+        <Text className="text-[11px] mt-1 text-right" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
           {pct}% 사용
         </Text>
       </View>
 
       {/* 지난 연도 이력 */}
       {data.history.length > 0 && (
-        <View style={{
-          borderTopWidth: 1,
+        <View className="border-t p-3.5 gap-1" style={{
           borderTopColor: theme.border.subtle,
-          paddingHorizontal: 14,
-          paddingVertical: 10,
-          gap: 4,
         }}>
-          <Text style={{ fontSize: 11, fontWeight: '600', color: theme.text.subtle, marginBottom: 4 }}>
+          <Text className="text-[11px] font-semibold mb-1" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>
             지난 연도 사용 내역
           </Text>
           {data.history.map((h) => (
-            <View key={h.year} style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text style={{ fontSize: 12, color: theme.text.muted }}>{h.year}년</Text>
-              <Text style={{ fontSize: 12, color: theme.text.body, fontWeight: '600' }}>
+            <View key={h.year} className="flex-row justify-between">
+              <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>{h.year}년</Text>
+              <Text className="text-xs font-semibold" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>
                 {fmtDcnt(h.usedDcnt)}일 사용
               </Text>
             </View>
@@ -563,26 +535,18 @@ function ReqRow({
   onPress: () => void;
   theme: ReturnType<typeof useTheme>;
 }) {
-  const s = StyleSheet.create({
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border.default,
-      gap: 12,
-    },
-    name: { fontSize: 13, fontWeight: '600', color: theme.text.primary },
-    sub: { fontSize: 12, color: theme.text.muted, marginTop: 2 },
-  });
   return (
-    <TouchableOpacity style={s.row} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      className="flex-row items-center px-4 py-3 border-b gap-3"
+      style={{ borderBottomColor: theme.border.default }}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
       <View style={{ flex: 1 }}>
-        <Text style={s.name}>
+        <Text className="text-[13px] font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
           {item.leaveMstNm}{item.leaveDtlNm ? ` / ${item.leaveDtlNm}` : ''}
         </Text>
-        <Text style={s.sub}>
+        <Text className="text-xs mt-0.5" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
           {dateRangeLabel(item.startYmd, item.endYmd)} · {item.leaveUseDcnt}일
           {item.reqUserNm ? ` · ${item.reqUserNm}` : ''}
         </Text>
@@ -614,27 +578,29 @@ export function LeaveReqScreen() {
     setActiveFullScreen('leave-req-form' as any);
   };
 
-  const s = makeStyles(theme);
+  const desktopDetail = selectedKey && !isMobile;
+  const mobileDetail = selectedKey && isMobile;
 
   return (
-    <View style={s.root}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.surface }}>
       {/* 헤더 */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>휴가신청</Text>
-        <TouchableOpacity style={s.newBtn} onPress={handleNewRequest}>
-          <Text style={s.newBtnText}>+ 신청하기</Text>
+      <View className="flex-row items-center justify-between px-5 py-3.5 border-b" style={{ borderBottomColor: theme.border.default }}>
+        <Text className="text-[17px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>휴가신청</Text>
+        <TouchableOpacity className="rounded-lg px-3 py-1.5" style={{ backgroundColor: theme.brand.primary }} onPress={handleNewRequest}>
+          <Text className="text-white text-[13px] font-semibold" style={{ fontFamily: WEB_FONT }}>+ 신청하기</Text>
         </TouchableOpacity>
       </View>
 
       {/* 탭 */}
-      <View style={s.tabBar}>
+      <View className="flex-row border-b" style={{ borderBottomColor: theme.border.default }}>
         {(['my', 'ref', 'approver'] as const).map((tab) => (
           <TouchableOpacity
             key={tab}
-            style={[s.tabItem, activeTab === tab && s.tabItemActive]}
+            className={`px-5 py-2.5 ${activeTab === tab ? 'border-b-2' : ''}`}
+            style={activeTab === tab ? { borderBottomColor: theme.brand.primary } : undefined}
             onPress={() => { setActiveTab(tab); setSelectedKey(null); }}
           >
-            <Text style={[s.tabText, activeTab === tab && s.tabTextActive]}>
+            <Text className={`text-sm ${activeTab === tab ? 'font-semibold' : ''}`} style={{ color: activeTab === tab ? theme.brand.primary : theme.text.muted, fontFamily: WEB_FONT }}>
               {tab === 'my' ? '내 신청' : tab === 'ref' ? '결재 참조' : '결재 대기'}
             </Text>
           </TouchableOpacity>
@@ -642,17 +608,17 @@ export function LeaveReqScreen() {
       </View>
 
       {/* 본문 */}
-      <View style={s.body}>
+      <View className="flex-1 flex-row">
         {/* 목록 */}
-        <View style={[s.listPane, selectedKey && !isMobile && s.listPaneNarrow]}>
+        <View className={`${desktopDetail ? "max-w-[380px] border-r" : "flex-1"}`} style={desktopDetail ? { borderRightColor: theme.border.default } : undefined}>
           {/* 내 신청 탭에서만 잔여일수 배너 표시 */}
           {activeTab === 'my' && <LeaveSummaryBanner theme={theme} />}
 
           {isLoading ? (
             <ActivityIndicator style={{ marginTop: 20 }} color={theme.brand.primary} />
           ) : list.length === 0 ? (
-            <View style={s.empty}>
-              <Text style={s.emptyText}>
+            <View className="flex-1 justify-center items-center pt-14">
+              <Text className="text-sm" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                 {activeTab === 'my'
                   ? '신청 내역이 없습니다.'
                   : activeTab === 'ref'
@@ -676,9 +642,9 @@ export function LeaveReqScreen() {
           )}
         </View>
 
-        {/* 상세 패널 (데스크탑: 우측, 모바일: 오버레이) */}
-        {selectedKey && !isMobile && (
-          <View style={s.detailPane}>
+        {/* 상세 패널 (데스크탑: 우측) */}
+        {desktopDetail && (
+          <View className="flex-1">
             <DetailPanel
               reqUserId={selectedKey.reqUserId}
               reqSn={selectedKey.reqSn}
@@ -687,159 +653,19 @@ export function LeaveReqScreen() {
             />
           </View>
         )}
-
-        {/* 모바일 상세 모달 */}
-        {selectedKey && isMobile && (
-          <Modal visible animationType="slide" transparent={false}>
-            <DetailPanel
-              reqUserId={selectedKey.reqUserId}
-              reqSn={selectedKey.reqSn}
-              currentUserId={me?.userId ?? ''}
-              onClose={() => setSelectedKey(null)}
-            />
-          </Modal>
-        )}
       </View>
+
+      {/* 모바일 상세 모달 */}
+      {mobileDetail && (
+        <Modal visible animationType="slide" transparent={false}>
+          <DetailPanel
+            reqUserId={selectedKey.reqUserId}
+            reqSn={selectedKey.reqSn}
+            currentUserId={me?.userId ?? ''}
+            onClose={() => setSelectedKey(null)}
+          />
+        </Modal>
+      )}
     </View>
   );
-}
-
-// ─── 스타일 ───────────────────────────────────────────────────────────────────
-
-function makeStyles(theme: ReturnType<typeof useTheme>) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.bg.surface },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border.default,
-    },
-    headerTitle: { fontSize: 17, fontWeight: '700', color: theme.text.primary },
-    newBtn: {
-      backgroundColor: theme.brand.primary,
-      borderRadius: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 6,
-    },
-    newBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-    tabBar: {
-      flexDirection: 'row',
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border.default,
-    },
-    tabItem: { paddingHorizontal: 20, paddingVertical: 10 },
-    tabItemActive: { borderBottomWidth: 2, borderBottomColor: theme.brand.primary },
-    tabText: { fontSize: 14, color: theme.text.muted },
-    tabTextActive: { color: theme.brand.primary, fontWeight: '600' },
-    body: { flex: 1, flexDirection: 'row' },
-    listPane: { flex: 1 },
-    listPaneNarrow: { maxWidth: 380, borderRightWidth: 1, borderRightColor: theme.border.default },
-    detailPane: { flex: 1 },
-    empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingTop: 60 },
-    emptyText: { color: theme.text.muted, fontSize: 14 },
-  });
-}
-
-function makeDetailStyles(theme: ReturnType<typeof useTheme>) {
-  return StyleSheet.create({
-    root: { flex: 1, backgroundColor: theme.bg.surface },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border.default,
-    },
-    headerTitle: { flex: 1, fontSize: 15, fontWeight: '700', color: theme.text.primary },
-    card: {
-      backgroundColor: theme.bg.surface,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: theme.border.default,
-      padding: 14,
-    },
-    cardTitle: { fontSize: 13, fontWeight: '700', color: theme.text.muted, marginBottom: 8 },
-    infoRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
-    infoLabel: { width: 64, fontSize: 13, color: theme.text.muted },
-    infoValue: { fontSize: 13, color: theme.text.primary, fontWeight: '500' },
-    dateChip: {
-      backgroundColor: theme.brand.primaryTint,
-      borderRadius: 6,
-      paddingHorizontal: 8,
-      paddingVertical: 3,
-    },
-    dateChipText: { fontSize: 12, color: theme.brand.primary },
-    aprvRow: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      gap: 12,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border.subtle,
-    },
-    aprvOrd: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: theme.brand.primaryTint,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    aprvOrdText: { fontSize: 11, fontWeight: '700', color: theme.brand.primary },
-    aprvNm: { fontSize: 13, fontWeight: '600', color: theme.text.primary },
-    fileRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      borderWidth: 1,
-      borderRadius: 7,
-      paddingHorizontal: 10,
-      paddingVertical: 8,
-    },
-    fileName: { flex: 1, fontSize: 13 },
-    actionBtn: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-      paddingHorizontal: 14,
-      paddingVertical: 8,
-      borderRadius: 8,
-    },
-    modalOverlay: {
-      flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      paddingHorizontal: 16,
-    },
-    modalBox: {
-      width: '100%',
-      maxWidth: 400,
-      backgroundColor: theme.bg.surface,
-      borderRadius: 12,
-      padding: 20,
-    },
-    modalTitle: { fontSize: 16, fontWeight: '700', color: theme.text.primary, marginBottom: 12 },
-    modalInput: {
-      borderWidth: 1,
-      borderColor: theme.border.default,
-      borderRadius: 8,
-      padding: 10,
-      fontSize: 14,
-      color: theme.text.primary,
-      minHeight: 80,
-      textAlignVertical: 'top',
-    },
-    modalBtn: {
-      paddingHorizontal: 16,
-      paddingVertical: 8,
-      borderRadius: 8,
-    },
-  });
 }

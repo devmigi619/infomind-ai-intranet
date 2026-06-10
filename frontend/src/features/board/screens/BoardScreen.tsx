@@ -5,12 +5,15 @@ import {
   FlatList,
   TouchableOpacity,
   TextInput,
-  StyleSheet,
   Platform,
   ScrollView,
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { HStack } from '../../../shared/components/ui/hstack';
+import { VStack } from '../../../shared/components/ui/vstack';
+import { Input, InputField } from '../../../shared/components/ui/input';
+import { Textarea, TextareaInput } from '../../../shared/components/ui/textarea';
 import { useConfirm } from '../../../shared/hooks/useConfirm';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
@@ -294,16 +297,16 @@ export function BoardScreen() {
 
   // ─── 풀뷰 — List 상태 ──────────────────────────────────────────────
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+    <View style={{ backgroundColor: theme.bg.app }} className="flex-1">
       {/* 게시판 탭 */}
-      <View style={[styles.tabBar, { borderBottomColor: theme.border.default }]}>
+      <HStack style={{ borderBottomColor: theme.border.default }} className="min-h-[48px] border-b justify-center">
         {boardsLoading ? (
-          <ActivityIndicator color={theme.brand.primary} size="small" style={styles.tabLoader} />
+          <ActivityIndicator color={theme.brand.primary} size="small" className="ml-4" />
         ) : (
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabScroll}
+            contentContainerStyle={{ paddingHorizontal: 16, alignItems: 'center', gap: 8 }}
           >
             {boards.map((b) => {
               const active = b.brdId === activeBrdId;
@@ -312,17 +315,12 @@ export function BoardScreen() {
                   key={b.brdId}
                   onPress={() => setActiveBrdId(b.brdId)}
                   activeOpacity={0.7}
-                  style={[
-                    styles.tab,
-                    active && { borderBottomColor: theme.brand.primary },
-                  ]}
+                  style={active ? { borderBottomColor: theme.brand.primary } : undefined}
+                  className="px-4 py-3 border-b-2 border-transparent"
                 >
                   <Text
-                    style={[
-                      styles.tabText,
-                      { color: active ? theme.brand.primary : theme.text.muted },
-                      active && { fontWeight: fontWeight.semibold },
-                    ]}
+                    style={{ color: active ? theme.brand.primary : theme.text.muted }}
+                    className={`text-[14px] ${active ? 'font-semibold' : ''}`}
                   >
                     {b.brdNm}
                   </Text>
@@ -331,53 +329,54 @@ export function BoardScreen() {
             })}
           </ScrollView>
         )}
-      </View>
+      </HStack>
 
       {/* 도구바 */}
-      <View
-        style={[
-          styles.toolbar,
-          { borderBottomColor: theme.border.subtle, backgroundColor: theme.bg.surface },
-        ]}
+      <HStack
+        style={{ borderBottomColor: theme.border.subtle, backgroundColor: theme.bg.surface }}
+        className="items-center gap-2 px-4 py-3 border-b"
       >
-        <TextInput
-          style={[
-            styles.searchInput,
-            {
-              borderColor: theme.border.default,
-              color: theme.text.primary,
-              backgroundColor: theme.bg.surface,
-            },
-          ]}
-          value={searchKeyword}
-          onChangeText={setSearchKeyword}
-          placeholder="제목/내용/작성자 검색"
-          placeholderTextColor={theme.text.subtle}
-        />
+        <Input
+          style={{
+            borderColor: theme.border.default,
+            backgroundColor: theme.bg.surface,
+          }}
+          className="flex-1 h-9 border rounded-lg"
+        >
+          <InputField
+            style={{ color: theme.text.primary }}
+            className="text-[14px] px-3 placeholder:text-[14px]"
+            value={searchKeyword}
+            onChangeText={setSearchKeyword}
+            placeholder="제목/내용/작성자 검색"
+            placeholderTextColor={theme.text.subtle}
+          />
+        </Input>
         <TouchableOpacity
           onPress={openWriteCreate}
           activeOpacity={0.7}
-          style={[styles.writeButton, { backgroundColor: theme.brand.primary }]}
+          style={{ backgroundColor: theme.brand.primary }}
+          className="h-9 px-4 rounded-lg items-center justify-center"
           disabled={!activeBrdId}
         >
-          <Text style={[styles.writeButtonText, { color: theme.text.onBrand }]}>+ 글쓰기</Text>
+          <Text style={{ color: theme.text.onBrand }} className="text-[14px] font-semibold">+ 글쓰기</Text>
         </TouchableOpacity>
-      </View>
+      </HStack>
 
       {/* 목록 */}
       {postsLoading ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6">
           <ActivityIndicator color={theme.brand.primary} />
         </View>
       ) : postsError ? (
-        <View style={styles.center}>
-          <Text style={[styles.errorText, { color: theme.semantic.danger }]}>
+        <View className="flex-1 items-center justify-center p-6">
+          <Text style={{ color: theme.semantic.danger }} className="text-[14px]">
             게시글을 불러오지 못했습니다.
           </Text>
         </View>
       ) : filteredPosts.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+        <View className="flex-1 items-center justify-center p-6">
+          <Text style={{ color: theme.text.muted }} className="text-[14px]">
             {searchKeyword ? '검색 결과가 없습니다.' : '글이 없습니다.'}
           </Text>
         </View>
@@ -386,7 +385,7 @@ export function BoardScreen() {
         <FlatList
           data={filteredPosts}
           keyExtractor={(item) => `${item.brdId}-${item.pstSn}`}
-          contentContainerStyle={styles.cardListContent}
+          contentContainerStyle={{ padding: 12, gap: 8 }}
           renderItem={({ item }) => {
             const isNotice = item.ntcYn === 'Y';
             return (
@@ -396,26 +395,25 @@ export function BoardScreen() {
                   setMode('detail');
                 }}
                 activeOpacity={0.7}
-                style={[
-                  styles.card,
-                  {
-                    backgroundColor: isNotice ? NTC_ROW_BG : theme.bg.surface,
-                    borderColor: theme.border.subtle,
-                  },
-                ]}
+                style={{
+                  backgroundColor: isNotice ? NTC_ROW_BG : theme.bg.surface,
+                  borderColor: theme.border.subtle,
+                }}
+                className="p-4 rounded-lg border mb-2 gap-1.5"
               >
                 {isNotice && (
-                  <View style={[styles.noticeBadge, { backgroundColor: NTC_BADGE_BG }]}>
-                    <Text style={styles.noticeBadgeText}>공지</Text>
+                  <View style={{ backgroundColor: NTC_BADGE_BG }} className="self-start px-2 py-0.5 rounded">
+                    <Text className="text-[11px] text-white font-bold">공지</Text>
                   </View>
                 )}
                 <Text
-                  style={[styles.cardTitle, { color: theme.text.primary }]}
+                  style={{ color: theme.text.primary }}
+                  className="text-[15px] font-semibold"
                   numberOfLines={2}
                 >
                   {item.pstTtl}
                 </Text>
-                <Text style={[styles.cardMeta, { color: theme.text.muted }]}>
+                <Text style={{ color: theme.text.muted }} className="text-[12px]">
                   {item.userId} · {formatDate(item.crtAt)} · 조회 {item.qryCnt} · 댓글 0
                 </Text>
               </TouchableOpacity>
@@ -424,20 +422,18 @@ export function BoardScreen() {
         />
       ) : (
         // ─── PC: 테이블 ───────────────────────────────
-        <View style={styles.tableWrap}>
-          <View
-            style={[
-              styles.tableHeader,
-              { borderBottomColor: theme.border.default, backgroundColor: theme.bg.surfaceAlt },
-            ]}
+        <View className="flex-1">
+          <HStack
+            style={{ borderBottomColor: theme.border.default, backgroundColor: theme.bg.surfaceAlt }}
+            className="items-center px-4 py-3 border-b"
           >
-            <Text style={[styles.thTag, { color: theme.text.muted }]}>구분</Text>
-            <Text style={[styles.thTitle, { color: theme.text.muted }]}>제목</Text>
-            <Text style={[styles.thAuthor, { color: theme.text.muted }]}>작성자</Text>
-            <Text style={[styles.thDate, { color: theme.text.muted }]}>작성일</Text>
-            <Text style={[styles.thNum, { color: theme.text.muted }]}>조회</Text>
-            <Text style={[styles.thNum, { color: theme.text.muted }]}>댓글</Text>
-          </View>
+            <Text style={{ color: theme.text.muted }} className="w-20 text-left text-[13px]">구분</Text>
+            <Text style={{ color: theme.text.muted }} className="flex-1 px-2 text-[13px]">제목</Text>
+            <Text style={{ color: theme.text.muted }} className="w-[100px] text-[13px]">작성자</Text>
+            <Text style={{ color: theme.text.muted }} className="w-[140px] text-[13px]">작성일</Text>
+            <Text style={{ color: theme.text.muted }} className="w-[60px] text-right text-[13px]">조회</Text>
+            <Text style={{ color: theme.text.muted }} className="w-[60px] text-right text-[13px]">댓글</Text>
+          </HStack>
           <FlatList
             data={filteredPosts}
             keyExtractor={(item) => `${item.brdId}-${item.pstSn}`}
@@ -450,43 +446,38 @@ export function BoardScreen() {
                     setMode('detail');
                   }}
                   activeOpacity={0.7}
-                  style={[
-                    styles.row,
-                    {
-                      borderBottomColor: theme.border.subtle,
-                      backgroundColor: isNotice ? NTC_ROW_BG : 'transparent',
-                    },
-                  ]}
+                  style={{
+                    borderBottomColor: theme.border.subtle,
+                    backgroundColor: isNotice ? NTC_ROW_BG : 'transparent',
+                  }}
+                  className="flex-row items-center px-4 py-3 border-b"
                 >
-                  <View style={styles.thTag}>
+                  <View className="w-20 items-start">
                     {isNotice ? (
-                      <View style={[styles.noticeBadgeSm, { backgroundColor: NTC_BADGE_BG }]}>
-                        <Text style={styles.noticeBadgeText}>공지</Text>
+                      <View style={{ backgroundColor: NTC_BADGE_BG }} className="px-2 py-0.5 rounded">
+                        <Text className="text-[11px] text-white font-bold">공지</Text>
                       </View>
                     ) : (
-                      <Text style={[styles.cellText, { color: theme.text.subtle }]}>일반</Text>
+                      <Text style={{ color: theme.text.subtle }} className="text-[12px]">일반</Text>
                     )}
                   </View>
                   <Text
-                    style={[
-                      styles.thTitle,
-                      styles.titleCell,
-                      { color: theme.text.primary, fontWeight: isNotice ? '600' : '500' },
-                    ]}
+                    style={{ color: theme.text.primary, fontWeight: isNotice ? '600' : '500' }}
+                    className="flex-1 px-2 text-[14px]"
                     numberOfLines={1}
                   >
                     {item.pstTtl}
                   </Text>
-                  <Text style={[styles.thAuthor, styles.cellText, { color: theme.text.body }]}>
+                  <Text style={{ color: theme.text.body }} className="w-[100px] text-[12px]">
                     {item.userId}
                   </Text>
-                  <Text style={[styles.thDate, styles.cellText, { color: theme.text.muted }]}>
+                  <Text style={{ color: theme.text.muted }} className="w-[140px] text-[12px]">
                     {formatDate(item.crtAt)}
                   </Text>
-                  <Text style={[styles.thNum, styles.cellText, { color: theme.text.muted }]}>
+                  <Text style={{ color: theme.text.muted }} className="w-[60px] text-[12px] text-right">
                     {item.qryCnt}
                   </Text>
-                  <Text style={[styles.thNum, styles.cellText, { color: theme.text.muted }]}>
+                  <Text style={{ color: theme.text.muted }} className="w-[60px] text-[12px] text-right">
                     0
                   </Text>
                 </TouchableOpacity>
@@ -544,7 +535,6 @@ function WriteForm({
 
   const handlePickFiles = async () => {
     if (Platform.OS === 'web') {
-      // 웹: 숨겨진 input[type=file] 다중 선택
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = true;
@@ -567,7 +557,6 @@ function WriteForm({
       input.click();
       return;
     }
-    // 네이티브: expo-document-picker 미설치 → 안내
     Alert.alert(
       '추후 지원',
       '모바일 첨부 선택은 expo-document-picker 설치 후 지원 예정입니다.',
@@ -590,134 +579,135 @@ function WriteForm({
       Alert.alert('삭제 실패', '첨부 파일을 삭제하지 못했습니다.');
     }
   };
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+    <View style={{ backgroundColor: theme.bg.app }} className="flex-1">
       <TouchableOpacity
         onPress={onCancel}
         activeOpacity={0.7}
-        style={[styles.backBar, { borderBottomColor: theme.border.subtle }]}
+        style={{ borderBottomColor: theme.border.subtle }}
+        className="px-4 py-3 border-b"
       >
-        <Text style={[styles.backText, { color: theme.brand.primary }]}>
+        <Text style={{ color: theme.brand.primary }} className="text-[14px] font-medium">
           ← 취소
         </Text>
       </TouchableOpacity>
-      <ScrollView contentContainerStyle={styles.writeContent}>
-        <Text style={[styles.writeTitle, { color: theme.text.primary }]}>
+      <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
+        <Text style={{ color: theme.text.primary }} className="text-[20px] font-semibold mb-4">
           {isEdit ? '글 수정' : '글 작성'} · {boardName}
         </Text>
 
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text.muted }]}>제목 *</Text>
-          <TextInput
-            value={title}
-            onChangeText={onTitleChange}
-            placeholder="제목을 입력하세요"
-            placeholderTextColor={theme.text.subtle}
-            style={[
-              styles.input,
-              {
-                borderColor: theme.border.default,
-                color: theme.text.primary,
-                backgroundColor: theme.bg.surface,
-              },
-            ]}
-          />
-        </View>
+        <VStack className="gap-1.5 mb-4">
+          <Text style={{ color: theme.text.muted }} className="text-[13px] font-medium">제목 *</Text>
+          <Input
+            style={{
+              borderColor: theme.border.default,
+              backgroundColor: theme.bg.surface,
+            }}
+            className="h-10 border rounded-lg"
+          >
+            <InputField
+              style={{ color: theme.text.primary }}
+              className="text-[14px] px-3 placeholder:text-[14px]"
+              value={title}
+              onChangeText={onTitleChange}
+              placeholder="제목을 입력하세요"
+              placeholderTextColor={theme.text.subtle}
+            />
+          </Input>
+        </VStack>
 
-        <View style={styles.field}>
-          <Text style={[styles.fieldLabel, { color: theme.text.muted }]}>본문 *</Text>
-          <TextInput
-            value={content}
-            onChangeText={onContentChange}
-            placeholder="내용을 입력하세요"
-            placeholderTextColor={theme.text.subtle}
-            multiline
-            numberOfLines={10}
-            textAlignVertical="top"
-            style={[
-              styles.input,
-              styles.textArea,
-              {
-                borderColor: theme.border.default,
-                color: theme.text.primary,
-                backgroundColor: theme.bg.surface,
-              },
-            ]}
-          />
-        </View>
+        <VStack className="gap-1.5 mb-4">
+          <Text style={{ color: theme.text.muted }} className="text-[13px] font-medium">본문 *</Text>
+          <Textarea
+            style={{
+              borderColor: theme.border.default,
+              backgroundColor: theme.bg.surface,
+            }}
+            className="h-[200px] border rounded-lg"
+          >
+            <TextareaInput
+              style={{ color: theme.text.primary }}
+              className="text-[14px] p-3 placeholder:text-[14px]"
+              value={content}
+              onChangeText={onContentChange}
+              placeholder="내용을 입력하세요"
+              placeholderTextColor={theme.text.subtle}
+              multiline
+              numberOfLines={10}
+            />
+          </Textarea>
+        </VStack>
 
         <TouchableOpacity
           onPress={() => onNoticeChange(!notice)}
           activeOpacity={0.7}
-          style={styles.checkboxRow}
+          className="flex-row items-center gap-2 py-2"
         >
           <View
-            style={[
-              styles.checkbox,
-              {
-                borderColor: notice ? theme.brand.primary : theme.border.strong,
-                backgroundColor: notice ? theme.brand.primary : 'transparent',
-              },
-            ]}
+            style={
+              notice
+                ? { borderColor: theme.brand.primary, backgroundColor: theme.brand.primary }
+                : { borderColor: theme.border.strong, backgroundColor: 'transparent' }
+            }
+            className="w-5 h-5 border-[1.5px] rounded items-center justify-center"
           >
-            {notice && <Text style={styles.checkboxMark}>✓</Text>}
+            {notice && <Text className="text-white text-[12px] font-bold">✓</Text>}
           </View>
-          <Text style={[styles.checkboxLabel, { color: theme.text.body }]}>
+          <Text style={{ color: theme.text.body }} className="text-[14px]">
             공지로 등록 (상단 고정)
           </Text>
         </TouchableOpacity>
 
         {/* 첨부 영역 */}
-        <View style={styles.field}>
-          <View style={styles.attachHeader}>
-            <Text style={[styles.fieldLabel, { color: theme.text.muted }]}>첨부 파일</Text>
+        <VStack className="gap-1.5 mb-4">
+          <HStack className="items-center justify-between mb-1.5">
+            <Text style={{ color: theme.text.muted }} className="text-[13px] font-medium">첨부 파일</Text>
             <TouchableOpacity
               onPress={handlePickFiles}
               activeOpacity={0.7}
-              style={[
-                styles.attachAddBtn,
-                { borderColor: theme.border.default, backgroundColor: theme.bg.surface },
-              ]}
+              style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surface }}
+              className="px-3 py-1.5 border rounded-lg"
             >
-              <Text style={[styles.attachAddBtnText, { color: theme.brand.primary }]}>
+              <Text style={{ color: theme.brand.primary }} className="text-[13px] font-semibold">
                 + 파일 선택
               </Text>
             </TouchableOpacity>
-          </View>
+          </HStack>
 
           {existingFiles.length === 0 && pendingAttachments.length === 0 ? (
-            <Text style={[styles.attachEmpty, { color: theme.text.subtle }]}>
+            <Text style={{ color: theme.text.subtle }} className="text-[12px] py-2">
               첨부된 파일이 없습니다.
             </Text>
           ) : (
             <View
-              style={[
-                styles.attachList,
-                { borderColor: theme.border.subtle, backgroundColor: theme.bg.surface },
-              ]}
+              style={{ borderColor: theme.border.subtle, backgroundColor: theme.bg.surface }}
+              className="border rounded-lg overflow-hidden"
             >
               {existingFiles.map((f) => (
                 <View
                   key={`ex-${f.afileSn}`}
-                  style={[styles.attachItem, { borderBottomColor: theme.border.subtle }]}
+                  style={{ borderBottomColor: theme.border.subtle }}
+                  className="flex-row items-center px-3 py-2 border-b gap-2"
                 >
-                  <View style={styles.attachInfo}>
+                  <View className="flex-1 gap-0.5">
                     <Text
-                      style={[styles.attachName, { color: theme.text.primary }]}
+                      style={{ color: theme.text.primary }}
+                      className="text-[14px] font-medium"
                       numberOfLines={1}
                     >
                       {f.oriFileNm}
                     </Text>
-                    <Text style={[styles.attachMeta, { color: theme.text.muted }]}>
+                    <Text style={{ color: theme.text.muted }} className="text-[11px]">
                       {formatBytes(f.fileSize)} · 업로드됨
                     </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => handleRemoveExisting(f)}
                     activeOpacity={0.7}
-                    style={styles.attachRemoveBtn}
+                    className="px-2 py-1"
                   >
-                    <Text style={[styles.attachRemoveText, { color: theme.semantic.danger }]}>
+                    <Text style={{ color: theme.semantic.danger }} className="text-[13px] font-medium">
                       삭제
                     </Text>
                   </TouchableOpacity>
@@ -726,25 +716,27 @@ function WriteForm({
               {pendingAttachments.map((f, idx) => (
                 <View
                   key={`pn-${idx}-${f.name}`}
-                  style={[styles.attachItem, { borderBottomColor: theme.border.subtle }]}
+                  style={{ borderBottomColor: theme.border.subtle }}
+                  className="flex-row items-center px-3 py-2 border-b gap-2"
                 >
-                  <View style={styles.attachInfo}>
+                  <View className="flex-1 gap-0.5">
                     <Text
-                      style={[styles.attachName, { color: theme.text.primary }]}
+                      style={{ color: theme.text.primary }}
+                      className="text-[14px] font-medium"
                       numberOfLines={1}
                     >
                       {f.name}
                     </Text>
-                    <Text style={[styles.attachMeta, { color: theme.brand.primary }]}>
+                    <Text style={{ color: theme.brand.primary }} className="text-[11px]">
                       {formatBytes(f.size)} · 업로드 대기
                     </Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => onRemovePending(idx)}
                     activeOpacity={0.7}
-                    style={styles.attachRemoveBtn}
+                    className="px-2 py-1"
                   >
-                    <Text style={[styles.attachRemoveText, { color: theme.text.muted }]}>
+                    <Text style={{ color: theme.text.muted }} className="text-[13px] font-medium">
                       제거
                     </Text>
                   </TouchableOpacity>
@@ -752,22 +744,20 @@ function WriteForm({
               ))}
             </View>
           )}
-        </View>
+        </VStack>
 
-        <View style={styles.writeActions}>
+        <HStack className="gap-3 mt-4">
           <TouchableOpacity
             onPress={onSave}
             activeOpacity={0.8}
             disabled={saving}
-            style={[
-              styles.primaryButton,
-              { backgroundColor: theme.brand.primary, opacity: saving ? 0.6 : 1 },
-            ]}
+            style={saving ? { backgroundColor: theme.brand.primary, opacity: 0.6 } : { backgroundColor: theme.brand.primary }}
+            className="flex-1 h-11 rounded-lg items-center justify-center"
           >
             {saving ? (
               <ActivityIndicator color={theme.text.onBrand} size="small" />
             ) : (
-              <Text style={[styles.primaryButtonText, { color: theme.text.onBrand }]}>
+              <Text style={{ color: theme.text.onBrand }} className="text-[14px] font-semibold">
                 {isEdit ? '수정 완료' : '등록'}
               </Text>
             )}
@@ -775,14 +765,12 @@ function WriteForm({
           <TouchableOpacity
             onPress={onCancel}
             activeOpacity={0.8}
-            style={[
-              styles.secondaryButton,
-              { borderColor: theme.border.default },
-            ]}
+            style={{ borderColor: theme.border.default }}
+            className="flex-1 h-11 rounded-lg border items-center justify-center"
           >
-            <Text style={[styles.secondaryButtonText, { color: theme.text.body }]}>취소</Text>
+            <Text style={{ color: theme.text.body }} className="text-[14px] font-medium">취소</Text>
           </TouchableOpacity>
-        </View>
+        </HStack>
       </ScrollView>
     </View>
   );
@@ -835,125 +823,118 @@ function PostDetail({
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+    <View style={{ backgroundColor: theme.bg.app }} className="flex-1">
       <TouchableOpacity
         onPress={onBack}
         activeOpacity={0.7}
-        style={[styles.backBar, { borderBottomColor: theme.border.subtle }]}
+        style={{ borderBottomColor: theme.border.subtle }}
+        className="px-4 py-3 border-b"
       >
-        <Text style={[styles.backText, { color: theme.brand.primary }]}>
+        <Text style={{ color: theme.brand.primary }} className="text-[14px] font-medium">
           ← 목록으로
         </Text>
       </TouchableOpacity>
 
       {isLoading ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6">
           <ActivityIndicator color={theme.brand.primary} />
         </View>
       ) : error || !post ? (
-        <View style={styles.center}>
-          <Text style={[styles.errorText, { color: theme.semantic.danger }]}>
+        <View className="flex-1 items-center justify-center p-6">
+          <Text style={{ color: theme.semantic.danger }} className="text-[14px]">
             게시글을 불러오지 못했습니다.
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.detailContent}>
+        <ScrollView contentContainerStyle={{ padding: 24, gap: 16 }}>
           {/* 헤더 */}
-          <View style={styles.detailHeader}>
-            <View style={styles.detailHeaderTop}>
+          <VStack className="gap-3 pb-4">
+            <HStack className="justify-between items-center">
               <View
-                style={[
-                  styles.categoryTag,
-                  { backgroundColor: theme.brand.primaryTint },
-                ]}
+                style={{ backgroundColor: theme.brand.primaryTint }}
+                className="px-3 py-1 rounded-full"
               >
-                <Text style={[styles.categoryTagText, { color: theme.brand.primary }]}>
+                <Text style={{ color: theme.brand.primary }} className="text-[11px] font-semibold">
                   {post.ntcYn === 'Y' ? '공지' : boardName}
                 </Text>
               </View>
-              <View style={styles.detailStats}>
-                <Text style={[styles.statText, { color: theme.text.muted }]}>
+              <HStack className="gap-3">
+                <Text style={{ color: theme.text.muted }} className="text-[12px]">
                   조회 {post.qryCnt}
                 </Text>
-                <Text style={[styles.statText, { color: theme.text.muted }]}>
+                <Text style={{ color: theme.text.muted }} className="text-[12px]">
                   좋아요 {post.likeNum}
                 </Text>
-              </View>
-            </View>
-            <Text style={[styles.detailTitleText, { color: theme.text.primary }]}>
+              </HStack>
+            </HStack>
+            <Text style={{ color: theme.text.primary }} className="text-[20px] font-bold leading-7">
               {post.pstTtl}
             </Text>
-            <View style={styles.detailMetaRow}>
+            <HStack className="items-center gap-3">
               <View
-                style={[
-                  styles.avatar,
-                  { backgroundColor: theme.brand.primaryTint },
-                ]}
+                style={{ backgroundColor: theme.brand.primaryTint }}
+                className="w-9 h-9 rounded-full items-center justify-center"
               >
-                <Text style={[styles.avatarText, { color: theme.brand.primary }]}>
+                <Text style={{ color: theme.brand.primary }} className="text-[14px] font-bold">
                   {(post.userId ?? '?').slice(0, 1).toUpperCase()}
                 </Text>
               </View>
               <View>
-                <Text style={[styles.detailAuthor, { color: theme.text.primary }]}>
+                <Text style={{ color: theme.text.primary }} className="text-[14px] font-medium">
                   {post.userId}
                 </Text>
-                <Text style={[styles.detailDate, { color: theme.text.muted }]}>
+                <Text style={{ color: theme.text.muted }} className="text-[12px]">
                   {formatDate(post.crtAt)}
                 </Text>
               </View>
-            </View>
-          </View>
+            </HStack>
+          </VStack>
 
           {/* 본문 */}
-          <Text style={[styles.detailBody, { color: theme.text.body }]}>
+          <Text style={{ color: theme.text.body }} className="text-[14px] leading-6 py-4">
             {post.pstDesc}
           </Text>
 
           {/* 첨부 영역 */}
           {attachments.length > 0 && (
-            <View
-              style={[
-                styles.detailAttachWrap,
-                { borderColor: theme.border.subtle, backgroundColor: theme.bg.surface },
-              ]}
+            <VStack
+              style={{ borderColor: theme.border.subtle, backgroundColor: theme.bg.surface }}
+              className="border rounded-lg p-4 gap-2"
             >
-              <Text style={[styles.detailAttachTitle, { color: theme.text.muted }]}>
+              <Text style={{ color: theme.text.muted }} className="text-[12px] font-semibold mb-1">
                 첨부 파일 {attachments.length}
               </Text>
               {attachments.map((f) => {
                 const previewable = isImageExt(f.fileExt) || isPdfExt(f.fileExt);
                 return (
-                  <View
+                  <HStack
                     key={`atc-${f.afileSn}`}
-                    style={[
-                      styles.detailAttachItem,
-                      { borderTopColor: theme.border.subtle },
-                    ]}
+                    style={{ borderTopColor: theme.border.subtle }}
+                    className="items-center justify-between py-2 border-t gap-2"
                   >
-                    <View style={styles.detailAttachInfo}>
+                    <View className="flex-1 gap-0.5">
                       <Text
-                        style={[styles.attachName, { color: theme.text.primary }]}
+                        style={{ color: theme.text.primary }}
+                        className="text-[14px] font-medium"
                         numberOfLines={1}
                       >
                         [{(f.fileExt ?? '').toUpperCase()}] {f.oriFileNm}
                       </Text>
-                      <Text style={[styles.attachMeta, { color: theme.text.muted }]}>
+                      <Text style={{ color: theme.text.muted }} className="text-[11px]">
                         {formatBytes(f.fileSize)}
                       </Text>
                     </View>
-                    <View style={styles.detailAttachActions}>
+                    <HStack className="gap-1.5">
                       {previewable && (
                         <TouchableOpacity
                           onPress={() => setPreviewFile(f)}
                           activeOpacity={0.7}
-                          style={[
-                            styles.detailAttachBtn,
-                            { borderColor: theme.border.default },
-                          ]}
+                          style={{ borderColor: theme.border.default }}
+                          className="px-2 py-1.5 border rounded-md"
                         >
                           <Text
-                            style={[styles.detailAttachBtnText, { color: theme.brand.primary }]}
+                            style={{ color: theme.brand.primary }}
+                            className="text-[11px] font-semibold"
                           >
                             미리보기
                           </Text>
@@ -962,34 +943,30 @@ function PostDetail({
                       <TouchableOpacity
                         onPress={() => handleDownload(f)}
                         activeOpacity={0.7}
-                        style={[
-                          styles.detailAttachBtn,
-                          { borderColor: theme.border.default },
-                        ]}
+                        style={{ borderColor: theme.border.default }}
+                        className="px-2 py-1.5 border rounded-md"
                       >
-                        <Text style={[styles.detailAttachBtnText, { color: theme.text.body }]}>
+                        <Text style={{ color: theme.text.body }} className="text-[11px] font-semibold">
                           다운로드
                         </Text>
                       </TouchableOpacity>
-                    </View>
-                  </View>
+                    </HStack>
+                  </HStack>
                 );
               })}
-            </View>
+            </VStack>
           )}
 
           {/* 액션 row */}
-          <View style={[styles.actionRow, { borderTopColor: theme.border.subtle }]}>
+          <HStack style={{ borderTopColor: theme.border.subtle }} className="gap-2 pt-4 border-t">
             <TouchableOpacity
               onPress={handleLike}
               activeOpacity={0.7}
               disabled={likePost.isPending}
-              style={[
-                styles.actionButton,
-                { borderColor: theme.border.default },
-              ]}
+              style={{ borderColor: theme.border.default }}
+              className="px-4 py-2 border rounded-lg"
             >
-              <Text style={[styles.actionText, { color: theme.text.body }]}>
+              <Text style={{ color: theme.text.body }} className="text-[12px] font-medium">
                 좋아요 {post.likeNum}
               </Text>
             </TouchableOpacity>
@@ -997,21 +974,23 @@ function PostDetail({
               <TouchableOpacity
                 onPress={() => onEdit(post)}
                 activeOpacity={0.7}
-                style={[styles.actionButton, { borderColor: theme.border.default }]}
+                style={{ borderColor: theme.border.default }}
+                className="px-4 py-2 border rounded-lg"
               >
-                <Text style={[styles.actionText, { color: theme.text.body }]}>수정</Text>
+                <Text style={{ color: theme.text.body }} className="text-[12px] font-medium">수정</Text>
               </TouchableOpacity>
             )}
             {canDelete && (
               <TouchableOpacity
                 onPress={() => onDelete(post)}
                 activeOpacity={0.7}
-                style={[styles.actionButton, { borderColor: theme.semantic.danger }]}
+                style={{ borderColor: theme.semantic.danger }}
+                className="px-4 py-2 border rounded-lg"
               >
-                <Text style={[styles.actionText, { color: theme.semantic.danger }]}>삭제</Text>
+                <Text style={{ color: theme.semantic.danger }} className="text-[12px] font-medium">삭제</Text>
               </TouchableOpacity>
             )}
-          </View>
+          </HStack>
 
           {/* 댓글 섹션 */}
           <CommentsSection
@@ -1128,15 +1107,15 @@ function CommentsSection({
   };
 
   return (
-    <View style={[styles.commentSection, { borderTopColor: theme.border.subtle }]}>
-      <Text style={[styles.commentSectionTitle, { color: theme.text.primary }]}>
+    <VStack style={{ borderTopColor: theme.border.subtle }} className="mt-6 pt-4 border-t gap-2">
+      <Text style={{ color: theme.text.primary }} className="text-[14px] font-semibold mb-2">
         댓글 {comments.length}
       </Text>
 
       {isLoading ? (
-        <ActivityIndicator color={theme.brand.primary} size="small" style={{ marginVertical: spacing.md }} />
+        <ActivityIndicator color={theme.brand.primary} size="small" className="my-3" />
       ) : tree.length === 0 ? (
-        <Text style={[styles.emptyComments, { color: theme.text.muted }]}>
+        <Text style={{ color: theme.text.muted }} className="text-[12px] p-4 text-center">
           첫 댓글을 남겨주세요.
         </Text>
       ) : (
@@ -1151,19 +1130,17 @@ function CommentsSection({
               onDelete={() => handleDelete(comment)}
             />
             {replies.map((r) => (
-              <View
+              <VStack
                 key={`r-${r.cmtSn}`}
-                style={[
-                  styles.replyWrap,
-                  { borderLeftColor: theme.brand.primaryTint },
-                ]}
+                style={{ borderLeftColor: theme.brand.primaryTint }}
+                className="ml-8 border-l-2 pl-3"
               >
-                <View style={styles.replyHeader}>
-                  <Text style={[styles.replyArrow, { color: theme.text.muted }]}>↳</Text>
-                  <Text style={[styles.replyTo, { color: theme.text.muted }]}>
+                <HStack className="items-center gap-1 mt-2">
+                  <Text style={{ color: theme.text.muted }} className="text-[14px]">↳</Text>
+                  <Text style={{ color: theme.text.muted }} className="text-[11px]">
                     @{comment.userId}에게
                   </Text>
-                </View>
+                </HStack>
                 <CommentItem
                   comment={r}
                   currentUserId={currentUserId}
@@ -1171,14 +1148,12 @@ function CommentsSection({
                   theme={theme}
                   onDelete={() => handleDelete(r)}
                 />
-              </View>
+              </VStack>
             ))}
             {replyTo?.cmtSn === comment.cmtSn && (
-              <View
-                style={[
-                  styles.replyInputWrap,
-                  { borderColor: theme.border.default, backgroundColor: theme.bg.surface },
-                ]}
+              <VStack
+                style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surface }}
+                className="ml-8 mt-2 border rounded-lg p-3"
               >
                 <TextInput
                   value={replyText}
@@ -1186,50 +1161,45 @@ function CommentsSection({
                   placeholder={`@${comment.userId}에게 답글`}
                   placeholderTextColor={theme.text.subtle}
                   multiline
-                  style={[styles.replyInput, { color: theme.text.primary }]}
+                  style={{ color: theme.text.primary }}
+                  className="min-h-[56px] text-[12px] p-2"
                 />
-                <View style={styles.replyActions}>
+                <HStack className="justify-end gap-2 mt-2">
                   <TouchableOpacity
                     onPress={() => {
                       setReplyTo(null);
                       setReplyText('');
                     }}
-                    style={[
-                      styles.commentBtnSmSecondary,
-                      { borderColor: theme.border.default },
-                    ]}
+                    style={{ borderColor: theme.border.default }}
+                    className="px-3 py-1.5 border rounded-md"
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.commentBtnTextSecondary, { color: theme.text.muted }]}>
+                    <Text style={{ color: theme.text.muted }} className="text-[12px]">
                       취소
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={handleReply}
                     disabled={createComment.isPending}
-                    style={[
-                      styles.commentBtnSmPrimary,
-                      { backgroundColor: theme.brand.primary },
-                    ]}
+                    style={{ backgroundColor: theme.brand.primary }}
+                    className="px-3 py-1.5 rounded-md"
                     activeOpacity={0.7}
                   >
-                    <Text style={[styles.commentBtnTextPrimary, { color: theme.text.onBrand }]}>
+                    <Text style={{ color: theme.text.onBrand }} className="text-[12px] font-semibold">
                       답글 등록
                     </Text>
                   </TouchableOpacity>
-                </View>
-              </View>
+                </HStack>
+              </VStack>
             )}
           </View>
         ))
       )}
 
       {/* 새 댓글 입력 */}
-      <View
-        style={[
-          styles.commentInputWrap,
-          { borderColor: theme.border.default, backgroundColor: theme.bg.surface },
-        ]}
+      <VStack
+        style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surface }}
+        className="mt-4 border rounded-lg p-3"
       >
         <TextInput
           value={newComment}
@@ -1237,26 +1207,26 @@ function CommentsSection({
           placeholder="댓글을 입력하세요"
           placeholderTextColor={theme.text.subtle}
           multiline
-          style={[styles.commentInput, { color: theme.text.primary }]}
+          style={{ color: theme.text.primary }}
+          className="min-h-[64px] text-[14px] p-2"
         />
         <TouchableOpacity
           onPress={handleSubmit}
           disabled={createComment.isPending || !newComment.trim()}
           activeOpacity={0.7}
-          style={[
-            styles.commentSubmit,
-            {
-              backgroundColor: theme.brand.primary,
-              opacity: createComment.isPending || !newComment.trim() ? 0.5 : 1,
-            },
-          ]}
+          style={
+            createComment.isPending || !newComment.trim()
+              ? { backgroundColor: theme.brand.primary, opacity: 0.5 }
+              : { backgroundColor: theme.brand.primary }
+          }
+          className="self-end px-4 py-2 rounded-md mt-2"
         >
-          <Text style={[styles.commentSubmitText, { color: theme.text.onBrand }]}>
+          <Text style={{ color: theme.text.onBrand }} className="text-[12px] font-semibold">
             등록
           </Text>
         </TouchableOpacity>
-      </View>
-    </View>
+      </VStack>
+    </VStack>
   );
 }
 
@@ -1282,584 +1252,34 @@ function CommentItem({
 }: CommentItemProps) {
   const canDelete = comment.userId === currentUserId || isAdminMode;
   return (
-    <View style={[styles.commentItem, { borderBottomColor: theme.border.subtle }]}>
-      <View style={styles.commentHeader}>
-        <Text style={[styles.commentAuthor, { color: theme.text.primary }]}>
+    <VStack style={{ borderBottomColor: theme.border.subtle }} className="py-3 border-b gap-1">
+      <HStack className="items-center gap-3">
+        <Text style={{ color: theme.text.primary }} className="text-[12px] font-semibold">
           {comment.userId}
         </Text>
-        <Text style={[styles.commentDate, { color: theme.text.muted }]}>
+        <Text style={{ color: theme.text.muted }} className="text-[11px]">
           {formatDate(comment.crtAt)}
         </Text>
-      </View>
-      <Text style={[styles.commentBody, { color: theme.text.body }]}>
+      </HStack>
+      <Text style={{ color: theme.text.body }} className="text-[14px] leading-[21px]">
         {comment.cmtDesc}
       </Text>
-      <View style={styles.commentActions}>
+      <HStack className="gap-4 mt-1">
         {onReply && (
           <TouchableOpacity onPress={onReply} activeOpacity={0.7}>
-            <Text style={[styles.commentActionText, { color: theme.brand.primary }]}>
+            <Text style={{ color: theme.brand.primary }} className="text-[11px] font-medium">
               답글
             </Text>
           </TouchableOpacity>
         )}
         {canDelete && (
           <TouchableOpacity onPress={onDelete} activeOpacity={0.7}>
-            <Text style={[styles.commentActionText, { color: theme.semantic.danger }]}>
+            <Text style={{ color: theme.semantic.danger }} className="text-[11px] font-medium">
               삭제
             </Text>
           </TouchableOpacity>
         )}
-      </View>
-    </View>
+      </HStack>
+    </VStack>
   );
 }
-
-// ─────────────────────────────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  errorText: { fontSize: fontSize.body, fontFamily },
-  emptyText: { fontSize: fontSize.body, fontFamily },
-
-  // ─ 탭 ─
-  tabBar: {
-    minHeight: 48,
-    borderBottomWidth: 1,
-    justifyContent: 'center',
-  },
-  tabLoader: { marginLeft: spacing.base },
-  tabScroll: {
-    paddingHorizontal: spacing.base,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  tab: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabText: {
-    fontSize: fontSize.body,
-    fontFamily,
-  },
-
-  // ─ 도구바 ─
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  searchInput: {
-    flex: 1,
-    height: 36,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    fontSize: fontSize.body,
-    fontFamily,
-  },
-  writeButton: {
-    height: 36,
-    paddingHorizontal: spacing.base,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  writeButtonText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-
-  // ─ PC 테이블 ─
-  tableWrap: { flex: 1 },
-  tableHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  thTag: { width: 80, alignItems: 'flex-start' },
-  thTitle: { flex: 1, paddingHorizontal: spacing.sm },
-  thAuthor: { width: 100 },
-  thDate: { width: 140 },
-  thNum: { width: 60, textAlign: 'right' },
-  titleCell: {
-    fontSize: fontSize.body,
-    fontFamily,
-  },
-  cellText: {
-    fontSize: fontSize.small,
-    fontFamily,
-  },
-
-  // ─ 모바일 카드 ─
-  cardListContent: { padding: spacing.md, gap: spacing.sm },
-  card: {
-    padding: spacing.base,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-    gap: 6,
-  },
-  cardTitle: {
-    fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  cardMeta: {
-    fontSize: fontSize.small,
-    fontFamily,
-  },
-
-  // ─ 공지 뱃지 ─
-  noticeBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  noticeBadgeSm: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-    alignSelf: 'flex-start',
-  },
-  noticeBadgeText: {
-    fontSize: fontSize.caption,
-    color: '#FFFFFF',
-    fontWeight: fontWeight.bold,
-    fontFamily,
-  },
-
-  // ─ 뒤로가기 바 ─
-  backBar: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  backText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-
-  // ─ 상세 ─
-  detailContent: {
-    padding: spacing.lg,
-    gap: spacing.base,
-  },
-  detailHeader: {
-    gap: spacing.md,
-    paddingBottom: spacing.base,
-  },
-  detailHeaderTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  categoryTag: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-  },
-  categoryTagText: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  detailStats: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  statText: {
-    fontSize: fontSize.small,
-    fontFamily,
-  },
-  detailTitleText: {
-    fontSize: fontSize.title,
-    fontWeight: fontWeight.bold,
-    fontFamily,
-    lineHeight: fontSize.title * 1.4,
-  },
-  detailMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.bold,
-    fontFamily,
-  },
-  detailAuthor: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  detailDate: {
-    fontSize: fontSize.small,
-    fontFamily,
-  },
-  detailBody: {
-    fontSize: fontSize.body,
-    lineHeight: fontSize.body * 1.8,
-    fontFamily,
-    paddingVertical: spacing.base,
-  },
-
-  // ─ 액션 row ─
-  actionRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingTop: spacing.base,
-    borderTopWidth: 1,
-  },
-  actionButton: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-  },
-  actionText: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-
-  // ─ 댓글 ─
-  commentSection: {
-    marginTop: spacing.lg,
-    paddingTop: spacing.base,
-    borderTopWidth: 1,
-    gap: spacing.sm,
-  },
-  commentSectionTitle: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-    marginBottom: spacing.sm,
-  },
-  emptyComments: {
-    fontSize: fontSize.small,
-    fontFamily,
-    padding: spacing.md,
-    textAlign: 'center',
-  },
-  commentItem: {
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    gap: 4,
-  },
-  commentHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  commentAuthor: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  commentDate: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  commentBody: {
-    fontSize: fontSize.body,
-    fontFamily,
-    lineHeight: fontSize.body * 1.5,
-  },
-  commentActions: {
-    flexDirection: 'row',
-    gap: spacing.base,
-    marginTop: 4,
-  },
-  commentActionText: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-
-  // ─ 답글 (대댓글) ─
-  replyWrap: {
-    marginLeft: 32,
-    borderLeftWidth: 2,
-    paddingLeft: spacing.md,
-  },
-  replyHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: spacing.sm,
-  },
-  replyArrow: {
-    fontSize: fontSize.body,
-  },
-  replyTo: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  replyInputWrap: {
-    marginLeft: 32,
-    marginTop: spacing.sm,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.sm,
-  },
-  replyInput: {
-    minHeight: 56,
-    fontSize: fontSize.small,
-    fontFamily,
-    padding: spacing.sm,
-  },
-  replyActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  commentBtnSmPrimary: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-  },
-  commentBtnSmSecondary: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.md,
-    borderWidth: 1,
-  },
-  commentBtnTextPrimary: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  commentBtnTextSecondary: {
-    fontSize: fontSize.small,
-    fontFamily,
-  },
-
-  // ─ 새 댓글 입력 ─
-  commentInputWrap: {
-    marginTop: spacing.base,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.sm,
-  },
-  commentInput: {
-    minHeight: 64,
-    fontSize: fontSize.body,
-    fontFamily,
-    padding: spacing.sm,
-  },
-  commentSubmit: {
-    alignSelf: 'flex-end',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    marginTop: spacing.sm,
-  },
-  commentSubmitText: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-
-  // ─ Write Form ─
-  writeContent: {
-    padding: spacing.lg,
-    gap: spacing.base,
-  },
-  writeTitle: {
-    fontSize: fontSize.heading,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-    marginBottom: spacing.md,
-  },
-  field: { gap: 6 },
-  fieldLabel: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    fontSize: fontSize.body,
-    fontFamily,
-  },
-  textArea: {
-    minHeight: 200,
-    paddingTop: spacing.sm,
-  },
-  checkboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingVertical: spacing.sm,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1.5,
-    borderRadius: radius.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  checkboxMark: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: fontWeight.bold,
-  },
-  checkboxLabel: {
-    fontSize: fontSize.body,
-    fontFamily,
-  },
-  writeActions: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.base,
-  },
-  primaryButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  secondaryButton: {
-    flex: 1,
-    height: 44,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  secondaryButtonText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-
-  // ─ 첨부 (Write/Detail 공통) ─
-  attachHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  attachAddBtn: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-  },
-  attachAddBtnText: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  attachEmpty: {
-    fontSize: fontSize.small,
-    fontFamily,
-    paddingVertical: spacing.sm,
-  },
-  attachList: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  attachItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    gap: spacing.sm,
-  },
-  attachInfo: { flex: 1, gap: 2 },
-  attachName: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  attachMeta: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  attachRemoveBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 4,
-  },
-  attachRemoveText: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-
-  // ─ Detail 전용 첨부 박스 ─
-  detailAttachWrap: {
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  detailAttachTitle: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-    marginBottom: spacing.xs,
-  },
-  detailAttachItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.sm,
-    borderTopWidth: 1,
-    gap: spacing.sm,
-  },
-  detailAttachInfo: { flex: 1, gap: 2 },
-  detailAttachActions: {
-    flexDirection: 'row',
-    gap: spacing.xs,
-  },
-  detailAttachBtn: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderRadius: radius.md,
-  },
-  detailAttachBtnText: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-});

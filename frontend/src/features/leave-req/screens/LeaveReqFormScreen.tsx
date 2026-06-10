@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   Platform,
   ActivityIndicator,
   Modal,
@@ -37,10 +36,6 @@ import {
 } from '../../../features/attachment/api';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
-
-// ─── 조직도 트리 유틸 ─────────────────────────────────────────────────────────
-
-
 
 // ─── 캘린더 ───────────────────────────────────────────────────────────────────
 
@@ -96,28 +91,28 @@ function CalendarGrid({ dates, onChange, mode, theme }: {
   for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i+7));
 
   return (
-    <View style={{borderWidth:1,borderColor:theme.border.default,borderRadius:10,overflow:'hidden'}}>
-      <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:12,paddingVertical:10,backgroundColor:theme.bg.surfaceMute,borderBottomWidth:1,borderBottomColor:theme.border.subtle}}>
+    <View className="border rounded-xl overflow-hidden" style={{ borderColor: theme.border.default }}>
+      <View className="flex-row items-center justify-between px-3 py-2.5 border-b" style={{ backgroundColor: theme.bg.surfaceMute, borderBottomColor: theme.border.subtle }}>
         <TouchableOpacity onPress={prevMonth} style={{padding:6}}><Text style={{fontSize:16,color:theme.text.muted}}>‹</Text></TouchableOpacity>
-        <Text style={{fontSize:14,fontWeight:'700',color:theme.text.primary}}>{viewYear}년 {MONTH_NAMES[viewMonth]}</Text>
+        <Text style={{fontSize:14,fontWeight:'700',color:theme.text.primary, fontFamily: WEB_FONT}}>{viewYear}년 {MONTH_NAMES[viewMonth]}</Text>
         <TouchableOpacity onPress={nextMonth} style={{padding:6}}><Text style={{fontSize:16,color:theme.text.muted}}>›</Text></TouchableOpacity>
       </View>
-      <View style={{flexDirection:'row',backgroundColor:theme.bg.surfaceMute}}>
+      <View className="flex-row" style={{ backgroundColor: theme.bg.surfaceMute }}>
         {WEEKDAY_KR.map((w,i)=>(
-          <View key={w} style={{flex:1,alignItems:'center',paddingVertical:6}}>
-            <Text style={{fontSize:11,fontWeight:'600',color:i===0?'#EF4444':i===6?'#3B82F6':theme.text.muted}}>{w}</Text>
+          <View key={w} className="flex-1 items-center py-1.5">
+            <Text style={{fontSize:11,fontWeight:'600',color:i===0?'#EF4444':i===6?'#3B82F6':theme.text.muted, fontFamily: WEB_FONT}}>{w}</Text>
           </View>
         ))}
       </View>
       {rows.map((row,ri)=>(
-        <View key={ri} style={{flexDirection:'row'}}>
+        <View key={ri} className="flex-row">
           {row.map((day,ci)=>{
-            if(!day) return <View key={ci} style={{flex:1,height:38}}/>;
+            if(!day) return <View key={ci} className="flex-1 h-[38px]"/>;
             const ymd=toYmd(viewYear,viewMonth,day);
             const isSel=dates.includes(ymd), isToday=ymd===todayYmd, isAnchor=ymd===rangeAnchor, isWE=ci===0||ci===6;
             return (
-              <TouchableOpacity key={ci} style={{flex:1,height:38,alignItems:'center',justifyContent:'center',backgroundColor:isSel||isAnchor?theme.brand.primary:'transparent'}} onPress={()=>handleDayPress(day)} activeOpacity={0.7}>
-                <Text style={{fontSize:13,fontWeight:isSel||isAnchor||isToday?'700':'400',color:isSel||isAnchor?'#fff':isToday?theme.brand.primary:isWE?(ci===0?'#EF4444':'#3B82F6'):theme.text.primary}}>{day}</Text>
+              <TouchableOpacity key={ci} className="flex-1 h-[38px] items-center justify-center" style={{backgroundColor:isSel||isAnchor?theme.brand.primary:'transparent'}} onPress={()=>handleDayPress(day)} activeOpacity={0.7}>
+                <Text style={{fontSize:13,fontWeight:isSel||isAnchor||isToday?'700':'400',color:isSel||isAnchor?'#fff':isToday?theme.brand.primary:isWE?(ci===0?'#EF4444':'#3B82F6'):theme.text.primary, fontFamily: WEB_FONT}}>{day}</Text>
                 {isToday&&!isSel&&<View style={{position:'absolute',bottom:4,width:4,height:4,borderRadius:2,backgroundColor:theme.brand.primary}}/>}
               </TouchableOpacity>
             );
@@ -125,8 +120,8 @@ function CalendarGrid({ dates, onChange, mode, theme }: {
         </View>
       ))}
       {mode==='range'&&rangeAnchor&&(
-        <View style={{paddingHorizontal:12,paddingVertical:6,backgroundColor:theme.brand.primaryTint,borderTopWidth:1,borderTopColor:theme.border.subtle}}>
-          <Text style={{fontSize:12,color:theme.brand.primary}}>시작: {rangeAnchor.slice(0,4)}-{rangeAnchor.slice(4,6)}-{rangeAnchor.slice(6,8)} → 종료 날짜를 선택하세요</Text>
+        <View className="px-3 py-1.5 border-t" style={{backgroundColor:theme.brand.primaryTint, borderTopColor:theme.border.subtle}}>
+          <Text style={{fontSize:12,color:theme.brand.primary, fontFamily: WEB_FONT}}>시작: {rangeAnchor.slice(0,4)}-{rangeAnchor.slice(4,6)}-{rangeAnchor.slice(6,8)} → 종료 날짜를 선택하세요</Text>
         </View>
       )}
     </View>
@@ -142,17 +137,13 @@ const HALF_DAY_SLOTS: { key: HalfDaySlot; label: string; range: string; st: stri
   { key: 'pm', label: '오후', range: '14:00 ~ 18:00', st: '1400', end: '1800' },
 ];
 
-/**
- * 오전/오후 버튼 선택기.
- * 선택하면 시작·종료 시분이 고정 세팅되고 직접 수정 불가.
- */
 function HalfDaySelector({ slot, onChange, theme }: {
   slot: HalfDaySlot;
   onChange: (slot: HalfDaySlot, st: string, end: string) => void;
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={hds.row}>
+    <View className="flex-row gap-2.5">
       {HALF_DAY_SLOTS.map((s) => {
         const active = slot === s.key;
         return (
@@ -160,16 +151,16 @@ function HalfDaySelector({ slot, onChange, theme }: {
             key={s.key}
             onPress={() => onChange(s.key, s.st, s.end)}
             activeOpacity={0.75}
-            style={[
-              hds.btn,
-              { borderColor: active ? theme.brand.primary : theme.border.default,
-                backgroundColor: active ? theme.brand.primary : theme.bg.surfaceMute },
-            ]}
+            className="flex-1 border-[1.5px] rounded-xl py-3 items-center gap-1"
+            style={{
+              borderColor: active ? theme.brand.primary : theme.border.default,
+              backgroundColor: active ? theme.brand.primary : theme.bg.surfaceMute,
+            }}
           >
-            <Text style={[hds.btnLabel, { color: active ? '#fff' : theme.text.body }]}>
+            <Text className="text-[15px] font-bold" style={{ color: active ? '#fff' : theme.text.body, fontFamily: WEB_FONT }}>
               {s.label}
             </Text>
-            <Text style={[hds.btnRange, { color: active ? 'rgba(255,255,255,0.85)' : theme.text.muted }]}>
+            <Text className="text-xs" style={{ color: active ? 'rgba(255,255,255,0.85)' : theme.text.muted, fontFamily: WEB_FONT }}>
               {s.range}
             </Text>
           </TouchableOpacity>
@@ -179,44 +170,34 @@ function HalfDaySelector({ slot, onChange, theme }: {
   );
 }
 
-const hds = StyleSheet.create({
-  row: { flexDirection: 'row', gap: 10 },
-  btn: { flex: 1, borderWidth: 1.5, borderRadius: 10, paddingVertical: 12, alignItems: 'center', gap: 4 },
-  btnLabel: { fontSize: 15, fontWeight: '700' },
-  btnRange: { fontSize: 12 },
-});
-
 function DateSelector({ dates, onChange, theme }: { dates:string[]; onChange:(d:string[])=>void; theme:ReturnType<typeof useTheme> }) {
   const [mode, setMode] = useState<DateMode>('manual');
   const fmtChip = (ymd:string) => ymd.length===8 ? `${ymd.slice(0,4)}-${ymd.slice(4,6)}-${ymd.slice(6,8)}` : ymd;
   return (
-    <View style={{gap:10}}>
-      <View style={{flexDirection:'row',borderRadius:8,overflow:'hidden',borderWidth:1,borderColor:theme.border.default,alignSelf:'flex-start'}}>
+    <View className="gap-2.5">
+      <View className="flex-row rounded-lg overflow-hidden border self-start" style={{ borderColor: theme.border.default }}>
         {(['manual','range'] as DateMode[]).map(m=>(
-          <TouchableOpacity key={m} style={{paddingHorizontal:14,paddingVertical:6,backgroundColor:mode===m?theme.brand.primary:'transparent'}} onPress={()=>setMode(m)}>
-            <Text style={{fontSize:13,color:mode===m?'#fff':theme.text.muted,fontWeight:mode===m?'600':'400'}}>{m==='manual'?'날짜 선택':'범위 선택'}</Text>
+          <TouchableOpacity key={m} className="px-3.5 py-1.5" style={{ backgroundColor: mode === m ? theme.brand.primary : 'transparent' }} onPress={()=>setMode(m)}>
+            <Text className={`text-[13px] ${mode === m ? 'font-semibold' : ''}`} style={{ color: mode === m ? '#fff' : theme.text.muted, fontFamily: WEB_FONT }}>{m==='manual'?'날짜 선택':'범위 선택'}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      <Text style={{fontSize:12,color:theme.text.subtle}}>{mode==='manual'?'날짜를 탭하면 추가/제거됩니다':'첫 번째 날짜 → 마지막 날짜 순서로 탭하세요 (평일만 자동 선택)'}</Text>
+      <Text className="text-xs" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>{mode==='manual'?'날짜를 탭하면 추가/제거됩니다':'첫 번째 날짜 → 마지막 날짜 순서로 탭하세요 (평일만 자동 선택)'}</Text>
       <CalendarGrid dates={dates} onChange={onChange} mode={mode} theme={theme}/>
       {dates.length>0&&(
-        <View style={{flexDirection:'row',flexWrap:'wrap',gap:6}}>
+        <View className="flex-row flex-wrap gap-1.5">
           {dates.map(d=>(
-            <TouchableOpacity key={d} style={{flexDirection:'row',alignItems:'center',gap:4,backgroundColor:theme.brand.primaryTint,borderRadius:6,paddingHorizontal:8,paddingVertical:4}} onPress={()=>onChange(dates.filter(x=>x!==d))}>
-              <Text style={{fontSize:12,color:theme.brand.primary,fontWeight:'500'}}>{fmtChip(d)}</Text>
+            <TouchableOpacity key={d} className="flex-row items-center gap-1 bg-brand-primaryTint rounded-md px-2 py-1" style={{ backgroundColor: theme.brand.primaryTint }} onPress={()=>onChange(dates.filter(x=>x!==d))}>
+              <Text className="text-xs font-medium" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>{fmtChip(d)}</Text>
               <X size={10} color={theme.brand.primary}/>
             </TouchableOpacity>
           ))}
         </View>
       )}
-      <Text style={{fontSize:12,color:theme.text.muted}}>총 {dates.length}일 선택됨</Text>
+      <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>총 {dates.length}일 선택됨</Text>
     </View>
   );
 }
-
-// ─── (OrgUserRow / DeptNode / OrgTreePanel / SelectionPanel / MobileViewTabs)
-// → AprvLineEditorPanel.tsx 로 추출됨
 
 // ─── 결재선 지정 모달 ─────────────────────────────────────────────────────────
 
@@ -285,24 +266,24 @@ function AprvLineModal({ visible, initialAprvList, initialRefList, initialDeptRe
       animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
       onRequestClose={onClose}
     >
-      <View style={[ms.overlay, Platform.OS === 'web' && ms.overlayWeb]}>
-        <View style={[
-          ms.sheet,
-          { backgroundColor: theme.bg.surface, width: modalW, maxHeight: modalH },
-          Platform.OS === 'web' ? ms.sheetWeb : ms.sheetMobile,
-        ]}>
+      <View className={`flex-1 bg-black/45 justify-end ${Platform.OS === 'web' ? 'justify-center items-center' : ''}`}>
+        <View
+          className={`overflow-hidden ${Platform.OS === 'web' ? 'rounded-2xl' : 'rounded-t-[20px]'}`}
+          style={{ backgroundColor: theme.bg.surface, width: modalW, maxHeight: modalH }}
+        >
 
           {/* 헤더 */}
-          <View style={[ms.header, { borderBottomColor: theme.border.default }]}>
-            <Text style={[ms.headerTitle, { color: theme.text.primary }]}>결재선 지정</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <View className="flex-row items-center justify-between px-[18px] py-3.5 border-b" style={{ borderBottomColor: theme.border.default }}>
+            <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>결재선 지정</Text>
+            <View className="flex-row items-center gap-2">
               <TouchableOpacity
                 onPress={() => setTmplModalVisible(true)}
-                style={[ms.tmplLoadBtn, { backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default }]}
+                className="flex-row items-center gap-1 px-2.5 py-1.5 rounded-lg border"
+                style={{ backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default }}
                 activeOpacity={0.75}
               >
                 <Info size={13} color={theme.text.body} />
-                <Text style={[ms.tmplLoadTxt, { color: theme.text.body }]}>불러오기</Text>
+                <Text className="text-xs font-semibold" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>불러오기</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
                 <X size={20} color={theme.text.muted} />
@@ -312,20 +293,21 @@ function AprvLineModal({ visible, initialAprvList, initialRefList, initialDeptRe
 
           {/* 템플릿 카드 */}
           {tmpls.length > 0 && (
-            <View style={[ms.tmplSection, { borderBottomColor: theme.border.subtle }]}>
-              <Text style={[ms.tmplLabel, { color: theme.text.muted }]}>내 결재선 템플릿</Text>
+            <View className="px-3.5 py-2.5 border-b gap-1.5" style={{ borderBottomColor: theme.border.subtle }}>
+              <Text className="text-[11px] font-semibold tracking-wider" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>내 결재선 템플릿</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={{ flexDirection: 'row', gap: 8, paddingHorizontal: 2 }}>
+                <View className="flex-row gap-2" style={{ paddingHorizontal: 2 }}>
                   {tmpls.map(t => {
                     const isSel = selectedTmplId === t.aprvlId;
                     return (
                       <TouchableOpacity key={t.aprvlId} onPress={() => applyTemplate(t)}
-                        style={[ms.tmplCard, { borderColor: isSel ? theme.brand.primary : theme.border.default, backgroundColor: isSel ? theme.brand.primaryTint : theme.bg.surfaceMute }]}
+                        className="w-[130px] border-[1.5px] rounded-xl p-2.5 relative"
+                        style={{ borderColor: isSel ? theme.brand.primary : theme.border.default, backgroundColor: isSel ? theme.brand.primaryTint : theme.bg.surfaceMute }}
                         activeOpacity={0.75}
                       >
-                        {isSel && <View style={[ms.tmplCheck, { backgroundColor: theme.brand.primary }]}><Check size={10} color="#fff" /></View>}
-                        <Text style={[ms.tmplNm, { color: isSel ? theme.brand.primary : theme.text.primary }]}>{t.aprvlNm}</Text>
-                        <Text style={[ms.tmplMeta, { color: theme.text.muted }]}>
+                        {isSel && <View className="absolute top-1.5 right-1.5 w-[17px] h-[17px] rounded-full items-center justify-center" style={{ backgroundColor: theme.brand.primary }}><Check size={10} color="#fff" /></View>}
+                        <Text className="text-xs font-bold mb-0.5" style={{ color: isSel ? theme.brand.primary : theme.text.primary, fontFamily: WEB_FONT }} numberOfLines={1}>{t.aprvlNm}</Text>
+                        <Text className="text-[11px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                           결재 {t.aprvList.length}명{t.refList.length > 0 ? ` · 참조 ${t.refList.length}명` : ''}
                         </Text>
                       </TouchableOpacity>
@@ -337,7 +319,7 @@ function AprvLineModal({ visible, initialAprvList, initialRefList, initialDeptRe
           )}
 
           {/* 본문 — 조직도 + 결재자/수신참조 선택 패널 */}
-          <View style={ms.body}>
+          <View className="flex-1 overflow-hidden">
             <AprvLineEditorPanel
               aprvList={aprvList}
               refList={refList}
@@ -351,18 +333,20 @@ function AprvLineModal({ visible, initialAprvList, initialRefList, initialDeptRe
           </View>
 
           {/* 푸터 */}
-          <View style={[ms.footer, { borderTopColor: theme.border.default }]}>
+          <View className="flex-row gap-2.5 p-3.5 border-t" style={{ borderTopColor: theme.border.default }}>
             <TouchableOpacity
-              style={[ms.footerBtn, { backgroundColor: theme.bg.surfaceMute, borderWidth: 1, borderColor: theme.border.default }]}
+              className="flex-1 py-3 rounded-lg items-center justify-center border"
+              style={{ backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default }}
               onPress={onClose}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: theme.text.body }}>취소</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: theme.text.body, fontFamily: WEB_FONT }}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[ms.footerBtn, { backgroundColor: theme.brand.primary }]}
+              className="flex-1 py-3 rounded-lg items-center justify-center"
+              style={{ backgroundColor: theme.brand.primary }}
               onPress={() => onApply(aprvList, refList, deptRefYn)}
             >
-              <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff' }}>적용</Text>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff', fontFamily: WEB_FONT }}>적용</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -387,27 +371,6 @@ function AprvLineModal({ visible, initialAprvList, initialRefList, initialDeptRe
   );
 }
 
-const ms = StyleSheet.create({
-  overlay: { flex:1, backgroundColor:'rgba(0,0,0,0.45)', justifyContent:'flex-end' },
-  overlayWeb: { justifyContent:'center', alignItems:'center' },
-  sheet: { overflow:'hidden' },
-  sheetWeb: { borderRadius:16 },
-  sheetMobile: { borderTopLeftRadius:20, borderTopRightRadius:20 },
-  header: { flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:18, paddingVertical:14, borderBottomWidth:1 },
-  headerTitle: { fontSize:16, fontWeight:'700' },
-  tmplSection: { paddingHorizontal:14, paddingVertical:10, borderBottomWidth:1, gap:6 },
-  tmplLabel: { fontSize:11, fontWeight:'600', letterSpacing:0.4 },
-  tmplCard: { width:130, borderWidth:1.5, borderRadius:10, padding:10, position:'relative' },
-  tmplCheck: { position:'absolute', top:7, right:7, width:17, height:17, borderRadius:9, alignItems:'center', justifyContent:'center' },
-  tmplNm: { fontSize:12, fontWeight:'700', marginBottom:2 },
-  tmplMeta: { fontSize:11 },
-  body: { flex:1, overflow:'hidden' },
-  footer: { flexDirection:'row', gap:10, padding:14, borderTopWidth:1 },
-  footerBtn: { flex:1, paddingVertical:11, borderRadius:10, alignItems:'center', justifyContent:'center' },
-  tmplLoadBtn: { flexDirection:'row', alignItems:'center', gap:5, paddingHorizontal:10, paddingVertical:6, borderRadius:7, borderWidth:1 },
-  tmplLoadTxt: { fontSize:12, fontWeight:'600' },
-});
-
 // ─── 결재선 요약 카드 ─────────────────────────────────────────────────────────
 
 function AprvSummaryCard({ aprvList, refList, deptRefYn, onEdit, theme }: {
@@ -417,25 +380,29 @@ function AprvSummaryCard({ aprvList, refList, deptRefYn, onEdit, theme }: {
   const isEmpty = aprvList.length === 0;
   return (
     <TouchableOpacity onPress={onEdit} activeOpacity={0.75}
-      style={{ borderWidth:1, borderColor:isEmpty?theme.border.default:theme.brand.primary, borderRadius:10, padding:14, gap:8, backgroundColor:isEmpty?theme.bg.surfaceMute:theme.brand.primaryTint }}
+      className="border rounded-xl p-3.5 gap-2"
+      style={{
+        borderColor: isEmpty ? theme.border.default : theme.brand.primary,
+        backgroundColor: isEmpty ? theme.bg.surfaceMute : theme.brand.primaryTint
+      }}
     >
-      <View style={{ flexDirection:'row', alignItems:'center', justifyContent:'space-between' }}>
-        <View style={{ flexDirection:'row', alignItems:'center', gap:6 }}>
+      <View className="flex-row items-center justify-between">
+        <View className="flex-row items-center gap-1.5">
           <Users size={15} color={isEmpty ? theme.text.muted : theme.brand.primary} />
-          <Text style={{ fontSize:13, fontWeight:'600', color:isEmpty?theme.text.muted:theme.brand.primary }}>
+          <Text className="text-[13px] font-semibold" style={{ color: isEmpty ? theme.text.muted : theme.brand.primary, fontFamily: WEB_FONT }}>
             {isEmpty ? '결재선을 지정해주세요'
               : `결재자 ${aprvList.length}명${refList.length>0?` · 수신참조 ${refList.length}명`:''}${deptRefYn?' · 부서원 포함':''}`}
           </Text>
         </View>
-        <Text style={{ fontSize:12, color:theme.brand.primary, fontWeight:'600' }}>{isEmpty?'지정':'편집'}</Text>
+        <Text className="text-xs font-semibold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>{isEmpty?'지정':'편집'}</Text>
       </View>
       {!isEmpty && (
-        <View style={{ flexDirection:'row', flexWrap:'wrap', gap:4 }}>
+        <View className="flex-row flex-wrap gap-1">
           {aprvList.map((a, i) => (
-            <View key={a.aprvUserId} style={{ flexDirection:'row', alignItems:'center', gap:3, backgroundColor:theme.bg.surface, borderRadius:5, paddingHorizontal:7, paddingVertical:3, borderWidth:1, borderColor:theme.brand.primary }}>
-              <Text style={{ fontSize:11, color:theme.brand.primary, fontWeight:'600' }}>{i+1}</Text>
-              <Text style={{ fontSize:11, color:theme.text.primary }}>{a.aprvUserNm}</Text>
-              {a.jbgdNm && <Text style={{ fontSize:10, color:theme.text.muted }}>({a.jbgdNm})</Text>}
+            <View key={a.aprvUserId} className="flex-row items-center gap-1 bg-white rounded-md px-2 py-1 border" style={{ backgroundColor: theme.bg.surface, borderColor: theme.brand.primary }}>
+              <Text className="text-[11px] font-bold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>{i+1}</Text>
+              <Text className="text-[11px]" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{a.aprvUserNm}</Text>
+              {a.jbgdNm && <Text className="text-[10px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>({a.jbgdNm})</Text>}
             </View>
           ))}
         </View>
@@ -479,15 +446,15 @@ function FileAttachSection({
   };
 
   return (
-    <View style={{ gap: 8 }}>
+    <View className="gap-2">
       {files.length > 0 && (
-        <View style={{ gap: 4 }}>
+        <View className="gap-1">
           {files.map((f, idx) => (
-            <View key={idx} style={[fas.fileRow, { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }]}>
+            <View key={idx} className="flex-row items-center gap-1.5 border rounded-[7px] px-2.5 py-[7px]" style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }}>
               <FileText size={14} color={theme.text.muted} />
-              <Text style={[fas.fileName, { color: theme.text.body }]} numberOfLines={1}>{f.name}</Text>
+              <Text className="flex-1 text-[13px]" style={{ color: theme.text.body, fontFamily: WEB_FONT }} numberOfLines={1}>{f.name}</Text>
               {f.size != null && (
-                <Text style={[fas.fileSize, { color: theme.text.subtle }]}>
+                <Text className="text-[11px]" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>
                   {f.size < 1024 * 1024
                     ? `${(f.size / 1024).toFixed(0)} KB`
                     : `${(f.size / 1024 / 1024).toFixed(1)} MB`}
@@ -501,31 +468,24 @@ function FileAttachSection({
         </View>
       )}
       <TouchableOpacity
-        style={[fas.pickBtn, { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }]}
+        className="flex-row items-center gap-1.5 border border-dashed rounded-[7px] px-3 py-2 self-start"
+        style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }}
         onPress={handlePick}
         activeOpacity={0.75}
       >
         <Paperclip size={14} color={theme.brand.primary} />
-        <Text style={[fas.pickBtnText, { color: theme.brand.primary }]}>파일 첨부</Text>
+        <Text className="text-[13px] font-semibold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>파일 첨부</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
-const fas = StyleSheet.create({
-  fileRow: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderRadius: 7, paddingHorizontal: 10, paddingVertical: 7 },
-  fileName: { flex: 1, fontSize: 13 },
-  fileSize: { fontSize: 11 },
-  pickBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderStyle: 'dashed', borderRadius: 7, paddingHorizontal: 12, paddingVertical: 8, alignSelf: 'flex-start' },
-  pickBtnText: { fontSize: 13, fontWeight: '600' },
-});
-
 // ─── 폼 행 ────────────────────────────────────────────────────────────────────
 
 function FormRow({ label, required, children, theme }: { label:string; required?:boolean; children:React.ReactNode; theme:ReturnType<typeof useTheme> }) {
   return (
-    <View style={{ gap:6 }}>
-      <Text style={{ fontSize:13, fontWeight:'600', color:theme.text.body }}>
+    <View className="gap-1.5">
+      <Text className="text-[13px] font-semibold" style={{ color:theme.text.body, fontFamily: WEB_FONT }}>
         {label}{required && <Text style={{ color:'#EF4444' }}> *</Text>}
       </Text>
       {children}
@@ -617,18 +577,19 @@ export function LeaveReqFormScreen() {
     }
   };
 
-  const s = makeFormStyles(theme);
+  const { width } = useWindowDimensions();
+  const maxWidth = Math.min(640, width - 32);
 
   return (
-    <View style={s.root}>
-      <View style={s.header}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.surface }}>
+      <View className="flex-row items-center px-4 py-3 border-b" style={{ borderBottomColor: theme.border.default }}>
         <TouchableOpacity style={{ padding:4, marginRight:4 }} onPress={() => setActiveFullScreen('leave-req' as any)}>
           <ChevronLeft size={22} color={theme.text.primary} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>휴가신청</Text>
+        <Text className="text-[17px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>휴가신청</Text>
       </View>
 
-      <ScrollView style={{ flex:1 }} contentContainerStyle={s.form}>
+      <ScrollView style={{ flex:1 }} contentContainerStyle={{ padding: 20, gap: 20, maxWidth: 640, width: '100%', alignSelf: 'center' }}>
         <FormRow label="신청 날짜" required theme={theme}>
           <DateSelector dates={dates} onChange={setDates} theme={theme} />
         </FormRow>
@@ -660,7 +621,7 @@ export function LeaveReqFormScreen() {
               disabled={!leaveCd}
             />
             {selectedDtl && selectedDtl.useAvlDcnt != null && (
-              <Text style={{ fontSize: 12, color: theme.text.muted }}>
+              <Text style={{ fontSize: 12, color: theme.text.muted, fontFamily: WEB_FONT }}>
                 사용 가능 일수:{' '}
                 <Text style={{ fontWeight: '700', color: theme.brand.primary }}>
                   {selectedDtl.useAvlDcnt % 1 === 0
@@ -687,9 +648,16 @@ export function LeaveReqFormScreen() {
         )}
 
         <FormRow label="사유" theme={theme}>
-          <TextInput style={s.textArea} value={leaveRsn} onChangeText={setLeaveRsn}
-            placeholder="휴가 사유를 입력하세요" placeholderTextColor={theme.text.subtle}
-            multiline numberOfLines={3} />
+          <TextInput
+            className="border rounded-lg px-3 py-2.5 text-sm min-h-[80px]"
+            style={{ borderColor: theme.border.default, color: theme.text.primary, textAlignVertical: 'top', fontFamily: WEB_FONT }}
+            value={leaveRsn}
+            onChangeText={setLeaveRsn}
+            placeholder="휴가 사유를 입력하세요"
+            placeholderTextColor={theme.text.subtle}
+            multiline
+            numberOfLines={3}
+          />
         </FormRow>
 
         <FormRow label="결재선 설정" required theme={theme}>
@@ -706,15 +674,15 @@ export function LeaveReqFormScreen() {
           />
         </FormRow>
 
-        <View style={s.footer}>
-          <TouchableOpacity style={[s.btn, s.cancelBtn]} onPress={() => setActiveFullScreen('leave-req' as any)}>
-            <Text style={[s.btnText, { color: theme.text.body }]}>취소</Text>
+        <View className="flex-row justify-end gap-2.5 mt-2 pb-5">
+          <TouchableOpacity className="px-5 py-2.5 rounded-lg items-center justify-center border" style={{ backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default, minWidth: 80 }} onPress={() => setActiveFullScreen('leave-req' as any)}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: theme.text.body, fontFamily: WEB_FONT }}>취소</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[s.btn, s.submitBtn, isBusy && { opacity: 0.6 }]}
+          <TouchableOpacity className="px-5 py-2.5 rounded-lg items-center justify-center" style={{ backgroundColor: theme.brand.primary, minWidth: 80, opacity: isBusy ? 0.6 : 1 }}
             onPress={handleSubmit} disabled={isBusy}>
             {isBusy
               ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={[s.btnText, { color: '#fff' }]}>신청하기</Text>
+              : <Text style={{ fontSize: 14, fontWeight: '600', color: '#fff', fontFamily: WEB_FONT }}>신청하기</Text>
             }
           </TouchableOpacity>
         </View>
@@ -732,19 +700,4 @@ export function LeaveReqFormScreen() {
       />
     </View>
   );
-}
-
-function makeFormStyles(theme: ReturnType<typeof useTheme>) {
-  return StyleSheet.create({
-    root: { flex:1, backgroundColor:theme.bg.surface },
-    header: { flexDirection:'row', alignItems:'center', paddingHorizontal:16, paddingVertical:12, borderBottomWidth:1, borderBottomColor:theme.border.default },
-    headerTitle: { fontSize:17, fontWeight:'700', color:theme.text.primary },
-    form: { padding:20, gap:20, maxWidth:640, width:'100%', alignSelf:'center' },
-    textArea: { borderWidth:1, borderColor:theme.border.default, borderRadius:8, paddingHorizontal:12, paddingVertical:10, fontSize:14, color:theme.text.primary, minHeight:80, textAlignVertical:'top', fontFamily:WEB_FONT },
-    footer: { flexDirection:'row', justifyContent:'flex-end', gap:10, marginTop:8, paddingBottom:20 },
-    btn: { paddingHorizontal:20, paddingVertical:10, borderRadius:8, alignItems:'center', justifyContent:'center', minWidth:80 },
-    cancelBtn: { backgroundColor:theme.bg.surfaceMute, borderWidth:1, borderColor:theme.border.default },
-    submitBtn: { backgroundColor:theme.brand.primary },
-    btnText: { fontSize:14, fontWeight:'600' },
-  });
 }

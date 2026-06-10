@@ -1,10 +1,9 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import { ChevronDown } from 'lucide-react-native';
-import { useTheme, AppTheme } from '../../../shared/hooks/useTheme';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import { getDeptColor } from '../../../shared/constants/colors';
 import { fontSize, fontWeight } from '../../../shared/constants/typography';
-import { radius } from '../../../shared/constants/radius';
 import { spacing } from '../../../shared/constants/spacing';
 import {
   toYmd,
@@ -80,7 +79,6 @@ export function ListView({
   onEmptyCellPress,
 }: ListViewProps) {
   const theme = useTheme();
-  const s = useMemo(() => makeStyles(theme), [theme]);
 
   const todayY = useMemo(() => toYmd(new Date()), []);
   const tomorrowY = useMemo(() => toYmd(addDays(new Date(), 1)), []);
@@ -91,15 +89,15 @@ export function ListView({
   );
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.scrollContent}>
+    <ScrollView style={{ backgroundColor: theme.bg.surface }} className="flex-1" contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing.lg }}>
       {blocks.length === 0 ? (
         <TouchableOpacity
           activeOpacity={0.7}
-          // 빈 상태 클릭으로 오늘 등록 유도 (7번 단계에서 모달 연동 예정)
           onPress={() => onEmptyCellPress?.(startYmd)}
-          style={s.emptyWrap}
+          style={{ paddingVertical: spacing.xl, paddingHorizontal: spacing.base }}
+          className="items-center"
         >
-          <Text style={[s.emptyText, { color: theme.text.subtle }]}>
+          <Text style={{ color: theme.text.subtle }} className="text-[12px]">
             앞으로 {listLimit}일간 일정이 없습니다.
           </Text>
         </TouchableOpacity>
@@ -131,18 +129,17 @@ export function ListView({
           return (
             <View
               key={block.ymd}
-              style={[s.dayBlock, { borderBottomColor: theme.border.subtle }]}
+              style={{ borderBottomColor: theme.border.subtle }}
+              className="flex-row border-b"
             >
               {/* 날짜 라벨 (왼쪽) */}
-              <View style={s.dayLabelCol}>
-                <Text style={[s.dayLabelMain, { color: dateColor }]}>
+              <View style={{ width: 96, paddingHorizontal: spacing.base, paddingVertical: spacing.md }}>
+                <Text style={{ color: dateColor }} className="text-[16px] font-bold">
                   {lblMain}
                 </Text>
                 <Text
-                  style={[
-                    s.dayLabelSub,
-                    { color: subColor, opacity: isToday ? 0.8 : 1 },
-                  ]}
+                  style={{ color: subColor, opacity: isToday ? 0.8 : 1 }}
+                  className="text-[12px] font-medium mt-0.5"
                   numberOfLines={1}
                 >
                   {lblSub}
@@ -150,7 +147,7 @@ export function ListView({
               </View>
 
               {/* 일정 리스트 (오른쪽) */}
-              <View style={s.dayItemsCol}>
+              <View className="flex-1 min-w-0">
                 {block.items.map((ev) => {
                   const color = getDeptColor(ev.deptCd);
                   const isTimed = !ev.allday && !!ev.schdStHr && !!ev.schdEndHr;
@@ -163,26 +160,30 @@ export function ListView({
                       key={`${ev.schdSn}-${ev.occurrenceYmd ?? ev.displayStYmd}`}
                       activeOpacity={0.7}
                       onPress={() => onSchedulePress?.(ev)}
-                      style={[
-                        s.listRow,
-                        {
-                          borderLeftColor: color,
-                          backgroundColor: theme.bg.surface,
-                          borderBottomColor: theme.border.subtle,
-                        },
-                      ]}
+                      style={{
+                        borderLeftColor: color,
+                        backgroundColor: theme.bg.surface,
+                        borderBottomColor: theme.border.subtle,
+                        borderLeftWidth: 3,
+                        borderBottomWidth: 1,
+                        paddingHorizontal: spacing.base,
+                        paddingVertical: spacing.sm + 2,
+                      }}
+                      className="flex-row items-center gap-4"
                     >
-                      <View style={s.listRowTimeCol}>
+                      <View className="w-16">
                         {isTimed ? (
                           <>
                             <Text
-                              style={[s.listRowTime, { color: theme.text.primary }]}
+                              style={{ color: theme.text.primary }}
+                              className="text-[14px] font-bold"
                               numberOfLines={1}
                             >
                               {fmtHhmm(ev.schdStHr)}
                             </Text>
                             <Text
-                              style={[s.listRowTimeSub, { color: theme.text.muted }]}
+                              style={{ color: theme.text.muted }}
+                              className="text-[10px] font-medium mt-0.5"
                               numberOfLines={1}
                             >
                               {fmtHhmm(ev.schdEndHr)}
@@ -190,27 +191,30 @@ export function ListView({
                           </>
                         ) : (
                           <Text
-                            style={[s.listRowAllday, { color: theme.text.muted }]}
+                            style={{ color: theme.text.muted }}
+                            className="text-[10px] font-bold tracking-[0.3px]"
                             numberOfLines={1}
                           >
                             종일
                           </Text>
                         )}
                       </View>
-                      <View style={s.listRowBody}>
+                      <View className="flex-1 min-w-0">
                         <Text
-                          style={[s.listRowTitle, { color: theme.text.primary }]}
+                          style={{ color: theme.text.primary }}
+                          className="text-[15px] font-medium"
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
                           {ev.schdNm}
                         </Text>
                         <Text
-                          style={[s.listRowMeta, { color: theme.text.muted }]}
+                          style={{ color: theme.text.muted }}
+                          className="text-[10px] mt-1"
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
-                          <Text style={[s.deptTag, { color }]}>
+                          <Text style={{ color }} className="font-semibold">
                             {ev.deptNm || '전체공개'}
                           </Text>
                           {ev.userName ? ` · ${ev.userName}` : ''}
@@ -231,13 +235,19 @@ export function ListView({
         <TouchableOpacity
           activeOpacity={0.7}
           onPress={onLoadMore}
-          style={[
-            s.loadMore,
-            { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceAlt },
-          ]}
+          style={{
+            borderColor: theme.border.default,
+            backgroundColor: theme.bg.surfaceAlt,
+            borderWidth: 1,
+            borderRadius: 8,
+            paddingVertical: spacing.sm + 2,
+            marginHorizontal: spacing.base,
+            marginTop: spacing.md,
+          }}
+          className="flex-row items-center justify-center gap-2"
         >
           <ChevronDown size={14} color={theme.text.muted} />
-          <Text style={[s.loadMoreText, { color: theme.text.body }]}>
+          <Text style={{ color: theme.text.body }} className="text-[14px] font-medium">
             {loadMoreStep}일 더 보기 (현재 {listLimit}일)
           </Text>
         </TouchableOpacity>
@@ -246,104 +256,3 @@ export function ListView({
   );
 }
 
-const makeStyles = (theme: AppTheme) =>
-  StyleSheet.create({
-    root: {
-      flex: 1,
-      backgroundColor: theme.bg.surface,
-    },
-    scrollContent: {
-      flexGrow: 1,
-      paddingBottom: spacing.lg,
-    },
-    emptyWrap: {
-      paddingVertical: spacing.xl,
-      paddingHorizontal: spacing.base,
-      alignItems: 'center',
-    },
-    emptyText: {
-      fontSize: fontSize.caption,
-    },
-    // 한 날짜 블록 — 좌측 라벨 / 우측 일정 그리드 (mockup의 list-day-block)
-    dayBlock: {
-      flexDirection: 'row',
-      borderBottomWidth: 1,
-    },
-    dayLabelCol: {
-      width: 96,
-      paddingHorizontal: spacing.base,
-      paddingVertical: spacing.md,
-    },
-    dayLabelMain: {
-      fontSize: fontSize.bodyLg,
-      fontWeight: fontWeight.bold,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    dayLabelSub: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.medium,
-      marginTop: 2,
-    },
-    dayItemsCol: {
-      flex: 1,
-      minWidth: 0,
-    },
-    listRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      paddingHorizontal: spacing.base,
-      paddingVertical: spacing.sm + 2,
-      borderLeftWidth: 3,
-      borderBottomWidth: 1,
-    },
-    listRowTimeCol: {
-      width: 64,
-    },
-    listRowTime: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.bold,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    listRowTimeSub: {
-      fontSize: fontSize.micro,
-      fontWeight: fontWeight.medium,
-      fontVariant: ['tabular-nums'] as any,
-      marginTop: 1,
-    },
-    listRowAllday: {
-      fontSize: fontSize.micro,
-      fontWeight: fontWeight.bold,
-      letterSpacing: 0.3,
-    },
-    listRowBody: {
-      flex: 1,
-      minWidth: 0,
-    },
-    listRowTitle: {
-      fontSize: fontSize.body,
-      fontWeight: fontWeight.medium,
-    },
-    listRowMeta: {
-      fontSize: fontSize.micro,
-      marginTop: 3,
-    },
-    deptTag: {
-      fontWeight: fontWeight.semibold,
-    },
-    loadMore: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.xs + 2,
-      marginHorizontal: spacing.base,
-      marginTop: spacing.md,
-      paddingVertical: spacing.sm + 2,
-      borderWidth: 1,
-      borderRadius: radius.md,
-    },
-    loadMoreText: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.medium,
-    },
-  });

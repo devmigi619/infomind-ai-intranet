@@ -4,10 +4,11 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   ActivityIndicator,
 } from 'react-native';
+import { HStack } from '../../../shared/components/ui/hstack';
+import { VStack } from '../../../shared/components/ui/vstack';
 import { ArrowRight, X } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useUiStore } from '../../../store/uiStore';
@@ -102,37 +103,40 @@ export function BoardQuickPanel({ onClose }: BoardQuickPanelProps) {
 
   // ─── LP — List 모드 ──────────────────────────────────────────────
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
-        <Text style={[styles.headerTitle, { color: theme.text.primary }]}>게시판</Text>
-        <View style={styles.headerActions}>
+    <View className="flex-1">
+      <HStack style={{ borderBottomColor: theme.border.subtle }} className="items-center justify-between px-4 py-3 border-b">
+        <Text style={{ color: theme.text.primary }} className="text-[14px] font-medium">게시판</Text>
+        <HStack className="items-center gap-1">
           <TouchableOpacity
             onPress={handleOpenFull}
-            style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
+            style={{ backgroundColor: theme.brand.primaryTint }}
+            className="flex-row items-center gap-1 px-3 py-1.5 rounded-md"
             activeOpacity={0.7}
           >
-            <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+            <Text style={{ color: theme.brand.primary }} className="text-[11px] font-medium">열기</Text>
             <ArrowRight size={12} color={theme.brand.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} className="w-7 h-7 items-center justify-center rounded-md" activeOpacity={0.7}>
             <X size={14} color={theme.text.muted} />
           </TouchableOpacity>
-        </View>
-      </View>
+        </HStack>
+      </HStack>
 
-      <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-        <Text style={[styles.sectionLabel, { color: theme.text.subtle }]}>공지사항</Text>
+      <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }} showsVerticalScrollIndicator={false}>
+        <Text style={{ color: theme.text.subtle }} className="text-[10px] font-semibold uppercase tracking-wider mt-2 mb-1 mx-1">
+          공지사항
+        </Text>
 
         {isLoading ? (
-          <View style={styles.center}>
+          <View className="p-8 items-center justify-center">
             <ActivityIndicator color={theme.brand.primary} size="small" />
           </View>
         ) : !noticeBoard ? (
-          <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+          <Text style={{ color: theme.text.muted }} className="text-[13px] text-center p-4">
             공지사항 게시판이 없습니다.
           </Text>
         ) : previewPosts.length === 0 ? (
-          <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+          <Text style={{ color: theme.text.muted }} className="text-[13px] text-center p-4">
             최근 공지 없음
           </Text>
         ) : (
@@ -144,28 +148,27 @@ export function BoardQuickPanel({ onClose }: BoardQuickPanelProps) {
                 setLpMode('detail');
               }}
               activeOpacity={0.7}
-              style={[
-                styles.previewCard,
-                {
-                  backgroundColor: theme.bg.surfaceAlt,
-                  borderColor: theme.border.subtle,
-                },
-              ]}
+              style={{
+                backgroundColor: theme.bg.surfaceAlt,
+                borderColor: theme.border.subtle,
+              }}
+              className="p-3.5 rounded-xl border mb-2"
             >
-              <View style={styles.previewTitleRow}>
+              <HStack className="items-center gap-1.5 mb-1">
                 {p.ntcYn === 'Y' && (
-                  <Text style={[styles.pinIcon, { color: theme.semantic.danger }]}>
+                  <Text className="text-[13px]">
                     📌
                   </Text>
                 )}
                 <Text
-                  style={[styles.previewTitle, { color: theme.text.primary }]}
+                  style={{ color: theme.text.primary }}
+                  className="flex-1 text-[13px] font-medium"
                   numberOfLines={1}
                 >
                   {p.pstTtl}
                 </Text>
-              </View>
-              <Text style={[styles.previewMeta, { color: theme.text.muted }]} numberOfLines={1}>
+              </HStack>
+              <Text style={{ color: theme.text.muted }} className="text-[11px]" numberOfLines={1}>
                 {p.userId} · {formatDate(p.crtAt)}
               </Text>
             </TouchableOpacity>
@@ -193,54 +196,55 @@ function LpPostDetail({ brdId, pstSn, onBack, onClose, onOpenFull }: LpPostDetai
   const { data: comments = [] } = usePostComments(brdId, pstSn);
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
+    <View className="flex-1">
+      <HStack style={{ borderBottomColor: theme.border.subtle }} className="items-center justify-between px-4 py-3 border-b">
         <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-          <Text style={[styles.backText, { color: theme.brand.primary }]}>← 목록</Text>
+          <Text style={{ color: theme.brand.primary }} className="text-[13px] font-medium">← 목록</Text>
         </TouchableOpacity>
-        <View style={styles.headerActions}>
+        <HStack className="items-center gap-1">
           <TouchableOpacity
             onPress={onOpenFull}
-            style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
+            style={{ backgroundColor: theme.brand.primaryTint }}
+            className="flex-row items-center gap-1 px-3 py-1.5 rounded-md"
             activeOpacity={0.7}
           >
-            <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+            <Text style={{ color: theme.brand.primary }} className="text-[11px] font-medium">열기</Text>
             <ArrowRight size={12} color={theme.brand.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} className="w-7 h-7 items-center justify-center rounded-md" activeOpacity={0.7}>
             <X size={14} color={theme.text.muted} />
           </TouchableOpacity>
-        </View>
-      </View>
+        </HStack>
+      </HStack>
       {isLoading ? (
-        <View style={styles.center}>
+        <View className="p-8 items-center justify-center">
           <ActivityIndicator color={theme.brand.primary} size="small" />
         </View>
       ) : error || !post ? (
-        <View style={styles.center}>
-          <Text style={[styles.emptyText, { color: theme.semantic.danger }]}>
+        <View className="p-8 items-center justify-center">
+          <Text style={{ color: theme.semantic.danger }} className="text-[13px] text-center">
             글을 불러오지 못했습니다.
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
-          <View style={styles.lpDetailHeader}>
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }} showsVerticalScrollIndicator={false}>
+          <VStack className="gap-1.5 mb-4 pb-4">
             {post.ntcYn === 'Y' && (
-              <View style={[styles.lpNoticeBadge, { backgroundColor: '#DC2626' }]}>
-                <Text style={styles.lpNoticeBadgeText}>공지</Text>
+              <View className="self-start bg-red-600 px-2 py-0.5 rounded">
+                <Text className="text-[11px] text-white font-bold">공지</Text>
               </View>
             )}
-            <Text style={[styles.lpDetailTitle, { color: theme.text.primary }]}>
+            <Text style={{ color: theme.text.primary }} className="text-[16px] font-semibold leading-6">
               {post.pstTtl}
             </Text>
-            <Text style={[styles.lpDetailMeta, { color: theme.text.muted }]}>
+            <Text style={{ color: theme.text.muted }} className="text-[11px]">
               {post.userId} · {formatDate(post.crtAt)}
             </Text>
-            <Text style={[styles.lpDetailStats, { color: theme.text.subtle }]}>
+            <Text style={{ color: theme.text.subtle }} className="text-[11px]">
               조회 {post.qryCnt} · 좋아요 {post.likeNum} · 댓글 {comments.length}
             </Text>
-          </View>
-          <Text style={[styles.lpDetailBody, { color: theme.text.body }]} numberOfLines={20}>
+          </VStack>
+          <Text style={{ color: theme.text.body }} className="text-[13px] leading-5" numberOfLines={20}>
             {post.pstDesc}
           </Text>
         </ScrollView>
@@ -248,140 +252,3 @@ function LpPostDetail({ brdId, pstSn, onBack, onClose, onOpenFull }: LpPostDetai
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-  },
-  openButtonText: {
-    fontSize: fontSize.micro,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-  },
-  backText: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-
-  body: {
-    padding: spacing.md,
-    gap: 4,
-  },
-
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: fontWeight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginTop: spacing.sm,
-    marginBottom: spacing.xs,
-    marginHorizontal: 4,
-    fontFamily,
-  },
-  emptyText: {
-    fontSize: fontSize.small,
-    fontFamily,
-    padding: spacing.md,
-    textAlign: 'center',
-  },
-  center: {
-    padding: spacing.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  previewCard: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-  },
-  previewTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  pinIcon: {
-    fontSize: fontSize.small,
-  },
-  previewTitle: {
-    flex: 1,
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  previewMeta: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-
-  lpDetailHeader: {
-    gap: 6,
-    marginBottom: spacing.md,
-    paddingBottom: spacing.md,
-  },
-  lpNoticeBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  lpNoticeBadgeText: {
-    fontSize: fontSize.caption,
-    color: '#FFFFFF',
-    fontWeight: fontWeight.bold,
-    fontFamily,
-  },
-  lpDetailTitle: {
-    fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-    lineHeight: fontSize.bodyLg * 1.4,
-  },
-  lpDetailMeta: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  lpDetailStats: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  lpDetailBody: {
-    fontSize: fontSize.small,
-    lineHeight: fontSize.small * 1.7,
-    fontFamily,
-  },
-});

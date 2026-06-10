@@ -4,7 +4,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   ActivityIndicator,
   Image,
@@ -12,9 +11,6 @@ import {
 } from 'react-native';
 import { useTheme } from '../hooks/useTheme';
 import { useDownloadAttachment } from '../hooks/useDownloadAttachment';
-import { spacing } from '../constants/spacing';
-import { radius } from '../constants/radius';
-import { fontSize, fontWeight } from '../constants/typography';
 import { apiClient } from '../api/client';
 import { attachmentApi, AttachmentFileMeta } from '../../features/attachment/api';
 
@@ -94,39 +90,41 @@ export function AttachmentPreviewModal({ open, file, onClose }: AttachmentPrevie
 
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.backdrop}>
+      <View className="flex-1 bg-black/55 items-center justify-center p-4">
         <View
-          style={[
-            styles.dialog,
-            { backgroundColor: theme.bg.surface, borderColor: theme.border.default },
-          ]}
+          className="w-full max-w-[720px] max-h-[90%] rounded-2xl border overflow-hidden"
+          style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}
         >
-          <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
+          <View
+            className="flex-row items-center justify-between px-4 py-3 border-b gap-2"
+            style={{ borderBottomColor: theme.border.subtle }}
+          >
             <Text
-              style={[styles.title, { color: theme.text.primary }]}
+              className="flex-1 text-[15px] font-semibold"
+              style={{ color: theme.text.primary, fontFamily }}
               numberOfLines={1}
             >
               {file?.oriFileNm ?? '미리보기'}
             </Text>
-            <TouchableOpacity onPress={onClose} activeOpacity={0.7} style={styles.closeBtn}>
-              <Text style={[styles.closeBtnText, { color: theme.text.muted }]}>✕</Text>
+            <TouchableOpacity onPress={onClose} activeOpacity={0.7} className="w-8 h-8 items-center justify-center">
+              <Text className="text-base font-medium" style={{ color: theme.text.muted }}>✕</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.body}>
+          <View className="min-h-[240px] p-3">
             {loading ? (
-              <View style={styles.center}>
+              <View className="flex-1 min-h-[240px] items-center justify-center p-5">
                 <ActivityIndicator color={theme.brand.primary} />
               </View>
             ) : errorMsg ? (
-              <View style={styles.center}>
-                <Text style={[styles.errorText, { color: theme.semantic.danger }]}>
+              <View className="flex-1 min-h-[240px] items-center justify-center p-5">
+                <Text className="text-sm" style={{ color: theme.semantic.danger, fontFamily }}>
                   {errorMsg}
                 </Text>
               </View>
             ) : !file ? null : kind === 'image' && blobUrl ? (
               <ScrollView
-                contentContainerStyle={styles.imageScroll}
+                contentContainerStyle={{ alignItems: 'center', justifyContent: 'center' }}
                 maximumZoomScale={3}
                 minimumZoomScale={1}
               >
@@ -140,7 +138,7 @@ export function AttachmentPreviewModal({ open, file, onClose }: AttachmentPrevie
                 ) : (
                   <Image
                     source={{ uri: blobUrl }}
-                    style={styles.image}
+                    className="w-80 h-80"
                     resizeMode="contain"
                   />
                 )}
@@ -152,36 +150,41 @@ export function AttachmentPreviewModal({ open, file, onClose }: AttachmentPrevie
                 title: file.oriFileNm,
               })
             ) : kind === 'pdf' ? (
-              <View style={styles.center}>
-                <Text style={[styles.placeholderText, { color: theme.text.muted }]}>
+              <View className="flex-1 min-h-[240px] items-center justify-center p-5">
+                <Text className="text-sm text-center" style={{ color: theme.text.muted, fontFamily }}>
                   모바일 PDF 미리보기는 추후 지원 예정입니다.
                 </Text>
               </View>
             ) : (
-              <View style={styles.center}>
-                <Text style={[styles.placeholderText, { color: theme.text.muted }]}>
+              <View className="flex-1 min-h-[240px] items-center justify-center p-5">
+                <Text className="text-sm text-center" style={{ color: theme.text.muted, fontFamily }}>
                   이 확장자({file.fileExt})는 미리보기를 지원하지 않습니다.
                 </Text>
               </View>
             )}
           </View>
 
-          <View style={[styles.footer, { borderTopColor: theme.border.subtle }]}>
+          <View
+            className="flex-row gap-2 p-3 border-t justify-end"
+            style={{ borderTopColor: theme.border.subtle }}
+          >
             <TouchableOpacity
               onPress={handleDownload}
               activeOpacity={0.7}
-              style={[styles.downloadBtn, { backgroundColor: theme.brand.primary }]}
+              className="px-4 py-2 rounded-lg"
+              style={{ backgroundColor: theme.brand.primary }}
             >
-              <Text style={[styles.downloadBtnText, { color: theme.text.onBrand }]}>
+              <Text className="text-sm font-semibold" style={{ color: theme.text.onBrand, fontFamily }}>
                 다운로드
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={onClose}
               activeOpacity={0.7}
-              style={[styles.cancelBtn, { borderColor: theme.border.default }]}
+              className="px-4 py-2 rounded-lg border"
+              style={{ borderColor: theme.border.default }}
             >
-              <Text style={[styles.cancelBtnText, { color: theme.text.body }]}>닫기</Text>
+              <Text className="text-sm font-medium" style={{ color: theme.text.body, fontFamily }}>닫기</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -189,102 +192,3 @@ export function AttachmentPreviewModal({ open, file, onClose }: AttachmentPrevie
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.base,
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: 720,
-    maxHeight: '90%',
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    gap: spacing.sm,
-  },
-  title: {
-    flex: 1,
-    fontSize: fontSize.bodyLg,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtnText: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.medium,
-  },
-  body: {
-    minHeight: 240,
-    padding: spacing.md,
-  },
-  center: {
-    flex: 1,
-    minHeight: 240,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  imageScroll: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  image: {
-    width: 320,
-    height: 320,
-  },
-  errorText: {
-    fontSize: fontSize.body,
-    fontFamily,
-  },
-  placeholderText: {
-    fontSize: fontSize.body,
-    fontFamily,
-    textAlign: 'center',
-  },
-  footer: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderTopWidth: 1,
-    justifyContent: 'flex-end',
-  },
-  downloadBtn: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-  },
-  downloadBtnText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  cancelBtn: {
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  cancelBtnText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-});

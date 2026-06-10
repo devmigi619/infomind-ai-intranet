@@ -3,14 +3,6 @@
  *
  * 사용처: LeaveReqFormScreen > AprvLineModal 내 "불러오기" 버튼
  * 향후 다른 결재 화면에서도 재사용 가능.
- *
- * Props:
- *   visible          — 모달 표시 여부
- *   currentAprvList  — 현재 폼의 결재자 목록 (저장 시 기본값)
- *   currentRefList   — 현재 폼의 수신참조 목록
- *   currentDeptRefYn — 현재 폼의 부서원 자동포함 여부
- *   onApply          — 불러오기 시 호출 (aprvList, refList, deptRefYn)
- *   onClose          — 모달 닫기
  */
 import React, { useState, useCallback } from 'react';
 import {
@@ -20,7 +12,6 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
-  StyleSheet,
   Platform,
   ActivityIndicator,
   useWindowDimensions,
@@ -88,30 +79,28 @@ function EditView({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       {/* 헤더 */}
-      <View style={[ev.header, { borderBottomColor: theme.border.default }]}>
+      <View className="flex-row items-center justify-between px-3.5 py-3 border-b" style={{ borderBottomColor: theme.border.default }}>
         <TouchableOpacity onPress={onBack} style={{ padding: 4 }}>
           <ChevronLeft size={18} color={theme.text.muted} />
         </TouchableOpacity>
-        <Text style={[ev.title, { color: theme.text.primary }]}>
+        <Text className="text-[15px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
           {state.aprvlId ? '템플릿 수정' : '새 템플릿 저장'}
         </Text>
         <View style={{ width: 26 }} />
       </View>
 
       {/* 이름 입력 */}
-      <View style={[ev.nameRow, { borderBottomColor: theme.border.subtle }]}>
-        <Text style={[ev.nameLabel, { color: theme.text.body }]}>이름</Text>
+      <View className="flex-row items-center gap-2.5 px-3.5 py-2.5 border-b" style={{ borderBottomColor: theme.border.subtle }}>
+        <Text className="text-[13px] font-semibold w-9" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>이름</Text>
         <TextInput
           value={state.aprvlNm}
           onChangeText={(v) => onChange({ aprvlNm: v })}
           placeholder="예) 팀내 결재선"
           placeholderTextColor={theme.text.subtle}
-          style={[
-            ev.nameInput,
-            { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute, color: theme.text.primary, fontFamily: WEB_FONT },
-          ]}
+          className="flex-1 border rounded-lg px-3 py-1.75 text-[13px]"
+          style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute, color: theme.text.primary, fontFamily: WEB_FONT }}
         />
       </View>
 
@@ -128,46 +117,28 @@ function EditView({
       />
 
       {/* 푸터 */}
-      <View style={[ev.footer, { borderTopColor: theme.border.default }]}>
+      <View className="flex-row gap-2.5 p-3.5 border-t" style={{ borderTopColor: theme.border.default }}>
         <TouchableOpacity
-          style={[ev.btn, { backgroundColor: theme.bg.surfaceMute, borderWidth: 1, borderColor: theme.border.default }]}
+          className="flex-1 py-[11px] rounded-xl items-center justify-center border"
+          style={{ backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default }}
           onPress={onBack}
         >
-          <Text style={[ev.btnTxt, { color: theme.text.body }]}>취소</Text>
+          <Text className="text-sm font-semibold" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>취소</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[ev.btn, { backgroundColor: theme.brand.primary }, isSaving && { opacity: 0.6 }]}
+          className="flex-1 py-[11px] rounded-xl items-center justify-center"
+          style={{ backgroundColor: theme.brand.primary, opacity: isSaving ? 0.6 : 1 }}
           onPress={onSave}
           disabled={isSaving}
         >
           {isSaving
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={[ev.btnTxt, { color: '#fff' }]}>저장</Text>}
+            : <Text className="text-sm font-semibold text-white" style={{ fontFamily: WEB_FONT }}>저장</Text>}
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const ev = StyleSheet.create({
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1,
-  },
-  title: { fontSize: 15, fontWeight: '700', fontFamily: WEB_FONT },
-  nameRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1,
-  },
-  nameLabel: { fontSize: 13, fontWeight: '600', fontFamily: WEB_FONT, width: 36 },
-  nameInput: {
-    flex: 1, borderWidth: 1, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 7, fontSize: 13,
-  },
-  footer: { flexDirection: 'row', gap: 10, padding: 14, borderTopWidth: 1 },
-  btn: { flex: 1, paddingVertical: 11, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  btnTxt: { fontSize: 14, fontWeight: '600', fontFamily: WEB_FONT },
-});
 
 // ─── LIST VIEW ────────────────────────────────────────────────────────────────
 
@@ -193,10 +164,10 @@ function ListView({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       {/* 헤더 */}
-      <View style={[lv.header, { borderBottomColor: theme.border.default }]}>
-        <Text style={[lv.title, { color: theme.text.primary }]}>결재선 템플릿</Text>
+      <View className="flex-row items-center justify-between px-4 py-3.5 border-b" style={{ borderBottomColor: theme.border.default }}>
+        <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>결재선 템플릿</Text>
         <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
           <X size={20} color={theme.text.muted} />
         </TouchableOpacity>
@@ -204,19 +175,17 @@ function ListView({
 
       {/* 현재 결재선 / 신규 생성 버튼 */}
       <TouchableOpacity
-        style={[
-          lv.saveBtn,
-          hasCurrentLine
-            ? { borderColor: theme.brand.primary, backgroundColor: theme.brand.primaryTint }
-            : { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute },
-        ]}
+        className="flex-row items-center gap-2 mx-3 mt-3 px-3.5 py-2.5 border border-dashed rounded-xl"
+        style={hasCurrentLine
+          ? { borderColor: theme.brand.primary, backgroundColor: theme.brand.primaryTint }
+          : { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }}
         onPress={onCreateNew}
         activeOpacity={0.75}
       >
         {hasCurrentLine
           ? <BookmarkPlus size={15} color={theme.brand.primary} />
           : <Plus size={15} color={theme.text.muted} />}
-        <Text style={[lv.saveBtnTxt, { color: hasCurrentLine ? theme.brand.primary : theme.text.body }]}>
+        <Text className="text-[13px] font-semibold" style={{ color: hasCurrentLine ? theme.brand.primary : theme.text.body, fontFamily: WEB_FONT }}>
           {hasCurrentLine ? '현재 결재선을 템플릿으로 저장' : '새 템플릿 만들기'}
         </Text>
       </TouchableOpacity>
@@ -235,43 +204,47 @@ function ListView({
           tmpls.map((t) => (
             <View
               key={t.aprvlId}
-              style={[lv.card, { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }]}
+              className="flex-row items-start gap-2.5 border rounded-xl p-3 mb-1"
+              style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }}
             >
               <View style={{ flex: 1, gap: 4 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={[lv.cardNm, { color: theme.text.primary }]}>{t.aprvlNm}</Text>
+                  <Text className="text-[13px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{t.aprvlNm}</Text>
                   {t.deptRefYn === 'Y' && (
-                    <View style={[lv.deptBadge, { backgroundColor: theme.brand.primaryTint }]}>
+                    <View className="px-1.5 py-0.5 rounded-md" style={{ backgroundColor: theme.brand.primaryTint }}>
                       <Text style={{ fontSize: 10, color: theme.brand.primary, fontWeight: '600' }}>부서원</Text>
                     </View>
                   )}
                 </View>
-                <Text style={[lv.cardMeta, { color: theme.text.muted }]}>
+                <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                   결재 {t.aprvList.length}명{t.refList.length > 0 ? ` · 참조 ${t.refList.length}명` : ''}
                 </Text>
                 {t.aprvList.length > 0 && (
-                  <Text style={[lv.cardNames, { color: theme.text.subtle }]} numberOfLines={1}>
+                  <Text className="text-[11px]" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }} numberOfLines={1}>
                     {t.aprvList.map((a) => a.aprvUserNm).join(' → ')}
                   </Text>
                 )}
               </View>
-              <View style={lv.cardActions}>
+              <View className="flex-row items-center gap-1.5 pt-0.5">
                 <TouchableOpacity
-                  style={[lv.loadBtn, { backgroundColor: theme.brand.primary }]}
+                  className="px-3 py-1.5 rounded-md"
+                  style={{ backgroundColor: theme.brand.primary }}
                   onPress={() => onApply(t)}
                   activeOpacity={0.75}
                 >
-                  <Text style={[lv.loadBtnTxt, { color: '#fff' }]}>불러오기</Text>
+                  <Text className="text-xs font-semibold text-white" style={{ fontFamily: WEB_FONT }}>불러오기</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[lv.iconBtn, { backgroundColor: theme.bg.surface, borderColor: theme.border.default }]}
+                  className="w-[30px] h-[30px] rounded-md border items-center justify-center"
+                  style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}
                   onPress={() => onEdit(t)}
                   activeOpacity={0.75}
                 >
                   <Pencil size={13} color={theme.text.body} />
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[lv.iconBtn, { backgroundColor: theme.bg.surface, borderColor: theme.border.default }]}
+                  className="w-[30px] h-[30px] rounded-md border items-center justify-center"
+                  style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.default }}
                   onPress={() => onDelete(t)}
                   activeOpacity={0.75}
                 >
@@ -285,33 +258,6 @@ function ListView({
     </View>
   );
 }
-
-const lv = StyleSheet.create({
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1,
-  },
-  title: { fontSize: 16, fontWeight: '700', fontFamily: WEB_FONT },
-  saveBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    marginHorizontal: 12, marginTop: 12,
-    paddingHorizontal: 14, paddingVertical: 10,
-    borderWidth: 1, borderRadius: 10, borderStyle: 'dashed',
-  },
-  saveBtnTxt: { fontSize: 13, fontWeight: '600', fontFamily: WEB_FONT },
-  card: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    borderWidth: 1, borderRadius: 10, padding: 12, marginBottom: 4,
-  },
-  cardNm: { fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  cardMeta: { fontSize: 12, fontFamily: WEB_FONT },
-  cardNames: { fontSize: 11, fontFamily: WEB_FONT },
-  deptBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 },
-  cardActions: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingTop: 2 },
-  loadBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 7 },
-  loadBtnTxt: { fontSize: 12, fontWeight: '600', fontFamily: WEB_FONT },
-  iconBtn: { width: 30, height: 30, borderRadius: 7, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-});
 
 // ─── 메인 ─────────────────────────────────────────────────────────────────────
 
@@ -434,9 +380,8 @@ export function AprvlTmplModal({
     onClose();
   }, [onClose]);
 
-  // ── 모달 크기 ──────────────────────────────────────────────────────────────
+  // ── 템플릿 모달 크기 ──────────────────────────────────────────────────────────────
 
-  // EDIT VIEW는 조직도 패널이 필요하므로 넓게
   const modalW = Platform.OS === 'web'
     ? Math.min(winW * 0.92, view === 'edit' ? 820 : 520)
     : winW;
@@ -451,13 +396,10 @@ export function AprvlTmplModal({
       animationType={Platform.OS === 'web' ? 'fade' : 'slide'}
       onRequestClose={handleClose}
     >
-      <View style={[root.overlay, Platform.OS === 'web' && root.overlayWeb]}>
+      <View className={`flex-1 bg-black/55 justify-end ${Platform.OS === 'web' ? 'justify-center items-center' : ''}`}>
         <View
-          style={[
-            root.sheet,
-            { backgroundColor: theme.bg.surface, width: modalW, maxHeight: modalH },
-            Platform.OS === 'web' ? root.sheetWeb : root.sheetMobile,
-          ]}
+          className={`overflow-hidden ${Platform.OS === 'web' ? 'rounded-2xl' : 'rounded-t-[20px]'}`}
+          style={{ backgroundColor: theme.bg.surface, width: modalW, maxHeight: modalH }}
         >
           {view === 'list' ? (
             <ListView
@@ -486,11 +428,3 @@ export function AprvlTmplModal({
     </Modal>
   );
 }
-
-const root = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' },
-  overlayWeb: { justifyContent: 'center', alignItems: 'center' },
-  sheet: { overflow: 'hidden' },
-  sheetWeb: { borderRadius: 16 },
-  sheetMobile: { borderTopLeftRadius: 20, borderTopRightRadius: 20 },
-});

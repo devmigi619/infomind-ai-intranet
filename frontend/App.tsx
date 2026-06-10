@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, ActivityIndicator, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './src/shared/api/queryClient';
@@ -42,16 +42,21 @@ import { AppToast } from './src/shared/components/AppToast';
 import type { PanelId } from './src/types';
 
 
+import { GluestackUIProvider } from './src/shared/components/ui/gluestack-ui-provider';
+import './global.css';
+
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ConfirmProvider>
-        <View style={{ flex: 1 }}>
-          <AppContent />
-          <AppToast />
-        </View>
-      </ConfirmProvider>
-    </QueryClientProvider>
+    <GluestackUIProvider mode="light">
+      <QueryClientProvider client={queryClient}>
+        <ConfirmProvider>
+          <View style={{ flex: 1 }}>
+            <AppContent />
+            <AppToast />
+          </View>
+        </ConfirmProvider>
+      </QueryClientProvider>
+    </GluestackUIProvider>
   );
 }
 
@@ -192,7 +197,7 @@ function AppContent() {
   if (isLoading) {
     return (
       <SafeAreaProvider>
-        <View style={styles.loadingContainer}>
+        <View className="flex-1 items-center justify-center bg-white">
           <ActivityIndicator size="large" color="#0A2463" />
         </View>
       </SafeAreaProvider>
@@ -224,7 +229,7 @@ function AppContent() {
 
   return (
     <SafeAreaProvider>
-      <View style={styles.root}>
+      <View className="flex-1 bg-[#F9F9F9]">
         <StatusBar style="dark" />
 
         {/* Top Header */}
@@ -241,7 +246,7 @@ function AppContent() {
         />
 
         {/* Body: NavRail + LeftPanel + Main + RightPanel */}
-        <View style={styles.body}>
+        <View className="flex-1 flex-row overflow-hidden">
           <NavRail
             activePanel={activePanel}
             activeFullScreen={activeFullScreen}
@@ -280,7 +285,7 @@ function AppContent() {
             onOpenFullScreen={openFullScreen}
           />
 
-          <View style={styles.mainContent}>{renderMain()}</View>
+          <View className="flex-1 flex-col min-w-0 bg-white overflow-hidden">{renderMain()}</View>
 
           <RightPanel
             isOpen={isRightPanelOpen}
@@ -294,28 +299,3 @@ function AppContent() {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#F9F9F9',
-  },
-  body: {
-    flex: 1,
-    flexDirection: 'row',
-    overflow: 'hidden',
-  },
-  mainContent: {
-    flex: 1,
-    flexDirection: 'column',
-    minWidth: 0,
-    backgroundColor: '#ffffff',
-    overflow: 'hidden',
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-  },
-});

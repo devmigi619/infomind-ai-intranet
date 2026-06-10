@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import { Dropdown } from 'react-native-element-dropdown';
 import { useTheme } from '../hooks/useTheme';
 
@@ -47,11 +47,14 @@ export function AppDropdown({
   const theme = useTheme();
 
   return (
-    <View style={styles.wrapper}>
+    <View className="gap-1.5">
       {label && (
-        <Text style={[styles.label, { color: theme.text.subtle, fontFamily: WEB_FONT }]}>
+        <Text
+          className="text-xs font-medium"
+          style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}
+        >
           {label}
-          {required && <Text style={{ color: '#EF4444' }}> *</Text>}
+          {required && <Text className="text-red-500"> *</Text>}
         </Text>
       )}
       <Dropdown
@@ -68,26 +71,43 @@ export function AppDropdown({
         dropdownPosition="auto"
         fontFamily={WEB_FONT}
         // ── 트리거(버튼) 스타일 ──────────────────────────────────────
-        style={[
-          styles.trigger,
-          {
-            borderColor: theme.border.default,
-            backgroundColor: disabled ? theme.bg.surfaceAlt : theme.bg.surface,
-          },
-        ]}
+        style={{
+          height: 40,
+          borderWidth: 1,
+          borderRadius: 8,
+          paddingHorizontal: 12,
+          borderColor: theme.border.default,
+          backgroundColor: disabled ? theme.bg.surfaceAlt : theme.bg.surface,
+        }}
         // ── 텍스트 스타일 ────────────────────────────────────────────
-        placeholderStyle={[styles.placeholderText, { color: theme.text.muted }]}
-        selectedTextStyle={[styles.selectedText, { color: theme.text.primary }]}
-        itemTextStyle={[styles.itemText, { color: theme.text.primary }]}
-        inputSearchStyle={[styles.searchInput, { color: theme.text.primary, borderColor: theme.border.subtle }]}
+        placeholderStyle={{ fontSize: 13, color: theme.text.muted }}
+        selectedTextStyle={{ fontSize: 13, color: theme.text.primary }}
+        itemTextStyle={{ fontSize: 13, color: theme.text.primary }}
+        inputSearchStyle={{
+          height: 36,
+          fontSize: 13,
+          borderRadius: 6,
+          color: theme.text.primary,
+          borderColor: theme.border.subtle,
+        }}
         // ── 드롭다운 목록 컨테이너 ───────────────────────────────────
-        containerStyle={[
-          styles.container,
-          {
-            backgroundColor: theme.bg.surface,
-            borderColor: theme.border.default,
-          },
-        ]}
+        containerStyle={{
+          borderWidth: 1,
+          borderRadius: 10,
+          overflow: 'hidden',
+          backgroundColor: theme.bg.surface,
+          borderColor: theme.border.default,
+          ...Platform.select({
+            web: { boxShadow: '0 4px 12px rgba(0,0,0,0.08)' } as object,
+            default: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.08,
+              shadowRadius: 12,
+              elevation: 4,
+            },
+          }),
+        }}
         // ── 선택된 항목 강조 색상 ────────────────────────────────────
         activeColor={theme.brand.primaryTint}
         iconColor={theme.text.muted}
@@ -95,38 +115,3 @@ export function AppDropdown({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrapper: { gap: 6 },
-  label: { fontSize: 12, fontWeight: '500' },
-
-  trigger: {
-    height: 40,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-  },
-
-  placeholderText: { fontSize: 13 },
-  selectedText:   { fontSize: 13 },
-  itemText:       { fontSize: 13 },
-
-  searchInput: {
-    height: 36,
-    fontSize: 13,
-    borderRadius: 6,
-  },
-
-  container: {
-    borderWidth: 1,
-    borderRadius: 10,
-    overflow: 'hidden',
-    // 그림자 (iOS)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    // 그림자 (Android)
-    elevation: 4,
-  },
-});

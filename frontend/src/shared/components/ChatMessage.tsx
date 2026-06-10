@@ -1,8 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform, Animated, Easing } from 'react-native';
+import { View, TouchableOpacity, Animated, Easing } from 'react-native';
 import { Check } from 'lucide-react-native';
 import { useTheme } from '../hooks/useTheme';
 import type { AppTheme } from '../hooks/useTheme';
+import { Text } from './ui/text';
+import { HStack } from './ui/hstack';
+import { VStack } from './ui/vstack';
+import { Card } from './ui/card';
 
 interface ActionLink {
   label: string;
@@ -17,13 +21,11 @@ interface ChatMessageProps {
   isStreaming?: boolean;
   isThinking?: boolean;
   progressSteps?: string[];
-  interruptType?: 'human' | 'excu';
+  interruptType?: 'human' | 'excu' | 'form';
   onInterruptApprove?: () => void;
   onInterruptCancel?: () => void;
 }
 
-// Three-dot thinking indicator. Each dot pulses with a 0.2s delay,
-// 1.4s total cycle, scale 0.85↔1, opacity 0.3↔1.
 function ThinkingDots({ theme }: { theme: AppTheme }) {
   const dot1 = useRef(new Animated.Value(0)).current;
   const dot2 = useRef(new Animated.Value(0)).current;
@@ -71,15 +73,14 @@ function ThinkingDots({ theme }: { theme: AppTheme }) {
   });
 
   return (
-    <View style={[styles.thinkingBubble, { backgroundColor: theme.bg.surfaceMute }]}>
-      <Animated.View style={[styles.dot, { backgroundColor: theme.text.subtle }, dotStyle(dot1)]} />
-      <Animated.View style={[styles.dot, { backgroundColor: theme.text.subtle }, dotStyle(dot2)]} />
-      <Animated.View style={[styles.dot, { backgroundColor: theme.text.subtle }, dotStyle(dot3)]} />
-    </View>
+    <HStack style={{ backgroundColor: theme.bg.surfaceMute }} className="items-center gap-1 rounded-2xl rounded-bl-sm px-[18px] py-3.5">
+      <Animated.View style={{ backgroundColor: theme.text.subtle, ...dotStyle(dot1) }} className="w-[7px] h-[7px] rounded-full" />
+      <Animated.View style={{ backgroundColor: theme.text.subtle, ...dotStyle(dot2) }} className="w-[7px] h-[7px] rounded-full" />
+      <Animated.View style={{ backgroundColor: theme.text.subtle, ...dotStyle(dot3) }} className="w-[7px] h-[7px] rounded-full" />
+    </HStack>
   );
 }
 
-// Single pulsing dot — used alongside progress text.
 function ThinkingDot({ theme }: { theme: AppTheme }) {
   const anim = useRef(new Animated.Value(0)).current;
 
@@ -97,19 +98,17 @@ function ThinkingDot({ theme }: { theme: AppTheme }) {
   return (
     <Animated.View
       style={[
-        styles.dot,
         { backgroundColor: theme.text.subtle },
         {
           opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }),
           transform: [{ scale: anim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }],
         },
       ]}
+      className="w-[7px] h-[7px] rounded-full"
     />
   );
 }
 
-// Progress timeline — 진행 단계를 누적 표시. 마지막 단계는 활성(애니메이션 점),
-// 이전 단계는 완료(체크)로 흐리게 표시한다. 새 단계는 fade+slide 로 등장.
 function ProgressStep({
   text,
   done,
@@ -131,31 +130,30 @@ function ProgressStep({
 
   return (
     <Animated.View
-      style={[
-        styles.stepRow,
-        {
-          opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0, done ? 0.55 : 1] }),
-          transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }],
-        },
-      ]}
+      style={{
+        opacity: anim.interpolate({ inputRange: [0, 1], outputRange: [0, done ? 0.55 : 1] }),
+        transform: [{ translateY: anim.interpolate({ inputRange: [0, 1], outputRange: [4, 0] }) }],
+      }}
     >
-      <View style={styles.stepIcon}>
-        {done ? (
-          <Check size={12} color={theme.text.subtle} strokeWidth={3} />
-        ) : (
-          <ThinkingDot theme={theme} />
-        )}
-      </View>
-      <Text style={[styles.progressText, { color: done ? theme.text.subtle : theme.text.body }]}>
-        {text}
-      </Text>
+      <HStack className="items-center gap-2">
+        <View className="w-3.5 h-3.5 items-center justify-center">
+          {done ? (
+            <Check size={12} color={theme.text.subtle} strokeWidth={3} />
+          ) : (
+            <ThinkingDot theme={theme} />
+          )}
+        </View>
+        <Text size="sm" style={{ color: done ? theme.text.subtle : theme.text.body }} className="text-[13px] leading-5">
+          {text}
+        </Text>
+      </HStack>
     </Animated.View>
   );
 }
 
 function ProgressTimeline({ steps, theme }: { steps: string[]; theme: AppTheme }) {
   return (
-    <View style={[styles.timelineBubble, { backgroundColor: theme.bg.surfaceMute }]}>
+    <VStack style={{ backgroundColor: theme.bg.surfaceMute }} className="max-w-[80%] rounded-2xl rounded-bl-sm px-4 py-3 gap-1.5">
       {steps.map((text, i) => (
         <ProgressStep
           key={`${i}-${text}`}
@@ -164,11 +162,10 @@ function ProgressTimeline({ steps, theme }: { steps: string[]; theme: AppTheme }
           theme={theme}
         />
       ))}
-    </View>
+    </VStack>
   );
 }
 
-// Streaming cursor — blinks at 1s cycle.
 function StreamingCursor({ theme }: { theme: AppTheme }) {
   const opacity = useRef(new Animated.Value(1)).current;
 
@@ -193,7 +190,7 @@ function StreamingCursor({ theme }: { theme: AppTheme }) {
     return () => anim.stop();
   }, [opacity]);
 
-  return <Animated.Text style={[styles.cursor, { color: theme.brand.primary, opacity }]}>▎</Animated.Text>;
+  return <Animated.Text style={{ color: theme.brand.primary, opacity } as any} className="text-[14px] leading-[22px] ml-0.5">▎</Animated.Text>;
 }
 
 export function ChatMessage({
@@ -205,192 +202,72 @@ export function ChatMessage({
   isThinking,
   progressSteps,
   interruptType,
-  onInterruptApprove,
-  onInterruptCancel,
 }: ChatMessageProps) {
   const isUser = role === 'user';
   const theme = useTheme();
 
-  // Thinking bubble:
-  //  - progressSteps 누적 → 타임라인 (체크/활성 점)
-  //  - content만 있으면 단일 라인 (폴백)
-  //  - 둘 다 없으면 3점 애니메이션
   if (isThinking) {
     return (
-      <View style={[styles.row, styles.rowAssistant]}>
+      <HStack className="px-0 py-1 justify-start">
         {progressSteps && progressSteps.length > 0 ? (
           <ProgressTimeline steps={progressSteps} theme={theme} />
         ) : content ? (
-          <View style={[styles.thinkingBubble, { backgroundColor: theme.bg.surfaceMute }]}>
+          <HStack style={{ backgroundColor: theme.bg.surfaceMute }} className="items-center gap-2 rounded-2xl rounded-bl-sm px-[18px] py-3.5">
             <ThinkingDot theme={theme} />
-            <Text style={[styles.progressText, { color: theme.text.subtle }]}>{content}</Text>
-          </View>
+            <Text size="sm" style={{ color: theme.text.subtle }} className="text-[13px] leading-5">{content}</Text>
+          </HStack>
         ) : (
           <ThinkingDots theme={theme} />
         )}
-      </View>
+      </HStack>
     );
   }
 
   return (
-    <View style={[styles.row, isUser ? styles.rowUser : styles.rowAssistant]}>
-      <View
-        style={[
-          styles.bubble,
+    <HStack className={`px-0 py-1 ${isUser ? 'justify-end' : 'justify-start'}`}>
+      <Card
+        variant="filled"
+        style={
           isUser
             ? { backgroundColor: theme.brand.primary, borderBottomRightRadius: 4 }
-            : { backgroundColor: theme.bg.surfaceMute, borderBottomLeftRadius: 4 },
-        ]}
+            : { backgroundColor: theme.bg.surfaceMute, borderBottomLeftRadius: 4 }
+        }
+        className="max-w-[70%] px-4 py-3 rounded-2xl"
       >
-        <Text style={[styles.text, { color: isUser ? theme.text.onBrand : theme.text.body }]}>
+        <Text size="sm" style={{ color: isUser ? theme.text.onBrand : theme.text.body }} className="text-[14px] leading-[22px]">
           {content}
           {isStreaming && !isUser && <StreamingCursor theme={theme} />}
         </Text>
         {actions && actions.length > 0 && (
-          <View style={styles.actions}>
+          <HStack className="flex-wrap gap-1.5 mt-2">
             {actions.map((action) => (
               <TouchableOpacity
                 key={action.target}
                 onPress={() => onActionPress?.(action.target)}
-                style={[styles.actionButton, { borderColor: isUser ? theme.text.onBrand : theme.brand.primary }]}
+                style={{ borderColor: isUser ? theme.text.onBrand : theme.brand.primary }}
+                className="border rounded-md px-2.5 py-1"
                 activeOpacity={0.7}
               >
-                <Text style={[styles.actionText, { color: isUser ? theme.text.onBrand : theme.brand.primary }]}>
+                <Text style={{ color: isUser ? theme.text.onBrand : theme.brand.primary }} className="text-[12px]">
                   {action.label}
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </HStack>
         )}
-        {interruptType === 'excu' && (
-          <View style={styles.actions}>
-            <TouchableOpacity
-              onPress={onInterruptApprove}
-              style={[styles.actionButton, { backgroundColor: theme.semantic.success, borderColor: theme.semantic.success }]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.actionText, { color: '#fff' }]}>승인</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={onInterruptCancel}
-              style={[styles.actionButton, { borderColor: theme.border.default }]}
-              activeOpacity={0.8}
-            >
-              <Text style={[styles.actionText, { color: theme.text.body }]}>취소</Text>
-            </TouchableOpacity>
-          </View>
+        {(interruptType === 'excu' || interruptType === 'form') && (
+          <Text style={{ color: theme.brand.primary }} className="text-[12px] mt-2">
+            {interruptType === 'form'
+              ? '▸ 패널에서 양식을 작성해주세요'
+              : '▸ 패널에서 실행 여부를 확인해주세요'}
+          </Text>
         )}
         {interruptType === 'human' && (
-          <Text style={[styles.interruptHint, { color: theme.text.subtle }]}>
+          <Text style={{ color: theme.text.subtle }} className="text-[12px] mt-2">
             아래 입력창에 답변을 입력해주세요
           </Text>
         )}
-      </View>
-    </View>
+      </Card>
+    </HStack>
   );
 }
-
-const styles = StyleSheet.create({
-  row: {
-    paddingHorizontal: 0,
-    paddingVertical: 4,
-    flexDirection: 'row',
-  },
-  rowUser: {
-    justifyContent: 'flex-end',
-  },
-  rowAssistant: {
-    justifyContent: 'flex-start',
-  },
-  bubble: {
-    maxWidth: '70%',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-  },
-  text: {
-    fontSize: 14,
-    lineHeight: 22,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  cursor: {
-    fontSize: 14,
-    lineHeight: 22,
-    marginLeft: 2,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  thinkingBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    borderRadius: 16,
-    borderBottomLeftRadius: 4,
-    paddingHorizontal: 18,
-    paddingVertical: 14,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-  },
-  actions: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 8,
-  },
-  actionButton: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-  },
-  actionText: {
-    fontSize: 12,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  interruptHint: {
-    fontSize: 12,
-    marginTop: 8,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  progressText: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  timelineBubble: {
-    maxWidth: '80%',
-    borderRadius: 16,
-    borderBottomLeftRadius: 4,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 6,
-  },
-  stepRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepIcon: {
-    width: 14,
-    height: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

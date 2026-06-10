@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import {
   View,
   TouchableOpacity,
-  StyleSheet,
   Animated,
   Easing,
   ScrollView,
@@ -43,32 +42,41 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        {
-          width: widthAnim,
-          backgroundColor: theme.bg.surfaceAlt,
-          borderLeftColor: theme.border.default,
-        },
-      ]}
+      style={{
+        borderLeftWidth: 1,
+        overflow: 'hidden',
+        width: widthAnim,
+        backgroundColor: theme.bg.surfaceAlt,
+        borderLeftColor: theme.border.default,
+      }}
     >
-      <View style={styles.inner}>
+      <View
+        className="flex-1 flex-col"
+        style={{ width: 360 }}
+      >
         {/* Tabs */}
-        <View style={styles.tabs}>
+        <View className="flex-row items-center px-4 pt-3 pb-2" style={{ gap: 4 }}>
           {TABS.map(({ id, label, Icon }, idx) => {
             const isActive = rpTab === id;
             const webTitleProp = Platform.OS === 'web' ? ({ title: label } as object) : {};
             return (
               <React.Fragment key={id}>
                 {idx > 0 && (
-                  <View style={[styles.tabDivider, { backgroundColor: theme.border.default }]} />
+                  <View
+                    style={{
+                      width: 1,
+                      height: 16,
+                      marginHorizontal: 4,
+                      backgroundColor: theme.border.default,
+                    }}
+                  />
                 )}
                 <TouchableOpacity
                   onPress={() => onTabChange(id)}
-                  style={[
-                    styles.tab,
-                    isActive && { backgroundColor: theme.brand.primaryTint },
-                  ]}
+                  className="w-9 h-9 items-center justify-center rounded-lg relative"
+                  style={{
+                    backgroundColor: isActive ? theme.brand.primaryTint : 'transparent',
+                  }}
                   activeOpacity={0.7}
                   accessibilityLabel={label}
                   {...webTitleProp}
@@ -76,7 +84,16 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
                   <Icon size={18} color={isActive ? theme.brand.primary : theme.text.muted} />
                   {isActive && (
                     <View
-                      style={[styles.tabIndicator, { backgroundColor: theme.brand.primary }]}
+                      className="absolute"
+                      style={{
+                        bottom: -8,
+                        left: '50%',
+                        marginLeft: -8,
+                        width: 16,
+                        height: 2,
+                        borderRadius: 1,
+                        backgroundColor: theme.brand.primary,
+                      }}
                     />
                   )}
                   {id === 'ai' && hasUnreadAi && !isActive && (
@@ -90,8 +107,8 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
 
         {/* Content */}
         <ScrollView
-          style={styles.content}
-          contentContainerStyle={styles.contentInner}
+          className="flex-1"
+          contentContainerStyle={{ padding: 16 }}
           showsVerticalScrollIndicator={false}
         >
           {rpTab === 'home' ? (
@@ -104,51 +121,3 @@ export function RightPanel({ isOpen, rpTab, onTabChange, userName, hasUnreadAi }
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderLeftWidth: 1,
-    overflow: 'hidden',
-  },
-  inner: {
-    width: 360,
-    flex: 1,
-    flexDirection: 'column',
-  },
-  tabs: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
-    gap: 4,
-  },
-  tab: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    position: 'relative',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: -8,
-    left: '50%',
-    marginLeft: -8,
-    width: 16,
-    height: 2,
-    borderRadius: 1,
-  },
-  tabDivider: {
-    width: 1,
-    height: 16,
-    marginHorizontal: 4,
-  },
-  content: {
-    flex: 1,
-  },
-  contentInner: {
-    padding: 16,
-  },
-});

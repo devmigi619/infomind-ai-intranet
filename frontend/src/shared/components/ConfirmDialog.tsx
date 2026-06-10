@@ -1,11 +1,15 @@
 import React from 'react';
-import { Modal, View, Text, TouchableOpacity, TouchableWithoutFeedback, StyleSheet, Platform } from 'react-native';
-import { useTheme } from '../hooks/useTheme';
-import { spacing } from '../constants/spacing';
-import { radius } from '../constants/radius';
-import { fontSize, fontWeight } from '../constants/typography';
-
-const fontFamily = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
+import {
+  AlertDialog,
+  AlertDialogBackdrop,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogBody,
+  AlertDialogFooter,
+} from './ui/alert-dialog';
+import { Heading } from './ui/heading';
+import { Text } from './ui/text';
+import { Button, ButtonText } from './ui/button';
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -28,99 +32,42 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
-  const theme = useTheme();
-
   return (
-    <Modal
-      visible={open}
-      transparent
-      animationType="fade"
-      onRequestClose={onCancel}
-    >
-      <TouchableWithoutFeedback onPress={onCancel}>
-        <View style={styles.backdrop}>
-          <TouchableWithoutFeedback>
-            <View style={[styles.dialog, { backgroundColor: theme.bg.surface, borderColor: theme.border.default }]}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
-              {message ? (
-                <Text style={[styles.message, { color: theme.text.body }]}>{message}</Text>
-              ) : null}
-              <View style={styles.buttons}>
-                <TouchableOpacity
-                  onPress={onCancel}
-                  activeOpacity={0.7}
-                  style={[styles.button, styles.cancelButton, { borderColor: theme.border.default }]}
-                >
-                  <Text style={[styles.cancelText, { color: theme.text.body }]}>{cancelText}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={onConfirm}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.button,
-                    styles.confirmButton,
-                    { backgroundColor: danger ? theme.semantic.danger : theme.brand.primary },
-                  ]}
-                >
-                  <Text style={[styles.confirmText, { color: theme.text.onBrand }]}>{confirmText}</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
-    </Modal>
+    <AlertDialog isOpen={open} onClose={onCancel} size="sm">
+      <AlertDialogBackdrop />
+      <AlertDialogContent className="border border-outline-100 bg-background-0">
+        <AlertDialogHeader className="border-b-0 pb-2">
+          <Heading size="md" className="text-typography-900 font-semibold">
+            {title}
+          </Heading>
+        </AlertDialogHeader>
+        {message ? (
+          <AlertDialogBody className="mt-2 mb-6">
+            <Text size="sm" className="text-typography-500 leading-relaxed">
+              {message}
+            </Text>
+          </AlertDialogBody>
+        ) : null}
+        <AlertDialogFooter className="border-t-0 pt-0 gap-2">
+          <Button
+            variant="outline"
+            action="secondary"
+            onPress={onCancel}
+            size="sm"
+            className="flex-1"
+          >
+            <ButtonText className="text-typography-600">{cancelText}</ButtonText>
+          </Button>
+          <Button
+            action={danger ? 'negative' : 'primary'}
+            onPress={onConfirm}
+            size="sm"
+            className="flex-1"
+          >
+            <ButtonText className="text-white">{confirmText}</ButtonText>
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dialog: {
-    width: 320,
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  title: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  message: {
-    fontSize: fontSize.body,
-    fontFamily,
-    lineHeight: fontSize.body * 1.5,
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  button: {
-    flex: 1,
-    height: 40,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButton: {
-    borderWidth: 1,
-  },
-  confirmButton: {},
-  cancelText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  confirmText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-});

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet,
-  Platform, ActivityIndicator, Alert, useWindowDimensions, Modal,
+  View, Text, TextInput, TouchableOpacity, ScrollView,
+  Platform, ActivityIndicator, Alert, useWindowDimensions,
 } from 'react-native';
 import { ChevronLeft, Users, CalendarDays } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
@@ -66,24 +66,24 @@ function MiniCalendar({
   for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
 
   return (
-    <View style={[cal.wrap, { borderColor: theme.border.default, backgroundColor: theme.bg.surface }]}>
+    <View className="border rounded-xl overflow-hidden" style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surface }}>
       {/* 월 이동 헤더 */}
-      <View style={[cal.navRow, { backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }]}>
-        <TouchableOpacity onPress={prevMonth} style={cal.navBtn} activeOpacity={0.7}>
-          <Text style={[cal.navArrow, { color: theme.text.muted }]}>‹</Text>
+      <View className="flex-row items-center justify-between px-2 py-2.5 border-b" style={{ backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }}>
+        <TouchableOpacity onPress={prevMonth} className="p-2" activeOpacity={0.7}>
+          <Text className="text-lg font-semibold" style={{ color: theme.text.muted }}>‹</Text>
         </TouchableOpacity>
-        <Text style={[cal.navTitle, { color: theme.text.primary, fontFamily: WEB_FONT }]}>
+        <Text className="text-sm font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
           {viewYear}년 {MONTH_NAMES[viewMonth]}
         </Text>
-        <TouchableOpacity onPress={nextMonth} style={cal.navBtn} activeOpacity={0.7}>
-          <Text style={[cal.navArrow, { color: theme.text.muted }]}>›</Text>
+        <TouchableOpacity onPress={nextMonth} className="p-2" activeOpacity={0.7}>
+          <Text className="text-lg font-semibold" style={{ color: theme.text.muted }}>›</Text>
         </TouchableOpacity>
       </View>
       {/* 요일 헤더 */}
-      <View style={[cal.weekRow, { backgroundColor: theme.bg.surfaceAlt }]}>
+      <View className="flex-row" style={{ backgroundColor: theme.bg.surfaceAlt }}>
         {WEEKDAY_KR.map((w, i) => (
-          <View key={w} style={cal.weekCell}>
-            <Text style={[cal.weekText, { color: i === 0 ? '#EF4444' : i === 6 ? '#3B82F6' : theme.text.muted, fontFamily: WEB_FONT }]}>
+          <View key={w} className="flex-1 items-center py-1.5">
+            <Text className="text-[11px] font-semibold" style={{ color: i === 0 ? '#EF4444' : i === 6 ? '#3B82F6' : theme.text.muted, fontFamily: WEB_FONT }}>
               {w}
             </Text>
           </View>
@@ -91,9 +91,9 @@ function MiniCalendar({
       </View>
       {/* 날짜 */}
       {rows.map((row, ri) => (
-        <View key={ri} style={cal.row}>
+        <View key={ri} className="flex-row">
           {row.map((day, ci) => {
-            if (!day) return <View key={ci} style={cal.dayCell} />;
+            if (!day) return <View key={ci} className="flex-1 h-[38px]" />;
             const ymd    = toYmd(viewYear, viewMonth, day);
             const isSel  = ymd === value;
             const isToday = ymd === todayYmd;
@@ -101,20 +101,22 @@ function MiniCalendar({
             return (
               <TouchableOpacity
                 key={ci}
-                style={[cal.dayCell, isSel && { backgroundColor: theme.brand.primary, borderRadius: 8 }]}
+                className={`flex-1 h-[38px] items-center justify-center ${isSel ? 'rounded-lg' : ''}`}
+                style={isSel ? { backgroundColor: theme.brand.primary } : undefined}
                 onPress={() => { onChange(ymd); onClose(); }}
                 activeOpacity={0.7}
               >
-                <Text style={[
-                  cal.dayText,
-                  { color: isSel ? '#fff' : isToday ? theme.brand.primary : isWE ? (ci === 0 ? '#EF4444' : '#3B82F6') : theme.text.primary },
-                  (isSel || isToday) && { fontWeight: '700' },
-                  { fontFamily: WEB_FONT },
-                ]}>
+                <Text
+                  className={`text-[13px] ${(isSel || isToday) ? 'font-bold' : ''}`}
+                  style={{
+                    color: isSel ? '#fff' : isToday ? theme.brand.primary : isWE ? (ci === 0 ? '#EF4444' : '#3B82F6') : theme.text.primary,
+                    fontFamily: WEB_FONT,
+                  }}
+                >
                   {day}
                 </Text>
                 {isToday && !isSel && (
-                  <View style={[cal.todayDot, { backgroundColor: theme.brand.primary }]} />
+                  <View className="absolute bottom-1 w-1 h-1 rounded-full" style={{ backgroundColor: theme.brand.primary }} />
                 )}
               </TouchableOpacity>
             );
@@ -124,21 +126,6 @@ function MiniCalendar({
     </View>
   );
 }
-
-const cal = StyleSheet.create({
-  wrap:     { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
-  navRow:   { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, borderBottomWidth: 1 },
-  navBtn:   { padding: 8 },
-  navArrow: { fontSize: 18, fontWeight: '600' },
-  navTitle: { fontSize: 14, fontWeight: '700' },
-  weekRow:  { flexDirection: 'row' },
-  weekCell: { flex: 1, alignItems: 'center', paddingVertical: 6 },
-  weekText: { fontSize: 11, fontWeight: '600' },
-  row:      { flexDirection: 'row' },
-  dayCell:  { flex: 1, height: 38, alignItems: 'center', justifyContent: 'center' },
-  dayText:  { fontSize: 13 },
-  todayDot: { position: 'absolute', bottom: 4, width: 4, height: 4, borderRadius: 2 },
-});
 
 // ─── 동적 필드 입력 ───────────────────────────────────────────────────────────
 
@@ -159,8 +146,8 @@ function DynamicField({
   const isNumeric   = field.aprvRefSe === 'NUMBER';
 
   return (
-    <View style={df.field}>
-      <Text style={[df.label, { color: theme.text.subtle, fontFamily: WEB_FONT }]}>
+    <View className="gap-1.5">
+      <Text className="text-xs font-medium" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>
         {field.aprvRefNm}
         {field.reqdYn === 'Y' && <Text style={{ color: '#EF4444' }}> *</Text>}
       </Text>
@@ -170,10 +157,11 @@ function DynamicField({
           <TouchableOpacity
             onPress={() => setCalOpen(true)}
             activeOpacity={0.8}
-            style={[df.dateBtn, { borderColor: theme.border.default, backgroundColor: theme.bg.surface }]}
+            className="h-10 border rounded-lg px-3 flex-row items-center gap-2"
+            style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surface }}
           >
             <CalendarDays size={16} color={value ? theme.brand.primary : theme.text.muted} />
-            <Text style={[df.dateBtnText, { color: value ? theme.text.primary : theme.text.muted, fontFamily: WEB_FONT }]}>
+            <Text className="flex-1 text-[13px]" style={{ color: value ? theme.text.primary : theme.text.muted, fontFamily: WEB_FONT }}>
               {value ? fmtDisplay(value) : '날짜를 선택하세요'}
             </Text>
             {value ? (
@@ -194,11 +182,14 @@ function DynamicField({
         </>
       ) : (
         <TextInput
-          style={[
-            df.input,
-            isMultiline && df.inputMultiline,
-            { color: theme.text.primary, borderColor: theme.border.default, backgroundColor: theme.bg.surface, fontFamily: WEB_FONT },
-          ]}
+          className={`h-10 border rounded-lg px-3 text-[13px] ${isMultiline ? 'h-24 pt-2.5' : ''}`}
+          style={{
+            color: theme.text.primary,
+            borderColor: theme.border.default,
+            backgroundColor: theme.bg.surface,
+            fontFamily: WEB_FONT,
+            textAlignVertical: isMultiline ? 'top' : 'center',
+          }}
           value={value}
           onChangeText={onChange}
           placeholder={
@@ -215,19 +206,14 @@ function DynamicField({
   );
 }
 
-const df = StyleSheet.create({
-  field:          { gap: 6 },
-  label:          { fontSize: 12, fontWeight: '500' },
-  input:          { height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, fontSize: 13 },
-  inputMultiline: { height: 96, paddingTop: 10, textAlignVertical: 'top' },
-  dateBtn:        { height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dateBtnText:    { flex: 1, fontSize: 13 },
-});
-
 // ─── 결재선 요약 카드 ─────────────────────────────────────────────────────────
 
 function AprvSummaryCard({
-  aprvList, refList, deptRefYn, onEdit, theme,
+  aprvList,
+  refList,
+  deptRefYn,
+  onEdit,
+  theme,
 }: {
   aprvList:  AprvEntry[];
   refList:   AprvEntry[];
@@ -240,29 +226,29 @@ function AprvSummaryCard({
     <TouchableOpacity
       onPress={onEdit}
       activeOpacity={0.8}
-      style={[
-        s.aprvCard,
-        { borderColor: isEmpty ? theme.border.default : theme.brand.primary,
-          backgroundColor: isEmpty ? theme.bg.surfaceAlt : theme.brand.primaryTint },
-      ]}
+      className="border-[1.5px] rounded-xl p-3.5 flex-row items-center gap-2.5"
+      style={{
+        borderColor: isEmpty ? theme.border.default : theme.brand.primary,
+        backgroundColor: isEmpty ? theme.bg.surfaceAlt : theme.brand.primaryTint,
+      }}
     >
       {isEmpty ? (
-        <Text style={[s.aprvCardEmpty, { color: theme.text.muted, fontFamily: WEB_FONT }]}>
+        <Text className="flex-1 text-[13px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
           결재선을 지정해주세요
         </Text>
       ) : (
-        <View style={s.aprvCardContent}>
-          <View style={s.aprvCardMeta}>
-            <Text style={[s.aprvCardCount, { color: theme.brand.primary, fontFamily: WEB_FONT }]}>
+        <View className="flex-1 gap-2">
+          <View>
+            <Text className="text-[13px] font-semibold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>
               결재 {aprvList.length}명
               {refList.length > 0 ? ` · 참조 ${refList.length}명` : ''}
               {deptRefYn ? ' · 부서원 자동포함' : ''}
             </Text>
           </View>
-          <View style={s.aprvChips}>
+          <View className="flex-row flex-wrap gap-1.5">
             {aprvList.map((a, i) => (
-              <View key={a.aprvUserId} style={[s.aprvChip, { backgroundColor: theme.brand.primary }]}>
-                <Text style={[s.aprvChipText, { fontFamily: WEB_FONT }]}>
+              <View key={a.aprvUserId} className="px-2.5 py-1 rounded-lg" style={{ backgroundColor: theme.brand.primary }}>
+                <Text className="text-white text-xs font-medium" style={{ fontFamily: WEB_FONT }}>
                   {i + 1}. {a.aprvUserNm}
                 </Text>
               </View>
@@ -353,17 +339,17 @@ export function ApprovalFormScreen() {
   const maxWidth = Math.min(640, width - 32);
 
   return (
-    <View style={[s.root, { backgroundColor: theme.bg.app }]}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.app }}>
       {/* 헤더 */}
-      <View style={[s.header, { backgroundColor: theme.bg.surface, borderBottomColor: theme.border.default }]}>
-        <TouchableOpacity onPress={goBack} activeOpacity={0.7} style={s.backBtn}>
+      <View className="h-14 flex-row items-center gap-2 px-4 border-b" style={{ backgroundColor: theme.bg.surface, borderBottomColor: theme.border.default }}>
+        <TouchableOpacity onPress={goBack} activeOpacity={0.7} className="p-1">
           <ChevronLeft size={22} color={theme.text.primary} />
         </TouchableOpacity>
-        <Text style={[s.headerTitle, { color: theme.text.primary, fontFamily: WEB_FONT }]}>결재 신청</Text>
+        <Text className="text-base font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>결재 신청</Text>
       </View>
 
-      <ScrollView contentContainerStyle={[s.scrollBody, { alignItems: 'center' }]} showsVerticalScrollIndicator={false}>
-        <View style={[s.formCard, { width: maxWidth, backgroundColor: theme.bg.surface, borderColor: theme.border.subtle }]}>
+      <ScrollView contentContainerStyle={{ padding: 20, alignItems: 'center' }} showsVerticalScrollIndicator={false}>
+        <View className="rounded-2xl border p-5 gap-4" style={{ width: maxWidth, backgroundColor: theme.bg.surface, borderColor: theme.border.subtle }}>
 
           {/* 양식 선택 */}
           <AppDropdown
@@ -387,8 +373,8 @@ export function ApprovalFormScreen() {
           ))}
 
           {/* 결재선 */}
-          <View style={df.field}>
-            <Text style={[df.label, { color: theme.text.subtle, fontFamily: WEB_FONT }]}>
+          <View className="gap-1.5">
+            <Text className="text-xs font-medium" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>
               결재선<Text style={{ color: '#EF4444' }}> *</Text>
             </Text>
             <AprvSummaryCard
@@ -401,23 +387,25 @@ export function ApprovalFormScreen() {
           </View>
 
           {/* 제출/취소 버튼 */}
-          <View style={s.btnRow}>
+          <View className="flex-row gap-3 mt-2">
             <TouchableOpacity
               onPress={goBack}
-              style={[s.cancelBtn, { borderColor: theme.border.default }]}
+              className="flex-1 h-11 rounded-lg items-center justify-center border"
+              style={{ borderColor: theme.border.default }}
               activeOpacity={0.7}
             >
-              <Text style={[s.cancelBtnText, { color: theme.text.body, fontFamily: WEB_FONT }]}>취소</Text>
+              <Text className="text-sm" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSubmit}
               disabled={isSaving}
-              style={[s.submitBtn, { backgroundColor: theme.brand.primary }, isSaving && s.disabled]}
+              className="flex-[2] h-11 rounded-lg items-center justify-center"
+              style={{ backgroundColor: theme.brand.primary, opacity: isSaving ? 0.6 : 1 }}
               activeOpacity={0.8}
             >
               {isSaving
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={[s.submitBtnText, { fontFamily: WEB_FONT }]}>신청</Text>}
+                : <Text className="text-white text-[15px] font-semibold" style={{ fontFamily: WEB_FONT }}>신청</Text>}
             </TouchableOpacity>
           </View>
         </View>
@@ -439,43 +427,3 @@ export function ApprovalFormScreen() {
     </View>
   );
 }
-
-// ─── 스타일 ───────────────────────────────────────────────────────────────────
-
-const s = StyleSheet.create({
-  root: { flex: 1 },
-  header: {
-    height: 56, flexDirection: 'row', alignItems: 'center',
-    gap: 8, paddingHorizontal: 16, borderBottomWidth: 1,
-  },
-  backBtn: { padding: 4 },
-  headerTitle: { fontSize: 16, fontWeight: '600' },
-
-  scrollBody: { padding: 20 },
-  formCard: {
-    borderRadius: 16, borderWidth: 1, padding: 20, gap: 16,
-  },
-
-  aprvCard: {
-    borderWidth: 1.5, borderRadius: 12, padding: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-  },
-  aprvCardEmpty: { flex: 1, fontSize: 13 },
-  aprvCardContent: { flex: 1, gap: 8 },
-  aprvCardMeta: {},
-  aprvCardCount: { fontSize: 13, fontWeight: '600' },
-  aprvChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  aprvChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
-  aprvChipText: { color: '#fff', fontSize: 12, fontWeight: '500' },
-
-  btnRow: { flexDirection: 'row', gap: 12, marginTop: 8 },
-  cancelBtn: {
-    flex: 1, height: 46, borderRadius: 10, alignItems: 'center', justifyContent: 'center', borderWidth: 1,
-  },
-  cancelBtnText: { fontSize: 14 },
-  submitBtn: {
-    flex: 2, height: 46, borderRadius: 10, alignItems: 'center', justifyContent: 'center',
-  },
-  submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-  disabled: { opacity: 0.6 },
-});

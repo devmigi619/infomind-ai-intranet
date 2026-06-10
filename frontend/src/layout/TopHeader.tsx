@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Bell, PanelRight, Search } from 'lucide-react-native';
 import { AvatarMenu } from './AvatarMenu';
 import { PulseDot } from '../shared/components/PulseDot';
@@ -43,24 +43,28 @@ export function TopHeader({
   return (
     <>
       <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.bg.surface,
-            borderBottomColor: theme.border.default,
-            // 관리자 모드: 상단 2px 빨간 띠
-            borderTopWidth: theme.isAdmin ? 2 : 0,
-            borderTopColor: theme.isAdmin ? theme.brand.primary : 'transparent',
-          },
-        ]}
+        className="flex-row items-center pl-5 pr-4"
+        style={{
+          height: 48,
+          borderBottomWidth: 1,
+          gap: 16,
+          backgroundColor: theme.bg.surface,
+          borderBottomColor: theme.border.default,
+          // 관리자 모드: 상단 2px 빨간 띠
+          borderTopWidth: theme.isAdmin ? 2 : 0,
+          borderTopColor: theme.isAdmin ? theme.brand.primary : 'transparent',
+        }}
       >
         {/* Left: Brand + 관리자 배지 */}
         <TouchableOpacity onPress={onBrandClick} activeOpacity={0.6}>
           <Text
-            style={[
-              styles.brand,
-              { color: theme.text.primary },
-            ]}
+            className="font-light"
+            style={{
+              fontSize: 18,
+              letterSpacing: 18 * 0.12,
+              color: theme.text.primary,
+              fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+            }}
           >
             Infomind
           </Text>
@@ -68,60 +72,88 @@ export function TopHeader({
 
         {/* 관리자 배지 */}
         {theme.isAdmin && (
-          <View style={[styles.adminBadge, { backgroundColor: theme.brand.primary }]}>
-            <Text style={[styles.adminBadgeText, { color: theme.text.onBrand }]}>관리자</Text>
+          <View
+            className="px-2 py-0.5 rounded shrink-0"
+            style={{ backgroundColor: theme.brand.primary }}
+          >
+            <Text
+              className="font-semibold"
+              style={{
+                fontSize: 11,
+                letterSpacing: 0.04 * 11,
+                color: theme.text.onBrand,
+                fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+              }}
+            >
+              관리자
+            </Text>
           </View>
         )}
 
         {/* Center: Search placeholder */}
-        <View style={styles.searchBarWrap}>
+        <View className="flex-1 items-center">
           <View
-            style={[
-              styles.searchBar,
-              {
-                backgroundColor: theme.mode === 'dark' ? theme.bg.surfaceAlt : '#F0F0F0',
-                borderColor: theme.border.default,
-              },
-            ]}
+            className="w-full max-w-[480px] h-8 border rounded-full flex-row items-center px-3.5 opacity-50"
+            style={{
+              backgroundColor: theme.mode === 'dark' ? theme.bg.surfaceAlt : '#F0F0F0',
+              borderColor: theme.border.default,
+            }}
           >
-            <Search size={14} color={theme.text.subtle} style={styles.searchIcon} />
-            <Text style={[styles.searchPlaceholder, { color: theme.text.muted }]}>
+            <Search size={14} color={theme.text.subtle} className="mr-2" />
+            <Text
+              className="flex-1"
+              style={{
+                fontSize: 13,
+                color: theme.text.muted,
+                fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+              }}
+            >
               통합검색 준비 중...
             </Text>
-            <Text style={[styles.preparingTag, { color: theme.text.subtle }]}>준비 중</Text>
+            <Text
+              style={{
+                fontSize: 10,
+                letterSpacing: 0.4,
+                color: theme.text.subtle,
+                fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+              }}
+            >
+              준비 중
+            </Text>
           </View>
         </View>
 
         {/* Right: Controls */}
-        <View style={styles.rightControls}>
+        <View className="flex-row items-center" style={{ gap: 8 }}>
           {/* Admin toggle (ADMIN only) */}
           {isAdmin && (
             <TouchableOpacity
               onPress={onToggleAdminMode}
               activeOpacity={0.7}
-              style={styles.adminToggle}
+              className="flex-row items-center mr-2"
+              style={{ gap: 8 }}
             >
               <Text
-                style={[
-                  styles.adminLabel,
-                  { color: theme.text.muted },
-                  isAdminMode && { color: theme.brand.primary, fontWeight: '500' },
-                ]}
+                style={{
+                  fontSize: 12,
+                  color: isAdminMode ? theme.brand.primary : theme.text.muted,
+                  fontWeight: isAdminMode ? '500' : 'normal',
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
               >
                 관리자 모드
               </Text>
               <View
-                style={[
-                  styles.switch,
-                  { backgroundColor: 'rgba(0,0,0,0.15)' },
-                  isAdminMode && { backgroundColor: theme.brand.primary },
-                ]}
+                className="w-8 h-[18px] rounded-full justify-center px-0.5"
+                style={{
+                  backgroundColor: isAdminMode ? theme.brand.primary : 'rgba(0,0,0,0.15)',
+                }}
               >
                 <View
-                  style={[
-                    styles.switchKnob,
-                    isAdminMode && styles.switchKnobActive,
-                  ]}
+                  className="w-3.5 h-3.5 rounded-full bg-white shadow-sm elevation-1"
+                  style={{
+                    transform: [{ translateX: isAdminMode ? 14 : 0 }],
+                  }}
                 />
               </View>
             </TouchableOpacity>
@@ -129,10 +161,10 @@ export function TopHeader({
 
           {/* Bell with notification dropdown */}
           <TouchableOpacity
-            style={[
-              styles.iconButton,
-              notifOpen && { backgroundColor: theme.brand.primaryTint },
-            ]}
+            className="w-8 h-8 items-center justify-center rounded-lg relative"
+            style={{
+              backgroundColor: notifOpen ? theme.brand.primaryTint : 'transparent',
+            }}
             activeOpacity={0.7}
             onPress={() => setNotifOpen((v) => !v)}
           >
@@ -143,10 +175,10 @@ export function TopHeader({
           {/* RightPanel toggle */}
           <TouchableOpacity
             onPress={onToggleRightPanel}
-            style={[
-              styles.iconButton,
-              isRightPanelOpen && { backgroundColor: theme.brand.primaryTint },
-            ]}
+            className="w-8 h-8 items-center justify-center rounded-lg relative"
+            style={{
+              backgroundColor: isRightPanelOpen ? theme.brand.primaryTint : 'transparent',
+            }}
             activeOpacity={0.7}
           >
             <PanelRight
@@ -174,105 +206,3 @@ export function TopHeader({
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    height: 48,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: 20,
-    paddingRight: 16,
-    gap: 16,
-  },
-  brand: {
-    fontSize: 18,
-    letterSpacing: 18 * 0.12,
-    fontWeight: '300',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  adminBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 4,
-    flexShrink: 0,
-  },
-  adminBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.04 * 11,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  searchBarWrap: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  searchBar: {
-    width: '100%',
-    maxWidth: 480,
-    height: 32,
-    borderWidth: 1,
-    borderRadius: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    opacity: 0.5,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchPlaceholder: {
-    flex: 1,
-    fontSize: 13,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  preparingTag: {
-    fontSize: 10,
-    letterSpacing: 0.4,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  rightControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  adminToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginRight: 8,
-  },
-  adminLabel: {
-    fontSize: 12,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  switch: {
-    width: 32,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  switchKnob: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  switchKnobActive: {
-    transform: [{ translateX: 14 }],
-  },
-  iconButton: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    position: 'relative',
-  },
-});

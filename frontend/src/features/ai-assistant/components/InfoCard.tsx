@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Alert, Platform } from 'react-native';
 import { ArrowRight } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import type { AssistantCard } from '../types';
+import { useUiStore } from '../../../store/uiStore';
+import type { PanelId } from '../../../types';
 
 const WEB_FONT = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
 
@@ -17,25 +19,61 @@ export function InfoCard({ card }: InfoCardProps) {
   const theme = useTheme();
 
   const handleFullLink = () => {
-    Alert.alert('', `전체 보기로 이동합니다 (추후 구현)\n경로: ${card.fullLink ?? '-'}`);
+    const link = card.fullLink;
+    if (!link) return;
+
+    let panelId: PanelId | null = null;
+    if (link.includes('/approval/new?type=vacation') || link.includes('/hr/vacation') || link.includes('/leave')) {
+      panelId = 'leave';
+    } else if (link.includes('/approval')) {
+      panelId = 'approval';
+    } else if (link.includes('/vehicle')) {
+      panelId = 'vehicle';
+    } else if (link.includes('/meeting')) {
+      panelId = 'meeting';
+    } else if (link.includes('/report')) {
+      panelId = 'report';
+    } else if (link.includes('/certificate')) {
+      panelId = 'certificate';
+    } else if (link.includes('/expense') || link.includes('/asset')) {
+      panelId = 'approval';
+    } else if (link.includes('/docs') || link.includes('/documents')) {
+      panelId = 'documents';
+    }
+
+    if (panelId) {
+      useUiStore.getState().handleNavClick(panelId);
+    } else {
+      Alert.alert('', `${card.title} 경로: ${link}`);
+    }
   };
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.bg.surface,
-          borderColor: theme.border.default,
-        },
-      ]}
+      style={{
+        backgroundColor: theme.bg.surface,
+        borderColor: theme.border.default,
+      }}
+      className="border rounded-xl p-4 gap-2.5"
     >
       {/* Header: title + tag */}
-      <View style={styles.header}>
-        <Text style={[styles.title, { color: theme.text.primary }]} numberOfLines={2}>{card.title}</Text>
+      <View className="flex-row items-start gap-2 flex-wrap">
+        <Text
+          style={{ color: theme.text.primary, fontFamily: WEB_FONT }}
+          className="text-[15px] font-medium flex-1"
+          numberOfLines={2}
+        >
+          {card.title}
+        </Text>
         {card.tag ? (
-          <View style={[styles.tag, { backgroundColor: `${card.tagColor ?? theme.brand.primary}18` }]}>
-            <Text style={[styles.tagText, { color: card.tagColor ?? theme.brand.primary }]}>
+          <View
+            style={{ backgroundColor: `${card.tagColor ?? theme.brand.primary}18` }}
+            className="px-2 py-0.5 rounded-full flex-shrink-0 self-start"
+          >
+            <Text
+              style={{ color: card.tagColor ?? theme.brand.primary, fontFamily: WEB_FONT }}
+              className="text-[11px] font-medium"
+            >
               {card.tag}
             </Text>
           </View>
@@ -44,11 +82,19 @@ export function InfoCard({ card }: InfoCardProps) {
 
       {/* Bullet list */}
       {bulletItems.length > 0 ? (
-        <View style={styles.bulletList}>
+        <View className="gap-1.5">
           {bulletItems.map((item, i) => (
-            <View key={i} style={styles.bulletRow}>
-              <View style={[styles.bullet, { backgroundColor: theme.text.subtle }]} />
-              <Text style={[styles.bulletText, { color: theme.text.body }]}>{item}</Text>
+            <View key={i} className="flex-row items-start gap-2">
+              <View
+                style={{ backgroundColor: theme.text.subtle }}
+                className="w-1 h-1 rounded-full mt-1.5 flex-shrink-0"
+              />
+              <Text
+                style={{ color: theme.text.body, fontFamily: WEB_FONT }}
+                className="flex-1 text-[13px] leading-[20px]"
+              >
+                {item}
+              </Text>
             </View>
           ))}
         </View>
@@ -56,8 +102,17 @@ export function InfoCard({ card }: InfoCardProps) {
 
       {/* Full-link button */}
       {card.fullLink ? (
-        <TouchableOpacity activeOpacity={0.7} onPress={handleFullLink} style={styles.fullLinkRow}>
-          <Text style={[styles.fullLinkText, { color: theme.brand.primary }]}>전체 보기</Text>
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={handleFullLink}
+          className="flex-row items-center gap-1 self-end mt-0.5"
+        >
+          <Text
+            style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}
+            className="text-[12px]"
+          >
+            전체 보기
+          </Text>
           <ArrowRight size={13} color={theme.brand.primary} />
         </TouchableOpacity>
       ) : null}
@@ -65,69 +120,3 @@ export function InfoCard({ card }: InfoCardProps) {
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    gap: 10,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: '500',
-    flex: 1,
-    fontFamily: WEB_FONT,
-  },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 20,
-    flexShrink: 0,
-    alignSelf: 'flex-start',
-  },
-  tagText: {
-    fontSize: 11,
-    fontWeight: '500',
-    fontFamily: WEB_FONT,
-  },
-  bulletList: {
-    gap: 6,
-  },
-  bulletRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  bullet: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    marginTop: 7,
-    flexShrink: 0,
-  },
-  bulletText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 13 * 1.55,
-    fontFamily: WEB_FONT,
-  },
-  fullLinkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    alignSelf: 'flex-end',
-    marginTop: 2,
-  },
-  fullLinkText: {
-    fontSize: 12,
-    fontFamily: WEB_FONT,
-  },
-});

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { useUiStore } from '../../store/uiStore';
@@ -25,10 +25,14 @@ export function MobileApp({ user, onLogout, onNavigate }: MobileAppProps) {
   return (
     <SafeAreaProvider>
       <SafeAreaView
-        style={[styles.safeArea, { backgroundColor: theme.bg.surface }]}
+        className="flex-1"
+        style={{ backgroundColor: theme.bg.surface }}
         edges={['top']}
       >
-        <View style={[styles.container, { backgroundColor: theme.bg.app }]}>
+        <View
+          className="flex-1 flex-col"
+          style={{ backgroundColor: theme.bg.app }}
+        >
           {/* Top Header — always visible */}
           <MobileTopHeader
             user={user}
@@ -37,7 +41,7 @@ export function MobileApp({ user, onLogout, onNavigate }: MobileAppProps) {
           />
 
           {/* Body: 메인 영역 — 풀뷰는 이 안에서만 슬라이드 (헤더/탭바 침범 X) */}
-          <View style={styles.body}>
+          <View className="flex-1 relative overflow-hidden">
             <MobileMainScreen user={user} onNavigate={onNavigate} />
             {/* 풀뷰 — body 자식, absolute fill로 부모 영역 안에 갇힘 */}
             <MobileFullScreenRouter />
@@ -56,18 +60,3 @@ export function MobileApp({ user, onLogout, onNavigate }: MobileAppProps) {
     </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    flexDirection: 'column',
-  },
-  body: {
-    flex: 1,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-});

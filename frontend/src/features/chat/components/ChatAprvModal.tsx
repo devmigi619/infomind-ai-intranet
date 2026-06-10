@@ -13,8 +13,6 @@ import {
   TouchableOpacity,
   Modal,
   SafeAreaView,
-  StyleSheet,
-  Platform,
 } from 'react-native';
 import { AprvLineEditorPanel } from '../../../shared/components/AprvLineEditorPanel';
 import type { AprvEntry } from '../../leave-req/api';
@@ -59,27 +57,27 @@ export function ChatAprvModal({
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={onCancel}>
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.bg.surface }]}>
+      <SafeAreaView style={{ backgroundColor: theme.bg.surface }} className="flex-1">
         {/* 헤더 */}
-        <View style={[styles.header, { borderBottomColor: theme.border.default }]}>
-          <TouchableOpacity onPress={onCancel} style={styles.headerBtn}>
-            <Text style={[styles.headerBtnText, { color: theme.text.muted }]}>취소</Text>
+        <View style={{ borderBottomColor: theme.border.default }} className="flex-row items-center justify-between px-4 py-3 border-b">
+          <TouchableOpacity onPress={onCancel} className="px-1 min-w-[44px]">
+            <Text style={{ color: theme.text.muted }} className="text-[15px] font-medium">취소</Text>
           </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.text.primary }]}>결재선 확인</Text>
-          <TouchableOpacity onPress={handleApprove} style={styles.headerBtn}>
-            <Text style={[styles.headerBtnText, { color: theme.brand.primary }]}>승인</Text>
+          <Text style={{ color: theme.text.primary }} className="text-[16px] font-semibold">결재선 확인</Text>
+          <TouchableOpacity onPress={handleApprove} className="px-1 min-w-[44px]">
+            <Text style={{ color: theme.brand.primary }} className="text-[15px] font-medium">승인</Text>
           </TouchableOpacity>
         </View>
 
         {/* 안내 */}
-        <View style={[styles.notice, { backgroundColor: theme.bg.surfaceMute }]}>
-          <Text style={[styles.noticeText, { color: theme.text.subtle }]}>
+        <View style={{ backgroundColor: theme.bg.surfaceMute }} className="mx-4 my-2.5 p-2.5 rounded-lg">
+          <Text style={{ color: theme.text.subtle }} className="text-[13px]">
             결재자와 참조자를 확인·수정한 후 승인을 눌러주세요.
           </Text>
         </View>
 
         {/* 결재선 편집 패널 */}
-        <View style={styles.editorWrap}>
+        <View className="flex-1">
           <AprvLineEditorPanel
             aprvList={aprvList}
             refList={refList}
@@ -96,40 +94,3 @@ export function ChatAprvModal({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  headerBtn: {
-    paddingHorizontal: 4,
-    minWidth: 44,
-  },
-  headerBtnText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  notice: {
-    marginHorizontal: 16,
-    marginVertical: 10,
-    padding: 10,
-    borderRadius: 8,
-  },
-  noticeText: {
-    fontSize: 13,
-  },
-  editorWrap: {
-    flex: 1,
-  },
-});

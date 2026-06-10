@@ -4,16 +4,12 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   ActivityIndicator,
 } from 'react-native';
 import { ArrowRight, X, Clock, CheckCircle, XCircle } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useUiStore } from '../../../store/uiStore';
-import { spacing } from '../../../shared/constants/spacing';
-import { radius } from '../../../shared/constants/radius';
-import { fontSize, fontWeight } from '../../../shared/constants/typography';
 import { useLeaveReqList, type LeaveReqSummaryDto } from '../api';
 
 const fontFamily = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
@@ -39,9 +35,9 @@ function StatusBadge({ se, theme }: { se: string; theme: ReturnType<typeof useTh
   };
   const c = cfg[se] ?? cfg['1'];
   return (
-    <View style={[s.badge, { backgroundColor: c.bg }]}>
+    <View className="flex-row items-center gap-[3px] rounded-full px-1.5 py-0.5" style={{ backgroundColor: c.bg }}>
       {c.icon}
-      <Text style={[s.badgeText, { color: c.text }]}>{SE_LABEL[se] ?? se}</Text>
+      <Text className="text-[10px] font-semibold" style={{ color: c.text, fontFamily }}>{SE_LABEL[se] ?? se}</Text>
     </View>
   );
 }
@@ -78,15 +74,16 @@ function LeaveCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.7}
-      style={[s.card, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.subtle }]}
+      className="p-3 rounded-lg border mb-2 gap-1"
+      style={{ backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.subtle }}
     >
-      <View style={s.cardTop}>
-        <Text style={[s.cardTitle, { color: theme.text.primary }]} numberOfLines={1}>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="flex-1 text-[13px] font-medium" style={{ color: theme.text.primary, fontFamily }} numberOfLines={1}>
           {typeName}
         </Text>
         <StatusBadge se={item.aprvRsltSe} theme={theme} />
       </View>
-      <Text style={[s.cardMeta, { color: theme.text.muted }]} numberOfLines={1}>
+      <Text className="text-[11px]" style={{ color: theme.text.muted, fontFamily }} numberOfLines={1}>
         {showRequester ? `${item.reqUserNm} · ` : ''}
         {dateRangeLabel(item.startYmd, item.endYmd)} · {
           item.leaveUseDcnt % 1 === 0
@@ -102,7 +99,7 @@ function LeaveCard({
 
 function SectionLabel({ label, theme }: { label: string; theme: ReturnType<typeof useTheme> }) {
   return (
-    <Text style={[s.sectionLabel, { color: theme.text.subtle }]}>{label}</Text>
+    <Text className="text-[10px] font-semibold uppercase tracking-wider mt-3 mb-1 mx-1" style={{ color: theme.text.subtle, fontFamily }}>{label}</Text>
   );
 }
 
@@ -110,7 +107,7 @@ function SectionLabel({ label, theme }: { label: string; theme: ReturnType<typeo
 
 function SectionEmpty({ message, theme }: { message: string; theme: ReturnType<typeof useTheme> }) {
   return (
-    <Text style={[s.emptyText, { color: theme.text.subtle }]}>{message}</Text>
+    <Text className="text-[13px] px-1 py-1" style={{ color: theme.text.subtle, fontFamily }}>{message}</Text>
   );
 }
 
@@ -142,20 +139,21 @@ export function LeaveReqQuickPanel({ onClose }: LeaveReqQuickPanelProps) {
   };
 
   return (
-    <View style={s.container}>
+    <View className="flex-1">
       {/* 헤더 */}
-      <View style={[s.header, { borderBottomColor: theme.border.subtle }]}>
-        <Text style={[s.headerTitle, { color: theme.text.primary }]}>휴가신청</Text>
-        <View style={s.headerActions}>
+      <View className="flex-row items-center justify-between px-4 py-3 border-b" style={{ borderBottomColor: theme.border.subtle }}>
+        <Text className="text-sm font-medium" style={{ color: theme.text.primary, fontFamily }}>휴가신청</Text>
+        <View className="flex-row items-center gap-1">
           <TouchableOpacity
             onPress={handleOpenFull}
-            style={[s.openButton, { backgroundColor: theme.brand.primaryTint }]}
+            className="flex-row items-center gap-1 px-3 py-1.5 rounded-md"
+            style={{ backgroundColor: theme.brand.primaryTint }}
             activeOpacity={0.7}
           >
-            <Text style={[s.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+            <Text className="text-xs font-medium" style={{ color: theme.brand.primary, fontFamily }}>열기</Text>
             <ArrowRight size={12} color={theme.brand.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={s.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} className="w-7 h-7 items-center justify-center rounded-md" activeOpacity={0.7}>
             <X size={14} color={theme.text.muted} />
           </TouchableOpacity>
         </View>
@@ -163,11 +161,11 @@ export function LeaveReqQuickPanel({ onClose }: LeaveReqQuickPanelProps) {
 
       {/* 본문 */}
       {isLoading ? (
-        <View style={s.center}>
+        <View className="flex-1 items-center justify-center">
           <ActivityIndicator color={theme.brand.primary} size="small" />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={s.body} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: 12, gap: 4 }} showsVerticalScrollIndicator={false}>
 
           {/* ── 결재 대기 ── */}
           <SectionLabel label="결재 대기" theme={theme} />
@@ -186,7 +184,7 @@ export function LeaveReqQuickPanel({ onClose }: LeaveReqQuickPanelProps) {
           )}
           {approverList.length > MAX_PER_SECTION && (
             <TouchableOpacity onPress={handleOpenFull} activeOpacity={0.7}>
-              <Text style={[s.moreText, { color: theme.brand.primary }]}>
+              <Text className="text-[11px] text-center py-1 mb-1" style={{ color: theme.brand.primary, fontFamily }}>
                 +{approverList.length - MAX_PER_SECTION}건 더 보기
               </Text>
             </TouchableOpacity>
@@ -209,7 +207,7 @@ export function LeaveReqQuickPanel({ onClose }: LeaveReqQuickPanelProps) {
           )}
           {myList.length > MAX_PER_SECTION && (
             <TouchableOpacity onPress={handleOpenFull} activeOpacity={0.7}>
-              <Text style={[s.moreText, { color: theme.brand.primary }]}>
+              <Text className="text-[11px] text-center py-1 mb-1" style={{ color: theme.brand.primary, fontFamily }}>
                 +{myList.length - MAX_PER_SECTION}건 더 보기
               </Text>
             </TouchableOpacity>
@@ -232,7 +230,7 @@ export function LeaveReqQuickPanel({ onClose }: LeaveReqQuickPanelProps) {
           )}
           {refList.length > MAX_PER_SECTION && (
             <TouchableOpacity onPress={handleOpenFull} activeOpacity={0.7}>
-              <Text style={[s.moreText, { color: theme.brand.primary }]}>
+              <Text className="text-[11px] text-center py-1 mb-1" style={{ color: theme.brand.primary, fontFamily }}>
                 +{refList.length - MAX_PER_SECTION}건 더 보기
               </Text>
             </TouchableOpacity>
@@ -243,124 +241,3 @@ export function LeaveReqQuickPanel({ onClose }: LeaveReqQuickPanelProps) {
     </View>
   );
 }
-
-// ─── 스타일 ───────────────────────────────────────────────────────────────────
-
-const s = StyleSheet.create({
-  container: { flex: 1 },
-
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-  },
-  openButtonText: {
-    fontSize: fontSize.micro,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-  },
-
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  body: {
-    padding: spacing.md,
-    gap: 4,
-  },
-
-  sectionLabel: {
-    fontSize: 10,
-    fontWeight: fontWeight.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    marginHorizontal: 4,
-    fontFamily,
-  },
-
-  emptyText: {
-    fontSize: fontSize.small,
-    fontFamily,
-    paddingHorizontal: 4,
-    paddingVertical: spacing.xs,
-  },
-
-  card: {
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    marginBottom: spacing.sm,
-    gap: 4,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  cardMeta: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-
-  moreText: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-    textAlign: 'center',
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.xs,
-  },
-});

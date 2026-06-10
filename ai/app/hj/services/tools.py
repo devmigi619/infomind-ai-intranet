@@ -1,13 +1,257 @@
 import calendar
+import json
 import re
 from datetime import date, datetime, timedelta
 from typing import TypeVar
 
+import sqlglot
+from sqlglot import exp
 from langchain_core.tools import tool
 from pydantic import BaseModel
 
 from app.hj.core.database import get_pool
 from app.hj.models.intent import SqlResult
+
+
+# ── 공통 감사 컬럼 자동 주입 ───────────────────────────────────────────────────
+# LLM이 생성한 INSERT/UPDATE에서 감사 컬럼이 누락되어도 시스템이 강제 주입한다.
+#   INSERT: crt_at, crt_by, crt_ip, upd_at, upd_by, upd_ip (전부 NOT NULL)
+#   UPDATE: upd_at, upd_by, upd_ip
+# 값 규칙: *_at=NOW(), *_by=user_id, *_ip='127.0.0.1'
+# 이미 포함된 컬럼은 건너뛴다(멱등) — build_aprvl_insert_sqls 생성 SQL은 그대로 통과.
+
+_AUDIT_INSERT_COLS = ("crt_at", "crt_by", "crt_ip", "upd_at", "upd_by", "upd_ip")
+_AUDIT_UPDATE_COLS = ("upd_at", "upd_by", "upd_ip")
+
+
+def _audit_value(col: str, user_id: str) -> exp.Expression:
+    """감사 컬럼명에 따른 값 표현식을 생성한다."""
+    if col.endswith("_at"):
+        return exp.func("NOW")
+    if col.endswith("_by"):
+        return exp.Literal.string(user_id)
+    return exp.Literal.string("127.0.0.1")   # _ip
+
+
+def inject_audit_columns(sql: str, user_id: str) -> str:
+    """
+    INSERT/UPDATE SQL에 누락된 감사 컬럼을 sqlglot AST로 주입한다.
+    파싱 실패·미지원 형태(컬럼 목록 없는 INSERT 등)는 원본을 그대로 반환한다.
+    """
+    try:
+        tree = sqlglot.parse_one(sql, read="postgres")
+    except Exception:
+        return sql   # 파싱 실패 시 원본 유지(상위에서 실행/오류 처리)
+
+    if isinstance(tree, exp.Insert):
+        schema = tree.this
+        # 컬럼 목록이 명시된 INSERT만 처리 (목록 없으면 컬럼 순서를 알 수 없음)
+        if not isinstance(schema, exp.Schema) or not schema.expressions:
+            return sql
+        existing = {c.name.lower() for c in schema.expressions}
+        body = tree.args.get("expression")
+        for col in _AUDIT_INSERT_COLS:
+            if col in existing:
+                continue
+            schema.append("expressions", exp.column(col))
+            val = _audit_value(col, user_id)
+            if isinstance(body, exp.Values):
+                for tup in body.expressions:           # 다행 INSERT: 각 튜플에 주입
+                    tup.append("expressions", val.copy())
+            elif isinstance(body, exp.Select):         # INSERT ... SELECT
+                body.select(val.copy(), append=True, copy=False)
+            else:
+                return sql   # 예상 못한 형태 — 안전하게 원본 반환
+        return tree.sql(dialect="postgres")
+
+    if isinstance(tree, exp.Update):
+        assigned = {
+            e.this.name.lower()
+            for e in tree.expressions
+            if isinstance(e, exp.EQ) and isinstance(e.this, exp.Column)
+        }
+        for col in _AUDIT_UPDATE_COLS:
+            if col in assigned:
+                continue
+            tree.append(
+                "expressions",
+                exp.EQ(this=exp.column(col), expression=_audit_value(col, user_id)),
+            )
+        return tree.sql(dialect="postgres")
+
+    return sql   # INSERT/UPDATE 외(DELETE/SELECT)는 변경 없음
+
+
+# ── DB SQL Safeguard 안전망 ──────────────────────────────────────────────────
+# LLM이 생성한 SQL의 문법적 오류 및 제약조건 위반을 실행 전 보정한다.
+_DB_SAFEGUARD_REGISTRY = {
+    "int_mtgr_rsv": {
+        "sn_col": "rsv_sn",
+        "group_cols": ["mtgr_id"],
+        "owner_col": "user_id",
+        "defaults": {"ext_yn": "N"}
+    },
+    "int_veh_rsv": {
+        "sn_col": "rsv_sn",
+        "group_cols": ["veh_id"],
+        "owner_col": "user_id",
+        "defaults": {"ext_yn": "N", "rtn_yn": "N"}
+    },
+    "int_leave_req_mst": {
+        "sn_col": "req_sn",
+        "group_cols": ["req_user_id"],
+        "owner_col": "req_user_id",
+        "defaults": {"aprv_rslt_se": "1", "dept_ref_yn": "Y"}
+    },
+    "int_leave_req_dtl": {
+        "sn_col": "req_sn",
+        "group_cols": ["req_user_id"],
+        "owner_col": "req_user_id"
+    },
+    "int_aprv_req": {
+        "sn_col": "aprv_req_sn",
+        "group_cols": ["aprv_form_id", "req_user_id"],
+        "owner_col": "req_user_id",
+        "defaults": {"aprv_rslt_se": "1", "dept_ref_yn": "Y", "del_yn": "N"}
+    },
+    "int_pst": {
+        "sn_col": "pst_sn",
+        "group_cols": ["brd_id"],
+        "owner_col": "user_id",
+        "defaults": {"del_yn": "N", "ntc_yn": "N", "like_num": 0}
+    },
+    "int_pst_cmt": {
+        "sn_col": "cmt_sn",
+        "group_cols": ["brd_id", "pst_sn"],
+        "owner_col": "user_id",
+        "defaults": {"del_yn": "N", "cmt_lvl": 1}
+    },
+    "int_schd": {
+        "sn_col": "schd_sn",
+        "group_cols": [],
+        "owner_col": "user_id",
+        "defaults": {"loop_yn": "N"}
+    },
+    "int_rpt_desc": {
+        "owner_col": "user_id",
+        "defaults": {"sbmt_yn": "N"}
+    }
+}
+
+
+def apply_sql_safeguards(sql: str, user_id: str) -> str:
+    """
+    SQL 실행 전 sqlglot을 이용해 공통 안전망 규칙을 적용하고 정제된 SQL을 반환한다.
+    1. SELECT: LIMIT 100 제약 강제
+    2. INSERT: _sn 자동증가 컬럼 누락/NULL 보정 및 기본값 누락 방어
+    3. UPDATE/DELETE: owner_col 조건 누락 시 강제 주입
+    """
+    try:
+        stmts = sqlglot.parse(sql, read="postgres")
+        if not stmts:
+            return sql
+
+        processed = []
+        for tree in stmts:
+            if not tree:
+                continue
+
+            # 1. SELECT 쿼리 방어
+            if isinstance(tree, exp.Select):
+                limit_clause = tree.args.get("limit")
+                if not limit_clause:
+                    tree = tree.limit(100)
+                else:
+                    try:
+                        limit_val = int(limit_clause.expression.name)
+                        if limit_val > 100:
+                            limit_clause.expression.replace(exp.Literal.number(100))
+                    except Exception:
+                        pass
+
+            # 2. INSERT 쿼리 방어
+            elif isinstance(tree, exp.Insert):
+                table_name = tree.this.this.name.lower()
+                cfg = _DB_SAFEGUARD_REGISTRY.get(table_name)
+                if cfg:
+                    schema = tree.this
+                    body = tree.args.get("expression")
+
+                    if isinstance(schema, exp.Schema) and schema.expressions:
+                        col_names = [c.name.lower() for c in schema.expressions]
+
+                        # A. 기본값 누락 방어
+                        defaults = cfg.get("defaults", {})
+                        for def_col, def_val in defaults.items():
+                            if def_col not in col_names:
+                                schema.append("expressions", exp.column(def_col))
+                                col_names.append(def_col)
+                                if isinstance(body, exp.Values):
+                                    for tup in body.expressions:
+                                        val_node = exp.Literal.string(str(def_val)) if isinstance(def_val, str) else exp.Literal.number(def_val)
+                                        tup.append("expressions", val_node)
+
+                        # B. 복합 PK 순번(_sn) 자동 보정
+                        sn_col = cfg.get("sn_col")
+                        if sn_col:
+                            group_cols = cfg.get("group_cols", [])
+                            is_missing = sn_col not in col_names
+
+                            if is_missing:
+                                schema.append("expressions", exp.column(sn_col))
+                                col_names.append(sn_col)
+
+                            if isinstance(body, exp.Values):
+                                for tup in body.expressions:
+                                    val_idx = -1 if is_missing else col_names.index(sn_col)
+
+                                    should_replace = not is_missing and val_idx < len(tup.expressions) and isinstance(tup.expressions[val_idx], exp.Null)
+                                    should_append = is_missing
+
+                                    if should_replace or should_append:
+                                        sub_select = exp.select(
+                                            exp.Add(
+                                                this=exp.func("COALESCE", exp.func("MAX", exp.column(sn_col)), exp.Literal.number(0)),
+                                                expression=exp.Literal.number(1)
+                                            )
+                                        ).from_(table_name)
+
+                                        for g_col in group_cols:
+                                            if g_col in col_names:
+                                                g_idx = col_names.index(g_col)
+                                                if g_idx < len(tup.expressions):
+                                                    val = tup.expressions[g_idx]
+                                                    sub_select = sub_select.where(exp.EQ(this=exp.column(g_col), expression=val.copy()))
+
+                                        sub_query_expr = exp.Paren(this=sub_select)
+
+                                        if should_append:
+                                            tup.append("expressions", sub_query_expr)
+                                        elif should_replace:
+                                            tup.expressions[val_idx] = sub_query_expr
+
+            # 3. UPDATE / DELETE 쿼리 방어
+            elif isinstance(tree, (exp.Update, exp.Delete)):
+                table_name = _extract_table(tree.sql(dialect="postgres"))
+                cfg = _DB_SAFEGUARD_REGISTRY.get(table_name)
+                if cfg and "owner_col" in cfg and user_id:
+                    owner_col = cfg["owner_col"]
+                    user_cond = exp.EQ(this=exp.column(owner_col), expression=exp.Literal.string(user_id))
+
+                    where_clause = tree.args.get("where")
+                    if not where_clause:
+                        tree = tree.where(user_cond)
+                    else:
+                        where_str = where_clause.sql().lower()
+                        if owner_col not in where_str:
+                            tree = tree.where(user_cond, append=True)
+
+            processed.append(tree.sql(dialect="postgres"))
+
+        return ";\n".join(processed)
+    except Exception as e:
+        print(f"[apply_sql_safeguards] 파싱/변환 오류로 인해 원본 SQL 사용: {e}")
+        return sql
 
 
 # ── LLM JSON 파싱 공통 유틸 ─────────────────────────────────────────────────
@@ -189,6 +433,7 @@ async def generate_sql(
     user_id: str,
     context: str = "",
     date_reference: str = "",
+    conversation_history: str = "",
 ) -> SqlResult:
     """
     intent와 사용자 메시지를 기반으로 LLM이 SQL을 생성합니다. (Text-to-SQL)
@@ -196,6 +441,8 @@ async def generate_sql(
 
     date_reference: node_enrich_context가 계산한 날짜 참조 표.
                     context(DB 조회 결과)보다 앞에 주입해 LLM이 날짜를 먼저 인식하도록 한다.
+    conversation_history: 직전 대화 히스토리. 단답형 응답("응") 시 INSERT/UPDATE 등
+                          사용자의 원래 의도를 파악하기 위한 맥락 제공용.
     """
     from langchain_core.messages import HumanMessage, SystemMessage
     from app.hj.core.llm import get_sql_slm, is_dev
@@ -206,6 +453,8 @@ async def generate_sql(
     prompt = SQL_GENERATION_PROMPT.format(schema=schema)
 
     human_content = f"intent={intent}, action_type={action_type}, user_id={user_id}\n질문: {user_message}"
+    if conversation_history:
+        human_content += f"\n\n[직전 대화]\n{conversation_history}"
     if date_reference:
         human_content += f"\n\n{date_reference}"
     if context:
@@ -265,6 +514,9 @@ DML_ALLOWED_TABLES: set[str] = {
     "int_mtgr_rsv",          # 회의실 예약 (본인만)
     "int_veh_rsv",           # 차량 예약 (본인만)
     "int_schd",            # 일정
+    "int_schd_attd",            # 일정참석
+    "int_schd_excp",            # 반복일저 예외
+    "int_rpt_desc",            # 업무보고
 }
 
 
@@ -301,16 +553,35 @@ async def execute_vector_sql(sql: str, embedding: list[float]) -> list[dict]:
 
 
 @tool
+async def execute_select_tool(sql: str) -> str:
+    """
+    SELECT SQL을 실행하고 결과를 JSON 문자열로 반환합니다.
+    SELECT / WITH 구문만 허용됩니다. DML은 차단됩니다.
+    ReAct 정보 수집 루프 전용 도구.
+    """
+    first_word = sql.strip().upper().split()[0] if sql.strip() else ""
+    if first_word not in ("SELECT", "WITH"):
+        return "오류: SELECT 쿼리만 허용됩니다."
+    sql = apply_sql_safeguards(sql, "")  # 안전망 적용 (LIMIT 100 등 강제)
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(sql)
+        return json.dumps([dict(r) for r in rows], ensure_ascii=False, default=str)
+
+
+@tool
 async def execute_sql(sql: str, user_id: str) -> list[dict] | int:
     """
     SQL을 ParadeDB에 실행합니다.
     - SELECT: 항상 허용, 결과 list[dict] 반환
     - DML(INSERT/UPDATE/DELETE): DML_ALLOWED_TABLES에 속한 테이블만 허용, 영향 행 수(int) 반환
     """
+    sql = apply_sql_safeguards(sql, user_id)  # 안전망 적용 (DML 보정, LIMIT 강제 등)
     if _is_dml(sql):
         table = _extract_table(sql)
         if table not in DML_ALLOWED_TABLES:
             raise PermissionError(f"DML 허용되지 않은 테이블: {table}")
+        sql = inject_audit_columns(sql, user_id)   # 감사 컬럼 강제 주입
 
     pool = await get_pool()
     async with pool.acquire() as conn:
@@ -450,27 +721,169 @@ def build_aprvl_insert_sqls(
     return sqls
 
 
+async def check_any_approved(intent: str, sql: str, user_id: str) -> bool:
+    """
+    DELETE/UPDATE SQL에서 sn 값을 추출해 이미 결재가 진행된 건인지 확인한다.
+    결재자 중 한 명이라도 aprv_se IS NOT NULL이면 True 반환.
+    sn 추출 실패 시 False (보수적으로 실행 허용).
+    """
+    cfg = APRVL_TABLE_MAP.get(intent)
+    if not cfg:
+        return False
+    sn_col = cfg["pk_sn_col"]
+    m = re.search(rf"{sn_col}\s*=\s*(\d+)", sql, re.IGNORECASE)
+    if not m:
+        return False
+    sn = int(m.group(1))
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        count = await conn.fetchval(
+            f"SELECT COUNT(*) FROM {cfg['aprv_table']} "
+            f"WHERE {cfg['pk_user_col']}=$1 AND {cfg['pk_sn_col']}=$2 AND aprv_se IS NOT NULL",
+            user_id, sn,
+        )
+    return (count or 0) > 0
+
+
+def _split_sql_statements(sql: str) -> list[str]:
+    """
+    세미콜론으로 연결된 멀티 SQL 문자열을 단일 문장 리스트로 분리한다.
+
+    LLM이 '단일 SQL' 규칙을 어기고 여러 INSERT/UPDATE를 하나의 문자열로
+    반환하는 경우(예: leave mst + dtl 동시 생성)를 안전하게 처리한다.
+
+    sqlglot.parse()를 사용해 문자열 기반 세미콜론 분리(문자열 내 세미콜론 오파싱)
+    문제를 방지한다. 파싱 실패 시 원본 단일 항목 리스트로 폴백.
+    """
+    try:
+        stmts = sqlglot.parse(sql, read="postgres")
+        result = [s.sql(dialect="postgres") for s in stmts if s]
+        return result if result else [sql]
+    except Exception:
+        return [sql]
+
+
 async def execute_sql_transaction(sqls: list[str], user_id: str) -> int:
     """
     여러 DML SQL을 asyncpg 트랜잭션으로 실행한다.
     하나라도 실패하면 전체 롤백 — 부분 커밋 없음.
     모든 SQL에 대해 DML_ALLOWED_TABLES 검사를 사전 수행한다.
 
+    각 입력 SQL은 _split_sql_statements()로 단문 분리 후 처리한다.
+    LLM이 세미콜론으로 여러 문장을 합쳐 반환하더라도 inject_audit_columns가
+    각 문장에 정확히 적용된다.
+
     반환: 총 영향 행 수 (INSERT/UPDATE/DELETE 결과 합산)
     """
-    # 실행 전 전체 권한 검사
+    # ① 멀티 SQL 문자열 → 단문 리스트로 분리
+    flat_sqls: list[str] = []
     for sql in sqls:
+        flat_sqls.extend(_split_sql_statements(sql))
+
+    # ② 실행 전 전체 권한 검사 + safeguards 적용 + 감사 컬럼 주입
+    prepared: list[str] = []
+    for sql in flat_sqls:
+        sql = apply_sql_safeguards(sql, user_id)   # 안전망 적용 (DML 보정, LIMIT 강제 등)
         if _is_dml(sql):
             table = _extract_table(sql)
             if table not in DML_ALLOWED_TABLES:
                 raise PermissionError(f"DML 허용되지 않은 테이블: {table}")
+            sql = inject_audit_columns(sql, user_id)   # 감사 컬럼 강제 주입(멱등)
+        prepared.append(sql)
 
     pool = await get_pool()
     total = 0
     async with pool.acquire() as conn:
         async with conn.transaction():
-            for sql in sqls:
+            for sql in prepared:
                 result = await conn.execute(sql)
                 if _is_dml(sql):
                     total += int(result.split()[-1])
     return total
+
+
+def patch_form_values(sql: str, form_data: dict) -> str:
+    """
+    INSERT 또는 UPDATE SQL에 form_data 값을 주입한다.
+
+    INSERT: VALUES의 NULL 컬럼 교체 또는 누락 컬럼 추가
+    UPDATE: SET 절의 NULL 컬럼 교체 또는 누락 컬럼 추가 (WHERE 절은 불변)
+
+    - form_data 값이 빈 문자열이면 교체하지 않는다.
+    - 컬럼명 비교는 대소문자 무시(lower).
+    - sqlglot 파싱 실패 시 원본 SQL 그대로 반환.
+    """
+    if not form_data:
+        return sql
+
+    try:
+        tree = sqlglot.parse_one(sql, read="postgres")
+    except Exception:
+        return sql
+
+    if isinstance(tree, exp.Insert):
+        return _patch_insert(tree, form_data)
+    if isinstance(tree, exp.Update):
+        return _patch_update(tree, form_data)
+    return sql
+
+
+def _patch_insert(tree: "exp.Insert", form_data: dict) -> str:
+    schema = tree.this
+    if not isinstance(schema, exp.Schema) or not schema.expressions:
+        return tree.sql(dialect="postgres")
+
+    body = tree.args.get("expression")
+    if not isinstance(body, exp.Values):
+        return tree.sql(dialect="postgres")
+
+    col_names = [c.name.lower() for c in schema.expressions]
+
+    for key, value in form_data.items():
+        if not value:
+            continue
+        key_lower = key.lower()
+        val_expr  = exp.Literal.string(str(value))
+
+        if key_lower in col_names:
+            idx = col_names.index(key_lower)
+            for tup in body.expressions:
+                if idx < len(tup.expressions) and isinstance(tup.expressions[idx], exp.Null):
+                    tup.expressions[idx] = val_expr.copy()
+        else:
+            schema.append("expressions", exp.column(key_lower))
+            col_names.append(key_lower)
+            for tup in body.expressions:
+                tup.append("expressions", val_expr.copy())
+
+    return tree.sql(dialect="postgres")
+
+
+def _patch_update(tree: "exp.Update", form_data: dict) -> str:
+    # sqlglot UPDATE: SET 절은 tree.args["expressions"] (EQ 리스트)
+    set_exprs: list = tree.args.get("expressions") or []
+    set_map: dict[str, int] = {
+        e.left.name.lower(): i
+        for i, e in enumerate(set_exprs)
+        if isinstance(e, exp.EQ) and hasattr(e, "left") and hasattr(e.left, "name")
+    }
+
+    for key, value in form_data.items():
+        if not value:
+            continue
+        key_lower = key.lower()
+        val_expr  = exp.Literal.string(str(value))
+
+        if key_lower in set_map:
+            # SET 절에 이미 있음: NULL이든 아니든 form_data로 덮어쓰기
+            set_exprs[set_map[key_lower]].set("expression", val_expr)
+        else:
+            # SET 절에 없는 컬럼: 추가
+            new_eq = exp.EQ(
+                this=exp.column(key_lower),
+                expression=val_expr,
+            )
+            set_exprs.append(new_eq)
+            set_map[key_lower] = len(set_exprs) - 1
+
+    return tree.sql(dialect="postgres")

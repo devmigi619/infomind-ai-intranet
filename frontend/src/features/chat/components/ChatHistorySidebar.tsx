@@ -1,28 +1,18 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
+import { TouchableOpacity, ScrollView, View } from 'react-native';
 import { Plus, Trash2, MessageSquare } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useChatSessions, useDeleteChatSession, ChatSessionDto } from '../api';
 import { useConfirm } from '../../../shared/hooks/useConfirm';
+import { Text } from '../../../shared/components/ui/text';
+import { Spinner } from '../../../shared/components/ui/spinner';
+import { VStack } from '../../../shared/components/ui/vstack';
 
 interface ChatHistorySidebarProps {
   activeSessId: string;
   onSelectSession: (sessId: string) => void;
   onNewSession: () => void;
 }
-
-const WEB_FONT = Platform.select({
-  web: "'Noto Sans KR', sans-serif",
-  default: undefined,
-});
 
 function formatDate(dateStr: string): string {
   try {
@@ -51,39 +41,36 @@ function SessionItem({
   const theme = useTheme();
   return (
     <TouchableOpacity
-      style={[
-        styles.item,
-        isActive && { backgroundColor: theme.brand.primaryTint },
-      ]}
+      style={isActive ? { backgroundColor: theme.brand.primaryTint } : undefined}
+      className="flex-row items-start px-3 py-2.5 gap-2"
       onPress={onPress}
       activeOpacity={0.7}
     >
       <MessageSquare
         size={14}
         color={isActive ? theme.brand.primary : theme.text.muted}
-        style={styles.itemIcon}
+        className="mt-0.5 flex-shrink-0"
       />
-      <View style={styles.itemContent}>
+      <VStack className="flex-1 gap-0.5">
         <Text
-          style={[
-            styles.itemTitle,
-            { color: isActive ? theme.brand.primary : theme.text.body },
-          ]}
+          size="sm"
+          style={{ color: isActive ? theme.brand.primary : theme.text.body }}
+          className={`text-[12px] leading-4 ${isActive ? 'font-semibold' : ''}`}
           numberOfLines={2}
         >
           {session.title || '새 대화'}
         </Text>
-        <Text style={[styles.itemDate, { color: theme.text.subtle }]}>
+        <Text size="xs" style={{ color: theme.text.subtle }} className="text-[11px]">
           {formatDate(session.lastAt)}
         </Text>
-      </View>
+      </VStack>
       <TouchableOpacity
         onPress={(e) => {
           e.stopPropagation?.();
           onDelete();
         }}
         hitSlop={8}
-        style={styles.deleteBtn}
+        className="p-0.5 flex-shrink-0"
       >
         <Trash2 size={13} color={theme.text.subtle} />
       </TouchableOpacity>
@@ -114,36 +101,32 @@ export function ChatHistorySidebar({
   };
 
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.bg.surfaceAlt,
-          borderRightColor: theme.border.default,
-        },
-      ]}
+    <VStack
+      style={{ backgroundColor: theme.bg.surfaceAlt }}
+      className="w-[240px] border-r border-outline-100 flex-col h-full"
     >
       {/* 새 대화 버튼 */}
       <TouchableOpacity
-        style={[styles.newBtn, { borderBottomColor: theme.border.default }]}
+        style={{ borderBottomColor: theme.border.default }}
+        className="flex-row items-center gap-2 px-4 py-3.5 border-b"
         onPress={onNewSession}
         activeOpacity={0.7}
       >
         <Plus size={15} color={theme.brand.primary} />
-        <Text style={[styles.newBtnText, { color: theme.brand.primary }]}>새 대화</Text>
+        <Text size="sm" style={{ color: theme.brand.primary }} className="font-medium text-[13px]">
+          새 대화
+        </Text>
       </TouchableOpacity>
 
       {/* 세션 목록 */}
-      <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {isLoading && (
-          <ActivityIndicator
-            size="small"
-            color={theme.text.muted}
-            style={{ marginTop: 24 }}
-          />
+          <View className="items-center justify-center mt-6">
+            <Spinner size="small" />
+          </View>
         )}
         {!isLoading && sessions.length === 0 && (
-          <Text style={[styles.emptyText, { color: theme.text.subtle }]}>
+          <Text size="sm" style={{ color: theme.text.subtle }} className="text-center text-[12px] mt-8 px-4">
             대화 이력이 없습니다
           </Text>
         )}
@@ -157,66 +140,6 @@ export function ChatHistorySidebar({
           />
         ))}
       </ScrollView>
-    </View>
+    </VStack>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    width: 240,
-    borderRightWidth: 1,
-    flexDirection: 'column',
-  },
-  newBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  newBtnText: {
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: WEB_FONT,
-  },
-  list: {
-    flex: 1,
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    gap: 8,
-    borderRadius: 0,
-  },
-  itemIcon: {
-    marginTop: 2,
-    flexShrink: 0,
-  },
-  itemContent: {
-    flex: 1,
-    gap: 2,
-  },
-  itemTitle: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontFamily: WEB_FONT,
-  },
-  itemDate: {
-    fontSize: 11,
-    fontFamily: WEB_FONT,
-  },
-  deleteBtn: {
-    padding: 2,
-    flexShrink: 0,
-  },
-  emptyText: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 32,
-    paddingHorizontal: 16,
-    fontFamily: WEB_FONT,
-  },
-});

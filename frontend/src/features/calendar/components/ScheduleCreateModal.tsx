@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  StyleSheet,
   ScrollView,
   Platform,
 } from 'react-native';
@@ -23,7 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react-native';
-import { useTheme, AppTheme } from '../../../shared/hooks/useTheme';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { useToast } from '../../../shared/hooks/useToast';
 import { fontSize, fontWeight } from '../../../shared/constants/typography';
@@ -175,7 +174,6 @@ export function ScheduleCreateModal({
 }: ScheduleCreateModalProps) {
   const theme = useTheme();
   const { isMobile } = useResponsive();
-  const styles = useMemo(() => makeStyles(theme, isMobile), [theme, isMobile]);
   const toast = useToast();
 
   const { data: depts = [] } = useOrgDepartments();
@@ -614,21 +612,32 @@ export function ScheduleCreateModal({
         onRequestClose={onClose}
       >
         <TouchableWithoutFeedback onPress={onClose}>
-          <View style={styles.backdrop}>
+          <View style={{ backgroundColor: 'rgba(15,23,42,0.5)' }} className={isMobile ? "flex-1 items-center justify-start p-4" : "flex-1 items-center justify-center p-6"}>
             <TouchableWithoutFeedback>
-              <View ref={modalRef} collapsable={false} style={styles.modal}>
+              <View
+                ref={modalRef}
+                collapsable={false}
+                style={{
+                  backgroundColor: theme.bg.surface,
+                  maxHeight: isMobile ? '100%' : '94%',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 24 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 70,
+                  elevation: 24,
+                }}
+                className="w-full max-w-[480px] flex-col rounded-[14px] overflow-hidden"
+              >
               {/* 헤더 */}
-              <View style={styles.modalHdr}>
-                <Text style={[styles.modalHdrTitle, { color: theme.text.muted }]}>
+              <View className="flex-row items-center justify-between pt-[14px] pb-[12px] px-6">
+                <Text style={{ color: theme.text.muted }} className="text-[16px] font-semibold">
                   {headerTitle}
                 </Text>
                 <TouchableOpacity
                   onPress={onClose}
                   activeOpacity={0.7}
-                  style={[
-                    styles.modalIconBtn,
-                    { backgroundColor: 'transparent' },
-                  ]}
+                  style={{ backgroundColor: 'transparent' }}
+                  className="w-[30px] h-[30px] rounded-lg items-center justify-center"
                 >
                   <X size={16} color={theme.text.muted} />
                 </TouchableOpacity>
@@ -636,40 +645,36 @@ export function ScheduleCreateModal({
 
               {/* 본문 */}
               <ScrollView
-                style={styles.modalBody}
+                className="px-6 pb-4"
                 keyboardShouldPersistTaps="handled"
               >
                 {/* 제목 — 보더 없는 큰 폰트 + 하단 구분선 */}
                 <View
-                  style={[
-                    styles.titleRow,
-                    { borderBottomColor: theme.border.subtle },
-                  ]}
+                  style={{ borderBottomColor: theme.border.subtle }}
+                  className="pt-1 pb-[14px] border-b"
                 >
                   <TextInput
                     value={title}
                     onChangeText={setTitle}
                     placeholder="제목"
                     placeholderTextColor={theme.text.subtle}
-                    style={[styles.inputTitle, { color: theme.text.primary }]}
+                    style={{ color: theme.text.primary }}
+                    className="py-2 text-[20px] font-semibold"
                     autoFocus={Platform.OS === 'web'}
                   />
                 </View>
 
                 {/* 🕐 언제 */}
                 <View
-                  style={[
-                    styles.iconRow,
-                    styles.rowLayerTop,
-                    { borderBottomColor: theme.border.subtle },
-                  ]}
+                  style={{ borderBottomColor: theme.border.subtle }}
+                  className="flex-row gap-3.5 py-3.5 border-b items-start relative z-30"
                 >
-                  <View style={styles.iconCell}>
+                  <View className="w-7 items-center justify-start pt-1">
                     <Clock size={18} color={theme.text.muted} />
                   </View>
-                  <View style={styles.contentCell}>
+                  <View className="flex-1 min-w-0 relative">
                     {/* 날짜 입력 — 시작/종료 항상 노출. 같으면 단일, 다르면 멀티데이 */}
-                    <View style={styles.dtRow}>
+                    <View className="flex-row items-center gap-2 mb-2.5 flex-wrap min-h-[34px]">
                       <TextInput
                         ref={startDateRef}
                         value={startDate}
@@ -678,18 +683,16 @@ export function ScheduleCreateModal({
                         onPressIn={() => openDatePicker('start')}
                         placeholder="2026-05-19"
                         placeholderTextColor={theme.text.subtle}
-                        style={[
-                          styles.dtInputDate,
-                          {
-                            borderColor: theme.border.default,
-                            backgroundColor: theme.bg.surface,
-                            color: theme.text.primary,
-                          },
-                        ]}
+                        style={{
+                          borderColor: theme.border.default,
+                          backgroundColor: theme.bg.surface,
+                          color: theme.text.primary,
+                        }}
+                        className="border rounded-[7px] px-2.5 py-1.5 text-[14px] flex-1 basis-[120px] min-w-0"
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <Text style={[styles.dtSep, { color: theme.text.muted }]}>
+                      <Text style={{ color: theme.text.muted }} className="text-[15px] shrink-0">
                         ~
                       </Text>
                       <TextInput
@@ -700,43 +703,39 @@ export function ScheduleCreateModal({
                         onPressIn={() => openDatePicker('end')}
                         placeholder="2026-05-19"
                         placeholderTextColor={theme.text.subtle}
-                        style={[
-                          styles.dtInputDate,
-                          {
-                            borderColor: theme.border.default,
-                            backgroundColor: theme.bg.surface,
-                            color: theme.text.primary,
-                          },
-                        ]}
+                        style={{
+                          borderColor: theme.border.default,
+                          backgroundColor: theme.bg.surface,
+                          color: theme.text.primary,
+                        }}
+                        className="border rounded-[7px] px-2.5 py-1.5 text-[14px] flex-1 basis-[120px] min-w-0"
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
                     </View>
 
-                    <View style={styles.dtRow}>
+                    <View className="flex-row items-center gap-2 mb-2.5 flex-wrap min-h-[34px]">
                       <TextInput
                         value={allday ? '' : startHm}
                         onChangeText={setStartHm}
                         placeholder={allday ? '' : '14:00'}
                         placeholderTextColor={theme.text.subtle}
                         editable={!allday}
-                        style={[
-                          styles.dtInput,
-                          {
-                            borderColor: theme.border.default,
-                            backgroundColor: allday
-                              ? theme.bg.surfaceAlt
-                              : theme.bg.surface,
-                            color: allday
-                              ? theme.text.subtle
-                              : theme.text.primary,
-                            opacity: allday ? 0.65 : 1,
-                          },
-                        ]}
+                        style={{
+                          borderColor: theme.border.default,
+                          backgroundColor: allday
+                            ? theme.bg.surfaceAlt
+                            : theme.bg.surface,
+                          color: allday
+                            ? theme.text.subtle
+                            : theme.text.primary,
+                          opacity: allday ? 0.65 : 1,
+                        }}
+                        className="border rounded-[7px] px-2.5 py-1.5 text-[14px] w-[110px] min-w-0"
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
-                      <Text style={[styles.dtSep, { color: theme.text.muted }]}>
+                      <Text style={{ color: theme.text.muted }} className="text-[15px] shrink-0">
                         ~
                       </Text>
                       <TextInput
@@ -745,19 +744,17 @@ export function ScheduleCreateModal({
                         placeholder={allday ? '' : '15:00'}
                         placeholderTextColor={theme.text.subtle}
                         editable={!allday}
-                        style={[
-                          styles.dtInput,
-                          {
-                            borderColor: theme.border.default,
-                            backgroundColor: allday
-                              ? theme.bg.surfaceAlt
-                              : theme.bg.surface,
-                            color: allday
-                              ? theme.text.subtle
-                              : theme.text.primary,
-                            opacity: allday ? 0.65 : 1,
-                          },
-                        ]}
+                        style={{
+                          borderColor: theme.border.default,
+                          backgroundColor: allday
+                            ? theme.bg.surfaceAlt
+                            : theme.bg.surface,
+                          color: allday
+                            ? theme.text.subtle
+                            : theme.text.primary,
+                          opacity: allday ? 0.65 : 1,
+                        }}
+                        className="border rounded-[7px] px-2.5 py-1.5 text-[14px] w-[110px] min-w-0"
                         autoCapitalize="none"
                         autoCorrect={false}
                       />
@@ -776,54 +773,46 @@ export function ScheduleCreateModal({
                         });
                       }}
                       activeOpacity={0.7}
-                      style={styles.checkboxRow}
+                      className="flex-row items-center gap-1.5 pt-0.5"
                     >
                       <View
-                        style={[
-                          styles.checkbox,
-                          {
-                            borderColor: allday
-                              ? theme.brand.primary
-                              : theme.border.strong,
-                            backgroundColor: allday
-                              ? theme.brand.primary
-                              : 'transparent',
-                          },
-                        ]}
+                        style={{
+                          borderColor: allday
+                            ? theme.brand.primary
+                            : theme.border.strong,
+                          backgroundColor: allday
+                            ? theme.brand.primary
+                            : 'transparent',
+                        }}
+                        className="w-4 h-4 rounded-[3px] border-[1.5px] items-center justify-center"
                       >
                         {allday && (
-                          <Text style={styles.checkboxMark}>✓</Text>
+                          <Text className="text-white text-[11px] font-bold leading-3">✓</Text>
                         )}
                       </View>
                       <Text
-                        style={[
-                          styles.checkboxLabel,
-                          { color: theme.text.body },
-                        ]}
+                        style={{ color: theme.text.body }}
+                        className="text-[14px]"
                       >
                         종일
                       </Text>
                     </TouchableOpacity>
 
                     {/* 반복 select */}
-                    <View style={styles.loopSelectWrap}>
+                    <View className="mt-2.5 relative z-10">
                       <TouchableOpacity
                         ref={loopTriggerRef}
                         onPress={toggleLoopDropdown}
                         activeOpacity={0.7}
-                        style={[
-                          styles.loopSelectTrigger,
-                          {
-                            borderColor: theme.border.default,
-                            backgroundColor: theme.bg.surface,
-                          },
-                        ]}
+                        style={{
+                          borderColor: theme.border.default,
+                          backgroundColor: theme.bg.surface,
+                        }}
+                        className="min-h-[38px] border rounded-lg px-3 flex-row items-center justify-between"
                       >
                         <Text
-                          style={[
-                            styles.loopSelectText,
-                            { color: theme.text.body },
-                          ]}
+                          style={{ color: theme.text.body }}
+                          className="text-[14px] font-medium"
                         >
                           {LOOP_LABEL[loopType]}
                         </Text>
@@ -839,27 +828,22 @@ export function ScheduleCreateModal({
 
                 {/* 👥 참석자 */}
                 <View
-                  style={[
-                    styles.iconRow,
-                    styles.rowLayerMiddle,
-                    { borderBottomColor: theme.border.subtle },
-                  ]}
+                  style={{ borderBottomColor: theme.border.subtle }}
+                  className="flex-row gap-3.5 py-3.5 border-b items-start relative z-20"
                 >
-                  <View style={styles.iconCell}>
+                  <View className="w-7 items-center justify-start pt-1">
                     <Users size={18} color={theme.text.muted} />
                   </View>
-                  <View style={styles.contentCell}>
+                  <View className="flex-1 min-w-0 relative">
                     <TouchableOpacity
                       ref={attendeeTriggerRef}
                       activeOpacity={1}
                       onPress={openAttendeeDropdown}
-                      style={[
-                        styles.attdSearchWrap,
-                        {
-                          borderColor: theme.border.default,
-                          backgroundColor: theme.bg.surface,
-                        },
-                      ]}
+                      style={{
+                        borderColor: theme.border.default,
+                        backgroundColor: theme.bg.surface,
+                      }}
+                      className="flex-row items-center gap-2 px-3 py-[9px] border rounded-lg min-h-[40px]"
                     >
                       <Search size={13} color={theme.text.muted} />
                       <TextInput
@@ -871,10 +855,8 @@ export function ScheduleCreateModal({
                         onFocus={openAttendeeDropdown}
                         placeholder="이름으로 검색"
                         placeholderTextColor={theme.text.subtle}
-                        style={[
-                          styles.attdSearchInput,
-                          { color: theme.text.primary },
-                        ]}
+                        style={{ color: theme.text.primary }}
+                        className="flex-1 text-[14px] py-0"
                       />
                       <TouchableOpacity
                         onPress={toggleAttendeeDropdown}
@@ -890,7 +872,7 @@ export function ScheduleCreateModal({
                     </TouchableOpacity>
                     {/* 선택된 참석자 칩 */}
                     {attendees.length > 0 && (
-                      <View style={styles.attdSelected}>
+                      <View className="flex-row flex-wrap gap-1.5 mt-2">
                         {attendees.map((uid) => {
                           const found = (allUsers as any[]).find((x: any) => {
                             const n = normalizeUser(x);
@@ -901,19 +883,15 @@ export function ScheduleCreateModal({
                             return (
                               <View
                                 key={uid}
-                                style={[
-                                  styles.attdChip,
-                                  {
-                                    borderColor: theme.border.default,
-                                    backgroundColor: theme.bg.surfaceAlt,
-                                  },
-                                ]}
+                                style={{
+                                  borderColor: theme.border.default,
+                                  backgroundColor: theme.bg.surfaceAlt,
+                                }}
+                                className="flex-row items-center gap-1.5 px-1 py-[3px] rounded-full border"
                               >
                                 <Text
-                                  style={[
-                                    styles.attdChipName,
-                                    { color: theme.text.primary },
-                                  ]}
+                                  style={{ color: theme.text.primary }}
+                                  className="text-[10px] pr-1.5 pl-0.5"
                                 >
                                   {uid}
                                 </Text>
@@ -921,7 +899,7 @@ export function ScheduleCreateModal({
                                   onPress={() => handleRemoveAttendee(uid)}
                                   activeOpacity={0.6}
                                   hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                  style={styles.attdChipRemove}
+                                  className="w-[18px] h-[18px] rounded-full items-center justify-center"
                                 >
                                   <X size={10} color={theme.text.muted} />
                                 </TouchableOpacity>
@@ -933,34 +911,26 @@ export function ScheduleCreateModal({
                           return (
                             <View
                               key={uid}
-                              style={[
-                                styles.attdChip,
-                                {
-                                  borderColor: theme.border.default,
-                                  backgroundColor: theme.bg.surfaceAlt,
-                                },
-                              ]}
+                              style={{
+                                borderColor: theme.border.default,
+                                backgroundColor: theme.bg.surfaceAlt,
+                              }}
+                              className="flex-row items-center gap-1.5 px-1 py-[3px] rounded-full border"
                             >
                               <View
-                                style={[
-                                  styles.attdAvatarSmall,
-                                  { backgroundColor: avatarColor + '1A' },
-                                ]}
+                                style={{ backgroundColor: avatarColor + '1A' }}
+                                className="w-5 h-5 rounded-full items-center justify-center"
                               >
                                 <Text
-                                  style={[
-                                    styles.attdAvatarTextSmall,
-                                    { color: avatarColor },
-                                  ]}
+                                  style={{ color: avatarColor }}
+                                  className="text-[10px] font-bold"
                                 >
                                   {n.name?.[0] ?? '?'}
                                 </Text>
                               </View>
                               <Text
-                                style={[
-                                  styles.attdChipName,
-                                  { color: theme.text.primary },
-                                ]}
+                                style={{ color: theme.text.primary }}
+                                className="text-[10px] pr-1.5 pl-0.5"
                               >
                                 {n.name}
                               </Text>
@@ -968,7 +938,7 @@ export function ScheduleCreateModal({
                                 onPress={() => handleRemoveAttendee(uid)}
                                 activeOpacity={0.6}
                                 hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                                style={styles.attdChipRemove}
+                                className="w-[18px] h-[18px] rounded-full items-center justify-center"
                               >
                                 <X size={10} color={theme.text.muted} />
                               </TouchableOpacity>
@@ -982,36 +952,35 @@ export function ScheduleCreateModal({
 
                 {/* ✎ 비고 */}
                 <View
-                  style={[styles.iconRow, { borderBottomColor: theme.border.subtle }]}
+                  style={{ borderBottomColor: theme.border.subtle }}
+                  className="flex-row gap-3.5 py-3.5 border-b items-start relative"
                 >
-                  <View style={styles.iconCell}>
+                  <View className="w-7 items-center justify-start pt-1">
                     <AlignLeft size={18} color={theme.text.muted} />
                   </View>
-                  <View style={styles.contentCell}>
+                  <View className="flex-1 min-w-0 relative">
                     <TextInput
                       value={rmk}
                       onChangeText={setRmk}
                       placeholder="비고"
                       placeholderTextColor={theme.text.subtle}
-                      style={[
-                        styles.inputMemo,
-                        {
-                          borderColor: theme.border.default,
-                          backgroundColor: theme.bg.surface,
-                          color: theme.text.primary,
-                        },
-                      ]}
+                      style={{
+                        borderColor: theme.border.default,
+                        backgroundColor: theme.bg.surface,
+                        color: theme.text.primary,
+                      }}
+                      className="border rounded-lg px-3 py-[9px] text-[14px]"
                     />
                   </View>
                 </View>
 
                 {/* 🏢 부서 */}
-                <View style={[styles.iconRow, { borderBottomWidth: 0 }]}>
-                  <View style={styles.iconCell}>
+                <View className="flex-row gap-3.5 py-3.5 border-b-0 items-start relative">
+                  <View className="w-7 items-center justify-start pt-1">
                     <Building2 size={18} color={theme.text.muted} />
                   </View>
-                  <View style={styles.contentCell}>
-                    <View style={styles.deptChips}>
+                  <View className="flex-1 min-w-0 relative">
+                    <View className="flex-row flex-wrap gap-1.5">
                       {depts.map((d) => {
                         const active = deptCode === d.deptCd;
                         const color = getDeptColor(d.deptCd);
@@ -1022,37 +991,27 @@ export function ScheduleCreateModal({
                             onPress={() =>
                               setDeptCode(active ? null : d.deptCd)
                             }
-                            style={[
-                              styles.deptChip,
-                              {
-                                borderColor: active
-                                  ? theme.text.primary
-                                  : theme.border.default,
-                                backgroundColor: active
-                                  ? theme.text.primary
-                                  : theme.bg.surface,
-                              },
-                            ]}
+                            style={{
+                              borderColor: active ? theme.text.primary : theme.border.default,
+                              backgroundColor: active ? theme.text.primary : theme.bg.surface,
+                            }}
+                            className="flex-row items-center gap-1.5 px-3 py-[5px] rounded-full border"
                           >
                             <View
-                              style={[
-                                styles.deptChipDot,
-                                {
-                                  backgroundColor: active
-                                    ? 'rgba(255,255,255,0.9)'
-                                    : color,
-                                },
-                              ]}
+                              style={{
+                                backgroundColor: active
+                                  ? 'rgba(255,255,255,0.9)'
+                                  : color,
+                              }}
+                              className="w-2 h-2 rounded-full"
                             />
                             <Text
-                              style={[
-                                styles.deptChipText,
-                                {
-                                  color: active
-                                    ? theme.bg.surface
-                                    : theme.text.body,
-                                },
-                              ]}
+                              style={{
+                                color: active
+                                  ? theme.bg.surface
+                                  : theme.text.body,
+                              }}
+                              className="text-[10.5px]"
                             >
                               {d.deptNm}
                             </Text>
@@ -1066,27 +1025,28 @@ export function ScheduleCreateModal({
 
               {activeDateField && (
                 <TouchableWithoutFeedback onPress={() => setActiveDateField(null)}>
-                  <View style={styles.overlayDismissLayer}>
+                  <View className="absolute inset-0 z-[80]">
                     <TouchableWithoutFeedback>
                       <View
-                        style={[
-                          styles.datePickerPanel,
-                          {
-                            top: dateOverlayPos.top,
-                            left: dateOverlayPos.left,
-                            borderColor: theme.border.default,
-                            backgroundColor: theme.bg.surface,
-                          },
-                        ]}
+                        style={{
+                          top: dateOverlayPos.top,
+                          left: dateOverlayPos.left,
+                          borderColor: theme.border.default,
+                          backgroundColor: theme.bg.surface,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 8 },
+                          shadowOpacity: 0.12,
+                          shadowRadius: 28,
+                          elevation: 12,
+                        }}
+                        className="absolute w-[284px] border rounded-[10px] p-2.5 z-[90]"
                       >
-                        <View style={styles.datePickerHeader}>
-                          <View style={styles.datePickerTitleWrap}>
+                        <View className="h-[30px] flex-row items-center justify-between mb-1.5">
+                          <View className="flex-row items-center gap-1.5">
                             <CalendarDays size={14} color={theme.text.muted} />
                             <Text
-                              style={[
-                                styles.datePickerTitle,
-                                { color: theme.text.body },
-                              ]}
+                              style={{ color: theme.text.body }}
+                              className="text-[14px] font-semibold"
                             >
                               {datePickerMonth.getFullYear()}.
                               {String(datePickerMonth.getMonth() + 1).padStart(
@@ -1095,13 +1055,13 @@ export function ScheduleCreateModal({
                               )}
                             </Text>
                           </View>
-                          <View style={styles.datePickerNav}>
+                          <View className="flex-row items-center gap-0.5">
                             <TouchableOpacity
                               onPress={() =>
                                 setDatePickerMonth((d) => addMonths(d, -1))
                               }
                               activeOpacity={0.7}
-                              style={styles.datePickerNavBtn}
+                              className="w-[26px] h-[26px] items-center justify-center rounded-[6px]"
                             >
                               <ChevronLeft size={15} color={theme.text.muted} />
                             </TouchableOpacity>
@@ -1110,21 +1070,19 @@ export function ScheduleCreateModal({
                                 setDatePickerMonth((d) => addMonths(d, 1))
                               }
                               activeOpacity={0.7}
-                              style={styles.datePickerNavBtn}
+                              className="w-[26px] h-[26px] items-center justify-center rounded-[6px]"
                             >
                               <ChevronRight size={15} color={theme.text.muted} />
                             </TouchableOpacity>
                           </View>
                         </View>
-                        <View style={styles.datePickerGrid}>
+                        <View className="flex-row flex-wrap">
                           {['일', '월', '화', '수', '목', '금', '토'].map(
                             (w) => (
                               <Text
                                 key={w}
-                                style={[
-                                  styles.datePickerWeek,
-                                  { color: theme.text.muted },
-                                ]}
+                                style={{ color: theme.text.muted }}
+                                className="w-[14.28%] h-6 text-center text-[12px] font-medium"
                               >
                                 {w}
                               </Text>
@@ -1144,27 +1102,21 @@ export function ScheduleCreateModal({
                                 key={dash}
                                 onPress={() => selectDate(d)}
                                 activeOpacity={0.7}
-                                style={[
-                                  styles.datePickerDay,
-                                  selected && {
-                                    backgroundColor: theme.brand.primary,
-                                  },
-                                ]}
+                                style={selected ? { backgroundColor: theme.brand.primary } : undefined}
+                                className="w-[14.28%] h-[30px] items-center justify-center rounded-[6px]"
                               >
                                 <Text
-                                  style={[
-                                    styles.datePickerDayText,
-                                    {
-                                      color: selected
-                                        ? theme.text.onBrand
-                                        : muted
-                                        ? theme.text.subtle
-                                        : theme.text.body,
-                                      fontWeight: selected
-                                        ? fontWeight.semibold
-                                        : fontWeight.medium,
-                                    },
-                                  ]}
+                                  style={{
+                                    color: selected
+                                      ? theme.text.onBrand
+                                      : muted
+                                      ? theme.text.subtle
+                                      : theme.text.body,
+                                    fontWeight: selected
+                                      ? fontWeight.semibold
+                                      : fontWeight.medium,
+                                  }}
+                                  className="text-[14px]"
                                 >
                                   {d.getDate()}
                                 </Text>
@@ -1180,19 +1132,22 @@ export function ScheduleCreateModal({
 
               {loopSelectOpen && (
                 <TouchableWithoutFeedback onPress={() => setLoopSelectOpen(false)}>
-                  <View style={styles.overlayDismissLayer}>
+                  <View className="absolute inset-0 z-[80]">
                     <TouchableWithoutFeedback>
                       <View
-                        style={[
-                          styles.loopSelectMenu,
-                          {
-                            top: loopOverlayPos.top,
-                            left: loopOverlayPos.left,
-                            width: loopOverlayPos.width,
-                            borderColor: theme.border.default,
-                            backgroundColor: theme.bg.surface,
-                          },
-                        ]}
+                        style={{
+                          top: loopOverlayPos.top,
+                          left: loopOverlayPos.left,
+                          width: loopOverlayPos.width,
+                          borderColor: theme.border.default,
+                          backgroundColor: theme.bg.surface,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 8 },
+                          shadowOpacity: 0.12,
+                          shadowRadius: 28,
+                          elevation: 8,
+                        }}
+                        className="absolute border rounded-lg overflow-hidden z-[90]"
                       >
                         {LOOP_OPTIONS.map((opt) => {
                           const active = loopType === opt;
@@ -1204,25 +1159,19 @@ export function ScheduleCreateModal({
                                 setLoopSelectOpen(false);
                               }}
                               activeOpacity={0.7}
-                              style={[
-                                styles.loopSelectItem,
-                                active && {
-                                  backgroundColor: theme.brand.primaryTint,
-                                },
-                              ]}
+                              style={active ? { backgroundColor: theme.brand.primaryTint } : undefined}
+                              className="min-h-[38px] justify-center px-3"
                             >
                               <Text
-                                style={[
-                                  styles.loopSelectItemText,
-                                  {
-                                    color: active
-                                      ? theme.brand.primary
-                                      : theme.text.body,
-                                    fontWeight: active
-                                      ? fontWeight.semibold
-                                      : fontWeight.medium,
-                                  },
-                                ]}
+                                style={{
+                                  color: active
+                                    ? theme.brand.primary
+                                    : theme.text.body,
+                                  fontWeight: active
+                                    ? fontWeight.semibold
+                                    : fontWeight.medium,
+                                }}
+                                className="text-[14px]"
                               >
                                 {LOOP_LABEL[opt]}
                               </Text>
@@ -1237,27 +1186,28 @@ export function ScheduleCreateModal({
 
               {dropdownOpen && (
                 <TouchableWithoutFeedback onPress={() => setDropdownOpen(false)}>
-                  <View style={styles.overlayDismissLayer}>
+                  <View className="absolute inset-0 z-[80]">
                     <TouchableWithoutFeedback>
                       <View
-                        style={[
-                          styles.attdDropdown,
-                          {
-                            top: attdOverlayPos.top,
-                            left: attdOverlayPos.left,
-                            width: attdOverlayPos.width,
-                            maxHeight: attdOverlayPos.maxHeight,
-                            borderColor: theme.border.default,
-                            backgroundColor: theme.bg.surface,
-                          },
-                        ]}
+                        style={{
+                          top: attdOverlayPos.top,
+                          left: attdOverlayPos.left,
+                          width: attdOverlayPos.width,
+                          maxHeight: attdOverlayPos.maxHeight,
+                          borderColor: theme.border.default,
+                          backgroundColor: theme.bg.surface,
+                          shadowColor: '#000',
+                          shadowOffset: { width: 0, height: 8 },
+                          shadowOpacity: 0.12,
+                          shadowRadius: 28,
+                          elevation: 12,
+                        }}
+                        className="absolute border rounded-[10px] overflow-hidden min-h-[92px] z-[90]"
                       >
-                        <View style={styles.attdDropdownHeader}>
+                        <View className="h-[34px] px-3 flex-row items-center justify-between">
                           <Text
-                            style={[
-                              styles.attdDropdownTitle,
-                              { color: theme.text.muted },
-                            ]}
+                            style={{ color: theme.text.muted }}
+                            className="text-[12px] font-medium"
                           >
                             참석자 추가
                           </Text>
@@ -1271,24 +1221,20 @@ export function ScheduleCreateModal({
                         </View>
                         {filteredUsers.length === 0 ? (
                           <Text
-                            style={[
-                              styles.attdDropdownEmpty,
-                              { color: theme.text.muted },
-                            ]}
+                            style={{ color: theme.text.muted }}
+                            className="p-3 text-[10px] text-center"
                           >
                             결과 없음
                           </Text>
                         ) : (
                           <ScrollView
-                            style={[
-                              styles.attdDropdownList,
-                              {
-                                maxHeight: Math.max(
-                                  60,
-                                  attdOverlayPos.maxHeight - 34,
-                                ),
-                              },
-                            ]}
+                            style={{
+                              maxHeight: Math.max(
+                                60,
+                                attdOverlayPos.maxHeight - 34,
+                              ),
+                            }}
+                            className="shrink"
                             nestedScrollEnabled
                           >
                             {filteredUsers.map((u: any) => {
@@ -1301,42 +1247,32 @@ export function ScheduleCreateModal({
                                   activeOpacity={added ? 1 : 0.7}
                                   disabled={added}
                                   onPress={() => handleAddAttendee(n.userId)}
-                                  style={[
-                                    styles.attdDropdownItem,
-                                    added && { opacity: 0.4 },
-                                  ]}
+                                  style={added ? { opacity: 0.4 } : undefined}
+                                  className="flex-row items-center gap-2.5 px-3 py-2"
                                 >
                                   <View
-                                    style={[
-                                      styles.attdAvatar,
-                                      { backgroundColor: avatarColor + '1A' },
-                                    ]}
+                                    style={{ backgroundColor: avatarColor + '1A' }}
+                                    className="w-[26px] h-[26px] rounded-[13px] items-center justify-center"
                                   >
                                     <Text
-                                      style={[
-                                        styles.attdAvatarText,
-                                        { color: avatarColor },
-                                      ]}
+                                      style={{ color: avatarColor }}
+                                      className="text-[11px] font-bold"
                                     >
                                       {n.name?.[0] ?? '?'}
                                     </Text>
                                   </View>
-                                  <View style={styles.attdInfo}>
+                                  <View className="flex-1 min-w-0">
                                     <Text
-                                      style={[
-                                        styles.attdName,
-                                        { color: theme.text.primary },
-                                      ]}
+                                      style={{ color: theme.text.primary }}
+                                      className="text-[14px]"
                                       numberOfLines={1}
                                     >
                                       {n.name}
                                     </Text>
                                     {!!n.department && (
                                       <Text
-                                        style={[
-                                          styles.attdDeptSub,
-                                          { color: theme.text.muted },
-                                        ]}
+                                        style={{ color: theme.text.muted }}
+                                        className="text-[12px]"
                                         numberOfLines={1}
                                       >
                                         {n.department}
@@ -1345,10 +1281,8 @@ export function ScheduleCreateModal({
                                   </View>
                                   {added && (
                                     <Text
-                                      style={[
-                                        styles.attdAddedTag,
-                                        { color: theme.text.muted },
-                                      ]}
+                                      style={{ color: theme.text.muted }}
+                                      className="text-[12px]"
                                     >
                                       추가됨
                                     </Text>
@@ -1366,31 +1300,25 @@ export function ScheduleCreateModal({
 
               {/* 푸터 — 저장만 */}
               <View
-                style={[
-                  styles.modalFtr,
-                  {
-                    borderTopColor: theme.border.default,
-                    backgroundColor: theme.bg.surfaceAlt,
-                  },
-                ]}
+                style={{
+                  borderTopColor: theme.border.default,
+                  backgroundColor: theme.bg.surfaceAlt,
+                }}
+                className="flex-row justify-end px-6 py-3.5 border-t"
               >
                 <TouchableOpacity
                   onPress={handleSave}
                   activeOpacity={0.8}
                   disabled={isPending}
-                  style={[
-                    styles.saveBtn,
-                    {
-                      backgroundColor: theme.brand.primary,
-                      opacity: isPending ? 0.6 : 1,
-                    },
-                  ]}
+                  style={{
+                    backgroundColor: theme.brand.primary,
+                    opacity: isPending ? 0.6 : 1,
+                  }}
+                  className="px-6 py-[9px] rounded-lg"
                 >
                   <Text
-                    style={[
-                      styles.saveBtnText,
-                      { color: theme.text.onBrand },
-                    ]}
+                    style={{ color: theme.text.onBrand }}
+                    className="text-[14px] font-semibold"
                   >
                     저장
                   </Text>
@@ -1430,64 +1358,54 @@ function LoopSaveRangeDialog({
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={dialogStyles.backdrop}>
+        <View style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} className="flex-1 items-center justify-center p-6">
           <TouchableWithoutFeedback>
             <View
-              style={[
-                dialogStyles.dialog,
-                {
-                  backgroundColor: theme.bg.surface,
-                  borderColor: theme.border.default,
-                },
-              ]}
+              style={{
+                backgroundColor: theme.bg.surface,
+                borderColor: theme.border.default,
+              }}
+              className="w-full max-w-[360px] border rounded-[16px] p-6 gap-4"
             >
-              <Text style={[dialogStyles.title, { color: theme.text.primary }]}>
+              <Text style={{ color: theme.text.primary }} className="text-[16px] font-semibold">
                 반복 일정 수정
               </Text>
-              <Text style={[dialogStyles.message, { color: theme.text.body }]}>
+              <Text style={{ color: theme.text.body }} className="text-[14px] leading-[21px]">
                 저장 범위를 선택해주세요.
               </Text>
-              <View style={dialogStyles.btnGroup}>
+              <View className="flex-col gap-2">
                 <TouchableOpacity
                   onPress={() => onSelect('one')}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.optionBtn,
-                    { borderColor: theme.border.default },
-                  ]}
+                  style={{ borderColor: theme.border.default }}
+                  className="min-h-[42px] border rounded-lg items-center justify-center px-4"
                 >
-                  <Text style={[dialogStyles.optionBtnText, { color: theme.text.primary }]}>
+                  <Text style={{ color: theme.text.primary }} className="text-[14px] font-medium">
                     이 일정만
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onSelect('from')}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.optionBtn,
-                    { borderColor: theme.border.default },
-                  ]}
+                  style={{ borderColor: theme.border.default }}
+                  className="min-h-[42px] border rounded-lg items-center justify-center px-4"
                 >
-                  <Text style={[dialogStyles.optionBtnText, { color: theme.text.primary }]}>
+                  <Text style={{ color: theme.text.primary }} className="text-[14px] font-medium">
                     이 일정부터 이후 전부
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => onSelect('all')}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.optionBtn,
-                    {
-                      borderColor: theme.brand.primary,
-                      backgroundColor: theme.brand.primary,
-                    },
-                  ]}
+                  style={{
+                    borderColor: theme.brand.primary,
+                    backgroundColor: theme.brand.primary,
+                  }}
+                  className="min-h-[42px] border rounded-lg items-center justify-center px-4"
                 >
                   <Text
-                    style={[
-                      dialogStyles.optionBtnText,
-                      { color: '#FFFFFF', fontWeight: fontWeight.semibold },
-                    ]}
+                    style={{ color: '#FFFFFF', fontWeight: fontWeight.semibold }}
+                    className="text-[14px]"
                   >
                     전체 반복 일정
                   </Text>
@@ -1496,9 +1414,9 @@ function LoopSaveRangeDialog({
               <TouchableOpacity
                 onPress={onClose}
                 activeOpacity={0.7}
-                style={dialogStyles.cancelBtn}
+                className="py-2 items-center justify-center"
               >
-                <Text style={[dialogStyles.cancelBtnText, { color: theme.text.muted }]}>
+                <Text style={{ color: theme.text.muted }} className="text-[14px]">
                   취소
                 </Text>
               </TouchableOpacity>
@@ -1525,55 +1443,47 @@ function SaveConfirmDialog({
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onCancel}>
       <TouchableWithoutFeedback onPress={onCancel}>
-        <View style={dialogStyles.backdrop}>
+        <View style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} className="flex-1 items-center justify-center p-6">
           <TouchableWithoutFeedback>
             <View
-              style={[
-                dialogStyles.dialog,
-                {
-                  backgroundColor: theme.bg.surface,
-                  borderColor: theme.border.default,
-                },
-              ]}
+              style={{
+                backgroundColor: theme.bg.surface,
+                borderColor: theme.border.default,
+              }}
+              className="w-full max-w-[360px] border rounded-[16px] p-6 gap-4"
             >
-              <Text style={[dialogStyles.title, { color: theme.text.primary }]}>
+              <Text style={{ color: theme.text.primary }} className="text-[16px] font-semibold">
                 저장하시겠습니까?
               </Text>
-              <Text style={[dialogStyles.message, { color: theme.text.body }]}>
+              <Text style={{ color: theme.text.body }} className="text-[14px] leading-[21px]">
                 입력한 수정사항을 저장합니다.
               </Text>
-              <View style={dialogStyles.confirmRow}>
+              <View className="flex-row gap-2 mt-1">
                 <TouchableOpacity
                   onPress={onCancel}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.confirmBtn,
-                    {
-                      borderColor: theme.border.default,
-                      backgroundColor: theme.bg.surface,
-                    },
-                  ]}
+                  style={{
+                    borderColor: theme.border.default,
+                    backgroundColor: theme.bg.surface,
+                  }}
+                  className="flex-1 h-10 border rounded-lg items-center justify-center"
                 >
-                  <Text style={[dialogStyles.confirmBtnText, { color: theme.text.body }]}>
+                  <Text style={{ color: theme.text.body }} className="text-[14px] font-medium">
                     취소
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={onConfirm}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.confirmBtn,
-                    {
-                      borderColor: theme.brand.primary,
-                      backgroundColor: theme.brand.primary,
-                    },
-                  ]}
+                  style={{
+                    borderColor: theme.brand.primary,
+                    backgroundColor: theme.brand.primary,
+                  }}
+                  className="flex-1 h-10 border rounded-lg items-center justify-center"
                 >
                   <Text
-                    style={[
-                      dialogStyles.confirmBtnText,
-                      { color: theme.text.onBrand, fontWeight: fontWeight.semibold },
-                    ]}
+                    style={{ color: theme.text.onBrand, fontWeight: fontWeight.semibold }}
+                    className="text-[14px]"
                   >
                     저장
                   </Text>
@@ -1587,493 +1497,3 @@ function SaveConfirmDialog({
   );
 }
 
-const dialogStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: 340,
-    borderWidth: 1,
-    borderRadius: radius.xl,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  title: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-  },
-  message: {
-    fontSize: fontSize.body,
-    lineHeight: fontSize.body * 1.5,
-  },
-  btnGroup: {
-    gap: spacing.sm,
-  },
-  optionBtn: {
-    minHeight: 42,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-  },
-  optionBtnText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-  },
-  cancelBtn: {
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-  },
-  confirmRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  confirmBtn: {
-    flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmBtnText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-  },
-});
-
-const makeStyles = (theme: AppTheme, isMobile: boolean) =>
-  StyleSheet.create({
-    backdrop: {
-      flex: 1,
-      backgroundColor: 'rgba(15,23,42,0.5)',
-      alignItems: 'center',
-      justifyContent: isMobile ? 'flex-start' : 'center',
-      padding: isMobile ? spacing.md : spacing.xl,
-    },
-    modal: {
-      width: '100%',
-      maxWidth: 480,
-      maxHeight: isMobile ? '100%' : '94%',
-      flexDirection: 'column',
-      backgroundColor: theme.bg.surface,
-      borderRadius: 14,
-      overflow: 'hidden',
-      // 모달 그림자
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 24 },
-      shadowOpacity: 0.2,
-      shadowRadius: 70,
-      elevation: 24,
-    },
-    modalHdr: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      paddingTop: 14,
-      paddingBottom: 12,
-      paddingHorizontal: spacing.lg,
-    },
-    modalHdrTitle: {
-      fontSize: fontSize.bodyLg,
-      fontWeight: fontWeight.semibold,
-    },
-    modalIconBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: radius.md,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    modalBody: {
-      paddingHorizontal: spacing.lg,
-      paddingBottom: spacing.md,
-    },
-
-    // 제목 (보더 없는 큰 폰트)
-    titleRow: {
-      paddingTop: 4,
-      paddingBottom: 14,
-      borderBottomWidth: 1,
-    },
-    inputTitle: {
-      paddingVertical: 8,
-      fontSize: 20,
-      fontWeight: fontWeight.semibold,
-      // RN에서 outline 없음 — 기본 input
-    } as any,
-
-    // 아이콘 행
-    iconRow: {
-      flexDirection: 'row',
-      gap: 14,
-      paddingVertical: 14,
-      borderBottomWidth: 1,
-      alignItems: 'flex-start',
-      position: 'relative',
-    },
-    rowLayerTop: {
-      zIndex: 30,
-    },
-    rowLayerMiddle: {
-      zIndex: 20,
-    },
-    iconCell: {
-      width: 28,
-      alignItems: 'center',
-      justifyContent: 'flex-start',
-      paddingTop: 4,
-    },
-    contentCell: {
-      flex: 1,
-      minWidth: 0,
-      position: 'relative',
-    },
-
-    // 날짜/시간 입력
-    dtRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      marginBottom: 10,
-      flexWrap: 'wrap',
-      minHeight: 34,
-    },
-    dtInputDate: {
-      borderWidth: 1,
-      borderRadius: radius.md + 1,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      fontSize: fontSize.small,
-      fontVariant: ['tabular-nums'] as any,
-      minWidth: 0,
-      flex: 1,
-      flexBasis: 120,
-    },
-    dtInput: {
-      borderWidth: 1,
-      borderRadius: radius.md + 1,
-      paddingHorizontal: 10,
-      paddingVertical: 7,
-      fontSize: fontSize.small,
-      fontVariant: ['tabular-nums'] as any,
-      minWidth: 0,
-      width: 110,
-    },
-    dtSep: {
-      fontSize: fontSize.body,
-      flexShrink: 0,
-    },
-
-    // 체크박스
-    checkboxRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingTop: 2,
-    },
-    checkbox: {
-      width: 16,
-      height: 16,
-      borderRadius: 3,
-      borderWidth: 1.5,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    checkboxMark: {
-      color: '#FFFFFF',
-      fontSize: 11,
-      fontWeight: fontWeight.bold,
-      lineHeight: 12,
-    },
-    checkboxLabel: {
-      fontSize: fontSize.small,
-    },
-
-    // 반복 선택
-    loopSelectWrap: {
-      marginTop: 10,
-      position: 'relative',
-      zIndex: 5,
-    },
-    loopSelectTrigger: {
-      minHeight: 38,
-      borderWidth: 1,
-      borderRadius: radius.lg,
-      paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    loopSelectText: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.medium,
-    },
-    loopSelectMenu: {
-      position: 'absolute',
-      borderWidth: 1,
-      borderRadius: radius.lg,
-      overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
-      shadowRadius: 28,
-      elevation: 8,
-      zIndex: 90,
-    },
-    loopSelectItem: {
-      minHeight: 38,
-      justifyContent: 'center',
-      paddingHorizontal: 12,
-    },
-    loopSelectItemText: {
-      fontSize: fontSize.small,
-    },
-
-    // 참석자 검색 입력
-    attdSearchWrap: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 8,
-      paddingHorizontal: 12,
-      paddingVertical: 9,
-      borderWidth: 1,
-      borderRadius: radius.lg,
-      minHeight: 40,
-    },
-    attdSearchInput: {
-      flex: 1,
-      fontSize: fontSize.small,
-      paddingVertical: 0,
-    },
-    overlayDismissLayer: {
-      ...StyleSheet.absoluteFillObject,
-      zIndex: 80,
-    },
-    datePickerPanel: {
-      position: 'absolute',
-      width: 284,
-      borderWidth: 1,
-      borderRadius: radius.lg + 2,
-      padding: 10,
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
-      shadowRadius: 28,
-      elevation: 12,
-      zIndex: 90,
-    },
-    datePickerHeader: {
-      height: 30,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: 6,
-    },
-    datePickerTitleWrap: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-    },
-    datePickerTitle: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.semibold,
-    },
-    datePickerNav: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 2,
-    },
-    datePickerNavBtn: {
-      width: 26,
-      height: 26,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: radius.md,
-    },
-    datePickerGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-    },
-    datePickerWeek: {
-      width: `${100 / 7}%`,
-      height: 24,
-      textAlign: 'center',
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.medium,
-    },
-    datePickerDay: {
-      width: `${100 / 7}%`,
-      height: 30,
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderRadius: radius.md,
-    },
-    datePickerDayText: {
-      fontSize: fontSize.small,
-    },
-    attdDropdown: {
-      position: 'absolute',
-      borderWidth: 1,
-      borderRadius: radius.lg + 2,
-      overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
-      shadowRadius: 28,
-      elevation: 12,
-      minHeight: 92,
-      zIndex: 90,
-    },
-    attdDropdownHeader: {
-      height: 34,
-      paddingHorizontal: 12,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    attdDropdownTitle: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.medium,
-    },
-    attdDropdownList: {
-      flexShrink: 1,
-    },
-    attdDropdownEmpty: {
-      padding: 12,
-      fontSize: fontSize.micro,
-      textAlign: 'center',
-    },
-    attdDropdownItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 10,
-      paddingHorizontal: 12,
-      paddingVertical: 8,
-    },
-    attdAvatar: {
-      width: 26,
-      height: 26,
-      borderRadius: 13,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    attdAvatarText: {
-      fontSize: 11,
-      fontWeight: fontWeight.bold,
-    },
-    attdInfo: {
-      flex: 1,
-      minWidth: 0,
-    },
-    attdName: {
-      fontSize: fontSize.small,
-    },
-    attdDeptSub: {
-      fontSize: fontSize.caption,
-    },
-    attdAddedTag: {
-      fontSize: fontSize.caption,
-    },
-    attdSelected: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-      marginTop: 8,
-    },
-    attdChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 4,
-      paddingVertical: 3,
-      borderRadius: radius.full,
-      borderWidth: 1,
-    },
-    attdAvatarSmall: {
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    attdAvatarTextSmall: {
-      fontSize: 10,
-      fontWeight: fontWeight.bold,
-    },
-    attdChipName: {
-      fontSize: fontSize.micro,
-      paddingRight: 6,
-      paddingLeft: 2,
-    },
-    attdChipRemove: {
-      width: 18,
-      height: 18,
-      borderRadius: 9,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-
-    // 비고
-    inputMemo: {
-      borderWidth: 1,
-      borderRadius: radius.lg,
-      paddingHorizontal: 12,
-      paddingVertical: 9,
-      fontSize: fontSize.small,
-    },
-
-    // 부서 칩
-    deptChips: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
-      gap: 6,
-    },
-    deptChip: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      paddingHorizontal: 12,
-      paddingVertical: 5,
-      borderRadius: radius.full,
-      borderWidth: 1,
-    },
-    deptChipDot: {
-      width: 8,
-      height: 8,
-      borderRadius: 4,
-    },
-    deptChipText: {
-      fontSize: fontSize.micro + 0.5,
-    },
-
-    // 푸터
-    modalFtr: {
-      flexDirection: 'row',
-      justifyContent: 'flex-end',
-      paddingHorizontal: spacing.lg,
-      paddingVertical: 14,
-      borderTopWidth: 1,
-    },
-    saveBtn: {
-      paddingHorizontal: spacing.lg,
-      paddingVertical: 9,
-      borderRadius: radius.lg,
-    },
-    saveBtnText: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.semibold,
-    },
-  });

@@ -4,7 +4,6 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
-  StyleSheet,
   Platform,
   Pressable,
   Modal,
@@ -351,48 +350,56 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
           setRowLayout(index, y, height);
         }}
         {...(mobileResponder ? mobileResponder.panHandlers : {})}
-        style={[
-          styles.menuRow,
-          { backgroundColor: theme.bg.surface },
-          isDragging && styles.menuRowDragging,
-          isActiveMobileDrag && {
-            transform: [{ translateY: dragTranslateY }],
-            opacity: 0.7,
-            zIndex: 10,
-            ...(Platform.OS === 'web'
-              ? ({ boxShadow: '0 8px 16px rgba(0,0,0,0.18)' } as object)
-              : {
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 8 },
-                  shadowOpacity: 0.18,
-                  shadowRadius: 16,
-                  elevation: 8,
-                }),
-          },
-        ]}
+        className="flex-row items-center relative px-6 py-2.5"
+        style={{
+          gap: 12,
+          backgroundColor: theme.bg.surface,
+          opacity: isDragging ? 0.4 : isActiveMobileDrag ? 0.7 : 1,
+          ...(isActiveMobileDrag
+            ? {
+                transform: [{ translateY: dragTranslateY }],
+                zIndex: 10,
+                ...(Platform.OS === 'web'
+                  ? { boxShadow: '0 8px 16px rgba(0,0,0,0.18)' }
+                  : {
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: 0.18,
+                      shadowRadius: 16,
+                      elevation: 8,
+                    }),
+              }
+            : {}),
+        }}
       >
         {/* Drop indicator above */}
-        {dropAbove && <View style={[styles.dropIndicatorAbove, { backgroundColor: theme.brand.primary }]} />}
+        {dropAbove && (
+          <View
+            className="absolute z-[1] h-0.5 rounded-[2px] left-6 right-6 top-[-1px]"
+            style={{ backgroundColor: theme.brand.primary }}
+          />
+        )}
 
         {/* Drag handle */}
-        <View style={styles.dragHandle}>
-          <View style={styles.dragHandleRow}>
-            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
-            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
+        <View className="w-4 items-center" style={{ gap: 2 }}>
+          <View className="flex-row my-0.5" style={{ gap: 4 }}>
+            <View className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: theme.text.subtle }} />
+            <View className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: theme.text.subtle }} />
           </View>
-          <View style={styles.dragHandleRow}>
-            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
-            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
+          <View className="flex-row my-0.5" style={{ gap: 4 }}>
+            <View className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: theme.text.subtle }} />
+            <View className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: theme.text.subtle }} />
           </View>
-          <View style={styles.dragHandleRow}>
-            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
-            <View style={[styles.dragHandleDot, { backgroundColor: theme.text.subtle }]} />
+          <View className="flex-row my-0.5" style={{ gap: 4 }}>
+            <View className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: theme.text.subtle }} />
+            <View className="w-[3px] h-[3px] rounded-full" style={{ backgroundColor: theme.text.subtle }} />
           </View>
         </View>
 
         {/* Checkbox */}
         <TouchableOpacity
-          style={[styles.checkbox, { backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }]}
+          className="w-4.5 h-4.5 border rounded items-center justify-center shrink-0"
+          style={{ backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }}
           onPress={() => togglePinnedMenu(panelId, maxPinned)}
           activeOpacity={0.7}
         >
@@ -400,15 +407,25 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
         </TouchableOpacity>
 
         {/* Icon */}
-        <View style={[styles.menuIcon, { backgroundColor: theme.brand.primaryTint }]}>
+        <View
+          className="w-8 h-8 items-center justify-center rounded-lg shrink-0"
+          style={{ backgroundColor: theme.brand.primaryTint }}
+        >
           <Icon size={18} color={theme.brand.primary} />
         </View>
 
         {/* Label */}
-        <Text style={[styles.menuName, { color: theme.text.primary }]}>{meta.label}</Text>
+        <Text className="flex-1" style={{ fontSize: 14, color: theme.text.primary }}>
+          {meta.label}
+        </Text>
 
         {/* Drop indicator below */}
-        {dropBelow && <View style={[styles.dropIndicatorBelow, { backgroundColor: theme.brand.primary }]} />}
+        {dropBelow && (
+          <View
+            className="absolute z-[1] h-0.5 rounded-[2px] left-6 right-6 bottom-[-1px]"
+            style={{ backgroundColor: theme.brand.primary }}
+          />
+        )}
       </Animated.View>
     );
   };
@@ -420,39 +437,39 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
     return (
       <TouchableOpacity
         key={meta.panel}
-        style={[
-          styles.menuRow,
-          { backgroundColor: theme.bg.surface },
-          disabled && styles.menuRowDisabled,
-        ]}
+        className="flex-row items-center relative px-6 py-2.5"
+        style={{
+          gap: 12,
+          backgroundColor: theme.bg.surface,
+          opacity: disabled ? 0.5 : 1,
+        }}
         onPress={() => !disabled && togglePinnedMenu(meta.panel, maxPinned)}
         activeOpacity={disabled ? 1 : 0.7}
       >
         {/* Empty drag handle placeholder */}
-        <View style={styles.dragHandlePlaceholder} />
+        <View style={{ width: 16 }} />
 
         {/* Checkbox */}
         <View
-          style={[
-            styles.checkbox,
-            { borderColor: theme.border.strong },
-            disabled && { backgroundColor: theme.bg.surfaceMute, borderColor: theme.border.default },
-          ]}
+          className="w-4.5 h-4.5 border rounded items-center justify-center shrink-0"
+          style={{
+            borderColor: disabled ? theme.border.default : theme.border.strong,
+            backgroundColor: disabled ? theme.bg.surfaceMute : 'transparent',
+          }}
         />
 
         {/* Icon */}
         <View
-          style={[
-            styles.menuIcon,
-            { backgroundColor: theme.brand.primaryTintSoft },
-            disabled && { backgroundColor: theme.bg.surfaceMute },
-          ]}
+          className="w-8 h-8 items-center justify-center rounded-lg shrink-0"
+          style={{
+            backgroundColor: disabled ? theme.bg.surfaceMute : theme.brand.primaryTintSoft,
+          }}
         >
           <Icon size={18} color={disabled ? theme.text.subtle : theme.text.muted} />
         </View>
 
         {/* Label */}
-        <Text style={[styles.menuName, { color: theme.text.primary }, disabled && { color: theme.text.muted }]}>
+        <Text className="flex-1" style={{ fontSize: 14, color: disabled ? theme.text.muted : theme.text.primary }}>
           {meta.label}
         </Text>
       </TouchableOpacity>
@@ -465,71 +482,114 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
   return (
     <Modal visible={isOpen} transparent animationType="fade" onRequestClose={onClose}>
       {/* Backdrop */}
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+        onPress={onClose}
+      >
         {/* 모달 본체 — 클릭이 backdrop으로 전파되지 않도록 onPress no-op */}
         <Pressable
-          style={[
-            styles.modalContainer,
-            {
-              backgroundColor: theme.bg.surface,
-              width: isMobile ? ('90%' as unknown as number) : 480,
-            },
-            Platform.OS === 'web'
-              ? ({ boxShadow: theme.shadow.modal } as object)
+          className="overflow-hidden"
+          style={{
+            maxHeight: '85%',
+            borderRadius: 16,
+            backgroundColor: theme.bg.surface,
+            width: isMobile ? '90%' : 480,
+            ...(Platform.OS === 'web'
+              ? { boxShadow: theme.shadow.modal }
               : {
                   shadowColor: '#000',
                   shadowOffset: { width: 0, height: 20 },
                   shadowOpacity: 0.25,
                   shadowRadius: 30,
                   elevation: 20,
-                },
-          ]}
+                }),
+          }}
           onPress={() => {}}
         >
           {/* Header */}
-          <View style={[styles.modalHeader, { borderBottomColor: theme.border.subtle }]}>
-            <View style={styles.modalTitleArea}>
-              <Text style={[styles.modalTitle, { color: theme.text.primary }]}>맞춤설정</Text>
-              <Text style={[styles.modalDesc, { color: theme.text.muted }]}>
+          <View
+            className="flex-row items-start justify-between px-6 pt-5 pb-3 border-b"
+            style={{ borderBottomColor: theme.border.subtle }}
+          >
+            <View className="flex-1">
+              <Text className="mb-1 font-medium" style={{ fontSize: 16, color: theme.text.primary }}>
+                맞춤설정
+              </Text>
+              <Text className="text-[12px] leading-[18px]" style={{ color: theme.text.muted }}>
                 {isAdminMode
                   ? '관리자 메뉴 중 NavRail에 노출할 항목을 선택하세요. 핸들로 드래그하여 순서를 변경할 수 있습니다.'
                   : 'NavRail에 노출할 메뉴를 체크하세요. 핸들로 드래그하여 순서를 변경할 수 있습니다.'}
               </Text>
             </View>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose} activeOpacity={0.7}>
+            <TouchableOpacity
+              className="w-7 h-7 items-center justify-center rounded-[6px]"
+              onPress={onClose}
+              activeOpacity={0.7}
+            >
               <X size={16} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
 
           {/* Max 안내 */}
           {isMax && (
-            <View style={[styles.maxBanner, { backgroundColor: theme.brand.primaryTintSoft, borderBottomColor: theme.border.subtle }]}>
-              <Text style={[styles.maxBannerText, { color: theme.brand.primary }]}>
+            <View
+              className="px-6 py-2 border-b"
+              style={{
+                backgroundColor: theme.brand.primaryTintSoft,
+                borderBottomColor: theme.border.subtle,
+              }}
+            >
+              <Text style={{ fontSize: 12, color: theme.brand.primary }}>
                 {`최대 ${maxPinned + 1}개까지 선택할 수 있습니다.`}
               </Text>
             </View>
           )}
 
           {/* Body */}
-          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
-            <View style={styles.menuList} ref={menuListRef}>
+          <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+            <View className="py-2" ref={menuListRef}>
               {/* 홈 (필수, 고정) */}
-              <View style={[styles.menuRow, { backgroundColor: theme.bg.surfaceMute }]}>
-                <View style={styles.dragHandlePlaceholder} />
+              <View
+                className="flex-row items-center relative px-6 py-2.5"
+                style={{ gap: 12, backgroundColor: theme.bg.surfaceMute }}
+              >
+                <View style={{ width: 16 }} />
                 <View
-                  style={[
-                    styles.checkbox,
-                    { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default },
-                  ]}
+                  className="w-4.5 h-4.5 border rounded items-center justify-center shrink-0"
+                  style={{
+                    borderColor: theme.border.default,
+                    backgroundColor: theme.bg.surfaceAlt,
+                  }}
                 >
                   <Check size={11} color={theme.text.subtle} strokeWidth={3} />
                 </View>
-                <View style={[styles.menuIcon, { backgroundColor: theme.brand.primaryTintSoft }]}>
+                <View
+                  className="w-8 h-8 items-center justify-center rounded-lg shrink-0"
+                  style={{ backgroundColor: theme.brand.primaryTintSoft }}
+                >
                   <Home size={18} color={theme.text.muted} />
                 </View>
-                <Text style={[styles.menuName, { color: theme.text.muted, fontStyle: 'italic' }]}>홈</Text>
-                <View style={[styles.tag, { backgroundColor: theme.bg.surfaceAlt }]}>
-                  <Text style={[styles.tagText, { color: theme.text.subtle }]}>필수</Text>
+                <Text
+                  className="flex-1 italic"
+                  style={{ fontSize: 14, color: theme.text.muted }}
+                >
+                  홈
+                </Text>
+                <View
+                  className="px-2 py-0.5 rounded-lg"
+                  style={{ backgroundColor: theme.bg.surfaceAlt }}
+                >
+                  <Text
+                    className="uppercase"
+                    style={{
+                      fontSize: 10,
+                      letterSpacing: 0.4,
+                      color: theme.text.subtle,
+                    }}
+                  >
+                    필수
+                  </Text>
                 </View>
               </View>
 
@@ -545,140 +605,3 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalContainer: {
-    maxHeight: '85%' as unknown as number,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-  },
-  modalTitleArea: {
-    flex: 1,
-  },
-  modalTitle: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 4,
-  },
-  modalDesc: {
-    fontSize: 12,
-    lineHeight: 18,
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 6,
-  },
-  maxBanner: {
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-  },
-  maxBannerText: {
-    fontSize: 12,
-  },
-  modalBody: {
-    flex: 1,
-  },
-  menuList: {
-    paddingVertical: 8,
-  },
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    position: 'relative',
-  },
-  menuRowDragging: {
-    opacity: 0.4,
-  },
-  menuRowDisabled: {
-    opacity: 0.5,
-  },
-  dragHandle: {
-    width: 16,
-    gap: 2,
-    alignItems: 'center',
-  },
-  dragHandleRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginVertical: 1,
-  },
-  dragHandleDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-  },
-  dragHandlePlaceholder: {
-    width: 16,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderWidth: 1.5,
-    borderRadius: 4,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  menuIcon: {
-    width: 32,
-    height: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 8,
-    flexShrink: 0,
-  },
-  menuName: {
-    flex: 1,
-    fontSize: 14,
-  },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  tagText: {
-    fontSize: 10,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-  },
-  dropIndicatorAbove: {
-    position: 'absolute',
-    top: -1,
-    left: 24,
-    right: 24,
-    height: 2,
-    borderRadius: 2,
-    zIndex: 1,
-  },
-  dropIndicatorBelow: {
-    position: 'absolute',
-    bottom: -1,
-    left: 24,
-    right: 24,
-    height: 2,
-    borderRadius: 2,
-    zIndex: 1,
-  },
-});

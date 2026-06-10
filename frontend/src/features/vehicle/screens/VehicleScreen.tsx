@@ -74,6 +74,14 @@ function fmtTime(hhmm: string): string {
   return `${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}`;
 }
 
+/** 실제 종료시각: 연장이면 ext, 아니면 rsv_end */
+function getEffectiveEnd(rsv: VehicleReservationDto): { ymd: string; hhmm: string } {
+  if (rsv.extYn === 'Y' && rsv.extYmd && rsv.extHhmm) {
+    return { ymd: rsv.extYmd, hhmm: rsv.extHhmm };
+  }
+  return { ymd: rsv.rsvEndYmd, hhmm: rsv.rsvEndHhmm };
+}
+
 /** HHMM → 08:00 기준 픽셀 top */
 function toTop(hhmm: string): number {
   const h = Math.min(Math.max(+hhmm.slice(0, 2), HOUR_START), HOUR_END);
@@ -424,8 +432,9 @@ function TimelineView({
   // 빈 슬롯 탭: 겹치는 예약 없는 30분 슬롯 클릭 → 폼
   const occupiedSet = new Set<string>();
   for (const rsv of reservations) {
+    const effEnd = getEffectiveEnd(rsv);
     const stIdx  = HALF_SLOT_HHMM.indexOf(rsv.rsvStHhmm);
-    const endIdx = HALF_SLOT_HHMM.indexOf(rsv.rsvEndHhmm);
+    const endIdx = HALF_SLOT_HHMM.indexOf(effEnd.hhmm);
     for (let i = stIdx; i < endIdx; i++) {
       if (i >= 0) occupiedSet.add(HALF_SLOT_HHMM[i]);
     }
@@ -488,8 +497,9 @@ function TimelineView({
 
         {/* 예약 블록 */}
         {reservations.map((rsv) => {
+          const effEnd = getEffectiveEnd(rsv);
           const top    = toTop(rsv.rsvStHhmm);
-          const height = toBlockH(rsv.rsvStHhmm, rsv.rsvEndHhmm);
+          const height = toBlockH(rsv.rsvStHhmm, effEnd.hhmm);
           const isMine = rsv.mine;
           return (
             <TouchableOpacity
@@ -511,7 +521,7 @@ function TimelineView({
                 } else {
                   Alert.alert(
                     '예약 정보',
-                    `${rsv.userNm}\n${fmtTime(rsv.rsvStHhmm)} ~ ${fmtTime(rsv.rsvEndHhmm)}${rsv.rmk ? `\n${rsv.rmk}` : ''}`
+                    `${rsv.userNm}\n${fmtTime(rsv.rsvStHhmm)} ~ ${fmtTime(effEnd.hhmm)}${rsv.rmk ? `\n${rsv.rmk}` : ''}`
                   );
                 }
               }}
@@ -520,7 +530,7 @@ function TimelineView({
                 {rsv.userNm}
               </Text>
               <Text style={[s.rsvBlockTime, { color: isMine ? 'rgba(255,255,255,0.85)' : theme.text.muted }]}>
-                {fmtTime(rsv.rsvStHhmm)} ~ {fmtTime(rsv.rsvEndHhmm)}
+                {fmtTime(rsv.rsvStHhmm)} ~ {fmtTime(effEnd.hhmm)}
               </Text>
               {rsv.rmk ? (
                 <Text style={[s.rsvBlockRmk, { color: isMine ? 'rgba(255,255,255,0.75)' : theme.text.muted }]} numberOfLines={1}>
@@ -574,9 +584,10 @@ function MyView({ vehicles, reservations, loading, selectedDate, onCancel, onRet
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 32 }}>
       {reservations.map((rsv) => {
         const veh = vehMap[rsv.vehId];
+        const effEnd = getEffectiveEnd(rsv);
         const dur =
-          (+rsv.rsvEndHhmm.slice(0, 2) - +rsv.rsvStHhmm.slice(0, 2)) * 60 +
-          (+rsv.rsvEndHhmm.slice(2, 4) - +rsv.rsvStHhmm.slice(2, 4));
+          (+effEnd.hhmm.slice(0, 2) - +rsv.rsvStHhmm.slice(0, 2)) * 60 +
+          (+effEnd.hhmm.slice(2, 4) - +rsv.rsvStHhmm.slice(2, 4));
         const returned = rsv.rtnYn === 'Y';
         const extended = rsv.extYn === 'Y';
 
@@ -617,7 +628,7 @@ function MyView({ vehicles, reservations, loading, selectedDate, onCancel, onRet
               {/* 시간 + 소요 */}
               <View style={s.myCardTimeRow}>
                 <Text style={[s.myCardTime, { color: theme.text.primary }]}>
-                  {fmtTime(rsv.rsvStHhmm)} ~ {fmtTime(rsv.rsvEndHhmm)}
+                  {fmtTime(rsv.rsvStHhmm)} ~ {fmtTime(effEnd.hhmm)}
                 </Text>
                 <View style={[s.durBadge, { backgroundColor: theme.brand.primaryTint }]}>
                   <Text style={[s.durText, { color: theme.brand.primary }]}>
@@ -1010,26 +1021,30 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
   const [newEndYmd, setNewEndYmd]   = useState('');
   const [newEndHhmm, setNewEndHhmm] = useState('');
 
+  // 실제 종료시간 (연장 반영)
+  const effEnd = reservation ? getEffectiveEnd(reservation) : { ymd: '', hhmm: '' };
+
   React.useEffect(() => {
     if (visible && reservation) {
-      setNewEndYmd(reservation.rsvEndYmd);
-      // 현재 종료 이후 첫 슬롯을 기본값으로
-      const afterEnd = getEndOptions(reservation.rsvEndHhmm);
+      const eff = getEffectiveEnd(reservation);
+      setNewEndYmd(eff.ymd);
+      // 현재 실제 종료 이후 첫 슬롯을 기본값으로
+      const afterEnd = getEndOptions(eff.hhmm);
       setNewEndHhmm(afterEnd[0] ?? '');
     }
   }, [visible, reservation]);
 
   if (!reservation) return null;
 
-  // 날짜 선택지: 현재 종료일 ~ maxYmd
+  // 날짜 선택지: 현재 실제 종료일 ~ maxYmd
   const dateOptions: string[] = [];
-  let cur = reservation.rsvEndYmd;
+  let cur = effEnd.ymd;
   while (cur <= maxYmd) { dateOptions.push(cur); cur = addDays(cur, 1); }
 
-  // 시각 선택지: 현재 종료일과 같으면 종료 이후 슬롯만, 다른 날이면 전체
+  // 시각 선택지: 현재 실제 종료일과 같으면 종료 이후 슬롯만, 다른 날이면 전체
   const timeOptions =
-    newEndYmd === reservation.rsvEndYmd
-      ? getEndOptions(reservation.rsvEndHhmm)
+    newEndYmd === effEnd.ymd
+      ? getEndOptions(effEnd.hhmm)
       : HALF_SLOT_HHMM;
 
   const safeHhmm = timeOptions.includes(newEndHhmm) ? newEndHhmm : (timeOptions[0] ?? newEndHhmm);
@@ -1052,7 +1067,7 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
           <View style={[s.extInfoBox, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.subtle }]}>
             <Text style={[s.extInfoLabel, { color: theme.text.subtle }]}>현재 종료</Text>
             <Text style={[s.extInfoValue, { color: theme.text.primary }]}>
-              {fmtDate(reservation.rsvEndYmd)}  {fmtTime(reservation.rsvEndHhmm)}
+              {fmtDate(effEnd.ymd)}  {fmtTime(effEnd.hhmm)}
             </Text>
           </View>
 
@@ -1072,8 +1087,8 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
                   onPress={() => {
                     setNewEndYmd(d);
                     const opts =
-                      d === reservation.rsvEndYmd
-                        ? getEndOptions(reservation.rsvEndHhmm)
+                      d === effEnd.ymd
+                        ? getEndOptions(effEnd.hhmm)
                         : HALF_SLOT_HHMM;
                     if (!opts.includes(safeHhmm)) setNewEndHhmm(opts[0] ?? '');
                   }}

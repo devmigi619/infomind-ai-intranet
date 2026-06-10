@@ -56,3 +56,21 @@ class SqlResult(BaseModel):
         default=True,
         description="True=실행 가능, False=핵심 정보 미확보로 실행 불가",
     )
+
+
+class ReactDecisionResult(BaseModel):
+    """ReAct 루프 종료 후 AI의 최종 흐름 의사결정 결과"""
+    need_more_info: bool = Field(
+        description="사용자에게 추가적인 정보를 더 요구해서 받아야 하는지 여부. 필수 입력 항목(일자, 시간 등)이 모호하거나 누락되었을 때 True"
+    )
+    more_info_question: str = Field(
+        default="",
+        description="need_more_info가 True일 때, 사용자에게 추가 정보를 구체적으로 요청하는 친절한 한국어 질문"
+    )
+    proceed_to_next_node: bool = Field(
+        description="다음 노드(실행 node_excu_preflight 또는 조회 node_generate)로 계속 진행해야 하는지 여부. 단순 조회/응답만으로 충분하면 False"
+    )
+    direct_response: str = Field(
+        default="",
+        description="proceed_to_next_node가 False일 때, 사용자에게 즉시 리턴할 최종 답변 텍스트"
+    )

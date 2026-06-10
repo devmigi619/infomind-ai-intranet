@@ -61,6 +61,19 @@ def _build_interrupt_event(interrupt_type: str, interrupt_value: dict) -> str:
             if (aprvl_list := interrupt_value.get("aprvl_list")) is not None:
                 payload["aprvl_list"] = aprvl_list
                 payload["ref_list"]   = interrupt_value.get("ref_list", [])
+        elif interrupt_type == "form":
+            # 미리보기 텍스트 (선택)
+            preview = interrupt_value.get("preview", "")
+            if preview:
+                payload["preview"] = preview
+            # 동적 폼 필드 목록
+            form_fields = interrupt_value.get("form_fields")
+            if form_fields:
+                payload["form_fields"] = form_fields
+            # 폼 제목 (없으면 프론트 기본값 '양식 작성' 사용)
+            form_title = interrupt_value.get("form_title", "")
+            if form_title:
+                payload["form_title"] = form_title
 
     return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
@@ -163,6 +176,13 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                     payload["detail_status"] = detail   # 누적 타임라인용
                 yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
+        # ── 커스텀 진행 이벤트 (node_react_gather 루프) → progress SSE ──────────
+        if kind == "on_custom_event" and name == "react_progress":
+            data = event.get("data", {})
+            detail = data.get("detail_status") if isinstance(data, dict) else None
+            if detail:
+                yield f"data: {json.dumps({'type': 'progress', 'detail_status': detail}, ensure_ascii=False)}\n\n"
+
         # ── 가드레일 차단 감지 ──────────────────────────────────────────────────
         if kind == "on_chain_end" and name in ("guardrail_input", "guardrail_output"):
             update = _extract_update(event["data"]["output"])
@@ -180,14 +200,16 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
         # on_chain_end에서 messages를 꺼내 직접 token 이벤트로 전달한다.
         # node_excu_preflight: 파싱 오류 시 오류 메시지를 담아 save_history로 직행.
         # (node_excu는 SQL+미리보기 생성 후 node_excu_confirm으로 라우팅만 하므로 messages 없음)
-        if kind == "on_chain_end" and name in ("node_general", "node_excu_confirm", "node_excu_preflight", "node_excu_preflight_ask"):
+        if kind == "on_chain_end" and name in ("node_general", "node_excu_confirm", "node_excu_preflight", "node_excu_preflight_ask", "node_react_gather"):
             update = _extract_update(event["data"]["output"])
             msgs = update.get("messages", [])
             if msgs:
                 last = msgs[-1]
-                content = last.content if hasattr(last, "content") else str(last)
-                if content:
-                    yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
+                from langchain_core.messages import AIMessage
+                if isinstance(last, AIMessage):
+                    content = last.content
+                    if content:
+                        yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
 
         # ── classify 완료 → meta 이벤트 (+ 파싱 오류 시 오류 메시지) ────────────
         # 파싱 오류 시 classify가 messages를 담아 save_history로 직행하므로
@@ -195,7 +217,9 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
         if kind == "on_chain_end" and name == "classify" and not meta_sent:
             update = _extract_update(event["data"]["output"])
             actions = update.get("actions", [])
-            yield f"data: {json.dumps({'type': 'meta', 'actions': actions})}\n\n"
+            intent = update.get("intent")
+            action_type = update.get("action_type")
+            yield f"data: {json.dumps({'type': 'meta', 'intent': intent, 'action_type': action_type, 'actions': actions}, ensure_ascii=False)}\n\n"
             meta_sent = True
             msgs = update.get("messages", [])
             if msgs:
@@ -222,7 +246,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
                 meta_sent = True
 
-            if interrupt_type in ("human", "excu"):
+            if interrupt_type in ("human", "excu", "form"):
                 yield _build_interrupt_event(interrupt_type, interrupt_value)
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
@@ -235,8 +259,8 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
         #   - 태그 필터로 SQL JSON 토큰이 프론트로 노출되는 것을 차단
         if kind == "on_chat_model_stream":
             tags = event.get("tags", [])
-            if "sql_generation" in tags:
-                continue  # SQL JSON 토큰 — 프론트 노출 차단
+            if "sql_generation" in tags or "react_decision" in tags:
+                continue  # SQL JSON 토큰 및 의사결정 토큰 — 프론트 노출 차단
             langgraph_node = event.get("metadata", {}).get("langgraph_node", "")
             if langgraph_node in STREAM_NODES:
                 token = event["data"]["chunk"].content
@@ -255,7 +279,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 it = iv.get("type", "") if isinstance(iv, dict) else ""
                 if not meta_sent:
                     yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
-                if it in ("human", "excu"):
+                if it in ("human", "excu", "form"):
                     yield _build_interrupt_event(it, iv)
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 return
@@ -320,3 +344,4 @@ async def chat_resume(request: dict, user=Depends(verify_token)):
         _sse_stream(Command(resume=resume_value), config),
         media_type="text/event-stream",
     )
+

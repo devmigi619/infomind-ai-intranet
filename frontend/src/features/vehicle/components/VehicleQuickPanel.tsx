@@ -11,7 +11,7 @@ import {
 import { ArrowRight, X, Car } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useUiStore } from '../../../store/uiStore';
-import { useVehicles, useVehicleReservations } from '../api';
+import { useVehicles, useVehicleReservations, type VehicleReservationDto } from '../api';
 
 // ─── 날짜 유틸 ─────────────────────────────────────────────────────────
 
@@ -25,6 +25,14 @@ function todayYmd(): string {
 
 function formatTime(hhmm: string): string {
   return `${hhmm.slice(0, 2)}:${hhmm.slice(2, 4)}`;
+}
+
+/** 실제 종료시각: 연장이면 ext, 아니면 rsv_end */
+function getEffectiveEndHhmm(rsv: VehicleReservationDto): string {
+  if (rsv.extYn === 'Y' && rsv.extHhmm) {
+    return rsv.extHhmm;
+  }
+  return rsv.rsvEndHhmm;
 }
 
 // ─── Props ─────────────────────────────────────────────────────────────
@@ -160,7 +168,7 @@ export function VehicleQuickPanel({ onClose }: VehicleQuickPanelProps) {
                             { color: rsv.mine ? theme.brand.primary : theme.text.body },
                           ]}
                         >
-                          {formatTime(rsv.rsvStHhmm)} ~ {formatTime(rsv.rsvEndHhmm)}
+                          {formatTime(rsv.rsvStHhmm)} ~ {formatTime(getEffectiveEndHhmm(rsv))}
                         </Text>
                         {rsv.mine && (
                           <View

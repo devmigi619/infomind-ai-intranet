@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Platform, StyleSheet, useWindowDimensions } from 'react-native';
+import { Animated, Platform, useWindowDimensions } from 'react-native';
 import { useUiStore } from '../../store/uiStore';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { useMenuList } from '../../shared/hooks/useMenuList';
@@ -107,29 +107,14 @@ export function MobileFullScreenRouter() {
   return (
     /* Sheet — 부모(body) 영역 안 absolute fill, 슬라이드업으로 등장 */
     <Animated.View
-      style={[
-        styles.container,
-        {
-          backgroundColor: theme.bg.app,
-          transform: [{ translateY }],
-        },
-      ]}
+      className="absolute inset-0 z-[1]"
+      style={{
+        backgroundColor: theme.bg.app,
+        transform: [{ translateY }],
+      }}
       pointerEvents={visible ? 'auto' : 'none'}
     >
       {renderContent()}
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  // 부모(body) 영역 안 absolute fill — body의 overflow:hidden + flex:1이 boundary
-  // 'fixed'는 viewport 기준이라 부모 boundary 무시함. 반드시 'absolute'.
-  container: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
-  },
-});

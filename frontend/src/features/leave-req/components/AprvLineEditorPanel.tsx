@@ -16,7 +16,6 @@ import {
   TouchableOpacity,
   Pressable,
   ScrollView,
-  StyleSheet,
   Platform,
   Switch,
   useWindowDimensions,
@@ -93,18 +92,18 @@ function OrgUserRow({
   return (
     <Pressable
       onPress={() => !isAdded && onAdd(user)}
-      style={({ pressed }) => [
-        ors.userRow,
-        pressed && !isAdded && { backgroundColor: theme.brand.primaryTint },
-        { opacity: isAdded ? 0.4 : 1 },
-      ]}
+      className="flex-row items-center gap-2 py-2 px-3"
+      style={({ pressed }) => ({
+        opacity: isAdded ? 0.4 : 1,
+        backgroundColor: pressed && !isAdded ? theme.brand.primaryTint : undefined,
+      })}
     >
-      <View style={[ors.avatar, { backgroundColor: theme.brand.primaryTint }]}>
-        <Text style={[ors.avatarTxt, { color: theme.brand.primary }]}>{initial}</Text>
+      <View className="w-[30px] h-[30px] rounded-full items-center justify-center" style={{ backgroundColor: theme.brand.primaryTint }}>
+        <Text className="text-xs font-bold" style={{ color: theme.brand.primary }}>{initial}</Text>
       </View>
       <View style={{ flex: 1 }}>
-        <Text style={[ors.userNm, { color: theme.text.primary }]}>{user.userNm}</Text>
-        {sub ? <Text style={[ors.sub, { color: theme.text.muted }]}>{sub}</Text> : null}
+        <Text className="text-[13px]" style={{ color: theme.text.primary }}>{user.userNm}</Text>
+        {sub ? <Text className="text-[11px] mt-[1px]" style={{ color: theme.text.muted }}>{sub}</Text> : null}
       </View>
       {isAdded
         ? <Check size={15} color={theme.brand.primary} />
@@ -139,17 +138,18 @@ function DeptNode({
     <View>
       <TouchableOpacity
         onPress={() => onToggle(node.deptCd)}
-        style={[ors.deptRow, { paddingLeft: 12 + depth * 14 }]}
+        className="flex-row items-center gap-1.5 py-[9px] pr-3"
+        style={{ paddingLeft: 12 + depth * 14 }}
         activeOpacity={0.7}
       >
-        <View style={[ors.chevronWrap, isOpen && { transform: [{ rotate: '90deg' }] }]}>
+        <View className="w-4 h-4 items-center justify-center" style={isOpen ? { transform: [{ rotate: '90deg' }] } : undefined}>
           <ChevronRight size={13} color={theme.text.muted} />
         </View>
-        <Text style={[ors.deptNm, { color: theme.text.body }]} numberOfLines={1}>
+        <Text className="flex-1 text-[13px] font-semibold" style={{ color: theme.text.body }} numberOfLines={1}>
           {node.deptNm}
         </Text>
-        <View style={[ors.cntBadge, { backgroundColor: theme.bg.surfaceMute }]}>
-          <Text style={[ors.cntTxt, { color: theme.text.muted }]}>{total}</Text>
+        <View className="px-1.5 py-0.5 rounded-full" style={{ backgroundColor: theme.bg.surfaceMute }}>
+          <Text className="text-[11px] font-semibold" style={{ color: theme.text.muted }}>{total}</Text>
         </View>
       </TouchableOpacity>
 
@@ -194,13 +194,14 @@ function OrgTreePanel({
 }) {
   const [query, setQuery] = useState('');
   return (
-    <View style={[ors.treePanel, { borderRightColor: theme.border.default }]}>
-      <View style={[ors.searchBox, { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }]}>
+    <View className="flex-1 pt-2 border-r" style={{ borderRightColor: theme.border.default }}>
+      <View className="flex-row items-center gap-2 mx-2.5 mb-1.5 px-2.5 py-[7px] border rounded-lg" style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surfaceMute }}>
         <Search size={14} color={theme.text.muted} />
         <TextInput
           value={query} onChangeText={setQuery} placeholder="이름 검색"
           placeholderTextColor={theme.text.subtle}
-          style={[ors.searchInput, { color: theme.text.primary, fontFamily: WEB_FONT }]}
+          className="flex-1 text-[13px] p-0"
+          style={{ color: theme.text.primary, fontFamily: WEB_FONT }}
         />
         {query.length > 0 && (
           <TouchableOpacity onPress={() => setQuery('')}>
@@ -222,22 +223,6 @@ function OrgTreePanel({
     </View>
   );
 }
-
-const ors = StyleSheet.create({
-  treePanel: { flex: 1, borderRightWidth: 1, paddingTop: 8 },
-  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 10, marginBottom: 6, paddingHorizontal: 10, paddingVertical: 7, borderWidth: 1, borderRadius: 8 },
-  searchInput: { flex: 1, fontSize: 13, padding: 0 },
-  deptRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, paddingRight: 12 },
-  chevronWrap: { width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },
-  deptNm: { flex: 1, fontSize: 13, fontWeight: '600' },
-  cntBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
-  cntTxt: { fontSize: 11, fontWeight: '600' },
-  userRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 12 },
-  avatar: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  avatarTxt: { fontSize: 12, fontWeight: '700' },
-  userNm: { fontSize: 13 },
-  sub: { fontSize: 11, marginTop: 1 },
-});
 
 // ─── SelectionPanel ───────────────────────────────────────────────────────────
 
@@ -267,16 +252,17 @@ function SelectionPanel({
   const removeItem = (i: number) => setCurrentList(currentList.filter((_, idx) => idx !== i));
 
   return (
-    <View style={sps.root}>
+    <View className="flex-1 flex-col">
       {showTabBar && (
-        <View style={[sps.tabBar, { borderColor: theme.border.default }]}>
+        <View className="flex-row border rounded-lg overflow-hidden m-3" style={{ borderColor: theme.border.default }}>
           {(['aprv', 'ref'] as AprvTab[]).map((t) => (
             <TouchableOpacity
               key={t}
-              style={[sps.tabBtn, tab === t && { backgroundColor: theme.brand.primary }]}
+              className="flex-1 py-2 items-center"
+              style={tab === t ? { backgroundColor: theme.brand.primary } : undefined}
               onPress={() => onTabChange(t)}
             >
-              <Text style={[sps.tabLabel, { color: tab === t ? '#fff' : theme.text.muted }]}>
+              <Text className="text-[13px] font-semibold" style={{ color: tab === t ? '#fff' : theme.text.muted }}>
                 {t === 'aprv' ? `결재자 ${aprvList.length}명` : `수신참조 ${refList.length}명`}
               </Text>
             </TouchableOpacity>
@@ -285,7 +271,7 @@ function SelectionPanel({
       )}
 
       {currentList.length === 0 ? (
-        <View style={sps.emptyHint}>
+        <View className="flex-1 items-center justify-center p-5">
           <Text style={{ fontSize: 13, color: theme.text.subtle, textAlign: 'center' }}>
             왼쪽 조직도에서 이름을 탭하세요
           </Text>
@@ -293,27 +279,27 @@ function SelectionPanel({
       ) : (
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingVertical: 4 }} keyboardShouldPersistTaps="always">
           {currentList.map((entry, i) => (
-            <View key={entry.aprvUserId} style={[sps.entryRow, { borderBottomColor: theme.border.subtle }]}>
+            <View key={entry.aprvUserId} className="flex-row items-center gap-2 py-2.5 px-3 border-b" style={{ borderBottomColor: theme.border.subtle }}>
               {tab === 'aprv' && (
-                <View style={[sps.ordBadge, { backgroundColor: theme.brand.primaryTint }]}>
-                  <Text style={[sps.ordTxt, { color: theme.brand.primary }]}>{i + 1}</Text>
+                <View className="w-[22px] h-[22px] rounded-full items-center justify-center" style={{ backgroundColor: theme.brand.primaryTint }}>
+                  <Text className="text-[11px] font-bold" style={{ color: theme.brand.primary }}>{i + 1}</Text>
                 </View>
               )}
               <View style={{ flex: 1 }}>
-                <Text style={[sps.entryNm, { color: theme.text.primary }]}>{entry.aprvUserNm}</Text>
+                <Text className="text-[13px] font-medium" style={{ color: theme.text.primary }}>{entry.aprvUserNm}</Text>
                 {(entry.deptNm || entry.jbgdNm) && (
-                  <Text style={[sps.entrySub, { color: theme.text.muted }]}>
+                  <Text className="text-[11px] mt-0.5" style={{ color: theme.text.muted }}>
                     {[entry.deptNm, entry.jbgdNm].filter(Boolean).join(' · ')}
                   </Text>
                 )}
               </View>
-              <View style={sps.reorderBtns}>
+              <View className="flex-col gap-0">
                 <TouchableOpacity onPress={() => moveItem(i, -1)} disabled={i === 0}
-                  style={[sps.reorderBtn, i === 0 && { opacity: 0.2 }]}>
+                  className="p-0.5" style={i === 0 ? { opacity: 0.2 } : undefined}>
                   <ChevronUp size={14} color={theme.text.muted} />
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => moveItem(i, 1)} disabled={i === currentList.length - 1}
-                  style={[sps.reorderBtn, i === currentList.length - 1 && { opacity: 0.2 }]}>
+                  className="p-0.5" style={i === currentList.length - 1 ? { opacity: 0.2 } : undefined}>
                   <ChevronDown size={14} color={theme.text.muted} />
                 </TouchableOpacity>
               </View>
@@ -326,7 +312,7 @@ function SelectionPanel({
       )}
 
       {tab === 'ref' && (
-        <View style={[sps.deptRefRow, { borderTopColor: theme.border.subtle }]}>
+        <View className="flex-row items-center gap-2 px-3 py-2.5 border-t" style={{ borderTopColor: theme.border.subtle }}>
           <Switch value={deptRefYn} onValueChange={onDeptRefToggle} />
           <Text style={{ fontSize: 13, color: theme.text.body }}>부서원 자동 포함</Text>
         </View>
@@ -334,22 +320,6 @@ function SelectionPanel({
     </View>
   );
 }
-
-const sps = StyleSheet.create({
-  root: { flex: 1, flexDirection: 'column' },
-  tabBar: { flexDirection: 'row', borderWidth: 1, borderRadius: 8, overflow: 'hidden', margin: 12 },
-  tabBtn: { flex: 1, paddingVertical: 8, alignItems: 'center' },
-  tabLabel: { fontSize: 13, fontWeight: '600' },
-  emptyHint: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 20 },
-  entryRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1 },
-  ordBadge: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
-  ordTxt: { fontSize: 11, fontWeight: '700' },
-  entryNm: { fontSize: 13, fontWeight: '500' },
-  entrySub: { fontSize: 11, marginTop: 2 },
-  reorderBtns: { flexDirection: 'column', gap: 0 },
-  reorderBtn: { padding: 2 },
-  deptRefRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 12, paddingVertical: 10, borderTopWidth: 1 },
-});
 
 // ─── MobileViewTabs ───────────────────────────────────────────────────────────
 
@@ -366,16 +336,17 @@ function MobileViewTabs({
     { key: 'ref', label: `수신참조 ${refCount}명` },
   ];
   return (
-    <View style={[mvt.bar, { borderBottomColor: theme.border.default }]}>
+    <View className="flex-row border-b" style={{ borderBottomColor: theme.border.default }}>
       {tabs.map(({ key, label }) => {
         const active = view === key;
         return (
           <TouchableOpacity
             key={key}
-            style={[mvt.tab, active && { borderBottomColor: theme.brand.primary }]}
+            className={`flex-1 items-center py-2.5 border-b-2 ${active ? '' : 'border-transparent'}`}
+            style={active ? { borderBottomColor: theme.brand.primary } : undefined}
             onPress={() => onChangeView(key)}
           >
-            <Text style={[mvt.label, { color: active ? theme.brand.primary : theme.text.muted }]}>
+            <Text className="text-[13px] font-semibold" style={{ color: active ? theme.brand.primary : theme.text.muted }}>
               {label}
             </Text>
           </TouchableOpacity>
@@ -384,12 +355,6 @@ function MobileViewTabs({
     </View>
   );
 }
-
-const mvt = StyleSheet.create({
-  bar: { flexDirection: 'row', borderBottomWidth: 1 },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderBottomWidth: 2, borderBottomColor: 'transparent' },
-  label: { fontSize: 13, fontWeight: '600' },
-});
 
 // ─── 메인 export ──────────────────────────────────────────────────────────────
 

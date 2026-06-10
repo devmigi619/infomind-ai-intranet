@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { Home, FileText, MoreHorizontal } from 'lucide-react-native';
 import { useTheme } from '../../shared/hooks/useTheme';
 import { selectPinnedForMode, useUiStore } from '../../store/uiStore';
@@ -54,29 +54,23 @@ export function MobileBottomTabBar() {
   return (
     <>
       <View
-        style={[
-          styles.container,
-          {
-            backgroundColor: theme.bg.surface,
-            borderTopColor: theme.border.default,
-          },
-        ]}
+        className="h-16 border-t flex-row items-center z-[100]"
+        style={{
+          backgroundColor: theme.bg.surface,
+          borderTopColor: theme.border.default,
+        }}
       >
         {/* Home tab (fixed 1st slot) */}
         <TouchableOpacity
-          style={[
-            styles.tab,
-            isHomeActive && { backgroundColor: theme.brand.primaryTint },
-          ]}
+          className="flex-1 items-center justify-center gap-1 h-full relative overflow-hidden"
+          style={isHomeActive ? { backgroundColor: theme.brand.primaryTint } : undefined}
           activeOpacity={0.7}
           onPress={handleHomePress}
         >
           {isHomeActive && (
             <View
-              style={[
-                styles.activeIndicator,
-                { backgroundColor: theme.brand.primary },
-              ]}
+              className="absolute top-0 left-3 right-3 h-0.5 rounded-b-[2px]"
+              style={{ backgroundColor: theme.brand.primary }}
             />
           )}
           <Home
@@ -84,10 +78,11 @@ export function MobileBottomTabBar() {
             color={isHomeActive ? theme.brand.primary : theme.text.muted}
           />
           <Text
-            style={[
-              styles.label,
-              { color: isHomeActive ? theme.brand.primary : theme.text.muted },
-            ]}
+            className="text-[11px]"
+            style={{
+              color: isHomeActive ? theme.brand.primary : theme.text.muted,
+              fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+            }}
           >
             홈
           </Text>
@@ -103,42 +98,42 @@ export function MobileBottomTabBar() {
           return (
             <TouchableOpacity
               key={panelId}
-              style={[
-                styles.tab,
-                isActive && { backgroundColor: theme.brand.primaryTint },
-              ]}
+              className="flex-1 items-center justify-center gap-1 h-full relative overflow-hidden"
+              style={isActive ? { backgroundColor: theme.brand.primaryTint } : undefined}
               activeOpacity={0.7}
               onPress={() => handleTabPress(panelId)}
             >
               {isActive && (
                 <View
-                  style={[
-                    styles.activeIndicator,
-                    { backgroundColor: theme.brand.primary },
-                  ]}
+                  className="absolute top-0 left-3 right-3 h-0.5 rounded-b-[2px]"
+                  style={{ backgroundColor: theme.brand.primary }}
                 />
               )}
               <Icon size={22} color={color} />
-              <Text style={[styles.label, { color }]}>{label}</Text>
+              <Text
+                className="text-[11px]"
+                style={{
+                  color,
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
+              >
+                {label}
+              </Text>
             </TouchableOpacity>
           );
         })}
 
         {/* More button (fixed 5th slot) — 메뉴 패널 풀뷰 또는 핀 안 된 메뉴 풀뷰일 때 active */}
         <TouchableOpacity
-          style={[
-            styles.tab,
-            isMoreActive && { backgroundColor: theme.brand.primaryTint },
-          ]}
+          className="flex-1 items-center justify-center gap-1 h-full relative overflow-hidden"
+          style={isMoreActive ? { backgroundColor: theme.brand.primaryTint } : undefined}
           activeOpacity={0.7}
           onPress={handleMorePress}
         >
           {isMoreActive && (
             <View
-              style={[
-                styles.activeIndicator,
-                { backgroundColor: theme.brand.primary },
-              ]}
+              className="absolute top-0 left-3 right-3 h-0.5 rounded-b-[2px]"
+              style={{ backgroundColor: theme.brand.primary }}
             />
           )}
           <MoreHorizontal
@@ -146,49 +141,16 @@ export function MobileBottomTabBar() {
             color={isMoreActive ? theme.brand.primary : theme.text.muted}
           />
           <Text
-            style={[
-              styles.label,
-              { color: isMoreActive ? theme.brand.primary : theme.text.muted },
-            ]}
+            className="text-[11px]"
+            style={{
+              color: isMoreActive ? theme.brand.primary : theme.text.muted,
+              fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+            }}
           >
             더보기
           </Text>
         </TouchableOpacity>
       </View>
-
     </>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    height: 64,
-    borderTopWidth: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    // 모바일 화면 위계: NavRail은 레벨 2 시트(50)보다 위, 레벨 3 모달(200)보다 아래
-    zIndex: 100,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    height: '100%',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  activeIndicator: {
-    position: 'absolute',
-    top: 0,
-    left: 12,
-    right: 12,
-    height: 2,
-    borderBottomLeftRadius: 2,
-    borderBottomRightRadius: 2,
-  },
-  label: {
-    fontSize: 11,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-});

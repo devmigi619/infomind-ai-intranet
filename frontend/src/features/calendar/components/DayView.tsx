@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useTheme, AppTheme } from '../../../shared/hooks/useTheme';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { getDeptColor, getDeptColorSoft } from '../../../shared/constants/colors';
 import { fontSize, fontWeight } from '../../../shared/constants/typography';
@@ -40,7 +40,6 @@ export function DayView({
 }: DayViewProps) {
   const theme = useTheme();
   const { isMobile } = useResponsive();
-  const s = useMemo(() => makeStyles(theme, isMobile), [theme, isMobile]);
 
   const dayYmd = useMemo(() => toYmd(current), [current]);
   const [now, setNow] = useState<Date>(() => new Date());
@@ -51,7 +50,6 @@ export function DayView({
   const timeColWidth = isMobile ? TIME_COL_WIDTH_MOBILE : TIME_COL_WIDTH;
 
   // 종일/멀티데이 일정 — 그 날에 걸치는 모든 것
-  // (멀티데이의 시작/종료 범위에 dayYmd가 포함되면 종일 영역에 표시)
   const alldayItems = useMemo(() => {
     return schedules
       .filter(
@@ -59,7 +57,6 @@ export function DayView({
           sc.allday && sc.displayStYmd <= dayYmd && sc.displayEndYmd >= dayYmd,
       )
       .sort((a, b) => {
-        // 시작일 빠른 것 먼저, 같으면 긴 것(종료일 늦은 것) 먼저
         if (a.displayStYmd !== b.displayStYmd) return a.displayStYmd.localeCompare(b.displayStYmd);
         return b.displayEndYmd.localeCompare(a.displayEndYmd);
       });
@@ -97,7 +94,7 @@ export function DayView({
   // 시간 그리드 전체 높이
   const gridHeight = (HOUR_END - HOUR_START + 1) * hourPx;
 
-  // 종일 영역 — 일정 개수만큼 세로로 (한도 110px, 초과 시 안에서 스크롤)
+  // 종일 영역 — 일정 개수만큼 세로로
   const ALLDAY_BAR_HEIGHT = LANE_HEIGHT - 4;
   const ALLDAY_BAR_GAP = 2;
   const ALLDAY_PADDING_V = 4;
@@ -107,40 +104,39 @@ export function DayView({
     ALLDAY_PADDING_V * 2 +
     alldayLaneCount * ALLDAY_BAR_HEIGHT +
     Math.max(0, alldayLaneCount - 1) * ALLDAY_BAR_GAP;
-  // 일정 없어도 빈 영역 한 줄 정도는 보여줘서 클릭으로 등록 유도
   const alldayRowHeight = Math.min(
     ALLDAY_MAX_HEIGHT,
     Math.max(LANE_HEIGHT + ALLDAY_PADDING_V * 2, alldayContentHeight),
   );
 
   return (
-    <View style={s.root}>
+    <View style={{ backgroundColor: theme.bg.surface }} className="flex-1">
       {/* 종일 영역 */}
       <View
-        style={[
-          s.alldayRow,
-          {
-            borderBottomColor: theme.border.default,
-            height: alldayRowHeight,
-          },
-        ]}
+        style={{
+          borderBottomColor: theme.border.default,
+          height: alldayRowHeight,
+        }}
+        className="flex-row border-b"
       >
         <View
-          style={[
-            s.alldayLabelCol,
-            {
-              width: timeColWidth,
-              borderRightColor: theme.border.subtle,
-              backgroundColor: theme.bg.surfaceAlt,
-            },
-          ]}
+          style={{
+            width: timeColWidth,
+            borderRightColor: theme.border.subtle,
+            backgroundColor: theme.bg.surfaceAlt,
+          }}
+          className="border-r items-end justify-center pr-3"
         >
-          <Text style={[s.alldayLabelText, { color: theme.text.subtle }]}>종일</Text>
+          <Text
+            style={{ color: theme.text.subtle }}
+            className={`font-bold tracking-wider ${isMobile ? 'text-[9px]' : 'text-[10px]'}`}
+          >
+            종일
+          </Text>
         </View>
         <ScrollView
-          style={s.alldayScroll}
+          className="flex-1"
           contentContainerStyle={{
-            // 일정 있을 땐 컨텐츠 높이, 없을 땐 최소 한 줄 만큼 (TouchableOpacity 클릭 영역 확보)
             minHeight: alldayRowHeight,
           }}
           showsVerticalScrollIndicator={false}
@@ -148,11 +144,12 @@ export function DayView({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => onEmptyCellPress?.(dayYmd)}
-            style={s.alldayCell}
+            className="flex-1 px-3 justify-center"
           >
             {alldayItems.length === 0 ? (
               <Text
-                style={[s.alldayEmpty, { color: theme.text.subtle }]}
+                style={{ color: theme.text.subtle }}
+                className="text-[12px]"
                 numberOfLines={1}
               >
                 종일 일정 없음
@@ -167,23 +164,23 @@ export function DayView({
                       key={`${ev.schdSn}-${ev.occurrenceYmd ?? ev.displayStYmd}`}
                       activeOpacity={0.7}
                       onPress={() => onSchedulePress?.(ev)}
-                      style={[
-                        s.alldayBar,
-                        {
-                          height: ALLDAY_BAR_HEIGHT,
-                          backgroundColor: color,
-                          marginTop: i === 0 ? 0 : ALLDAY_BAR_GAP,
-                        },
-                      ]}
+                      style={{
+                        height: ALLDAY_BAR_HEIGHT,
+                        backgroundColor: color,
+                        marginTop: i === 0 ? 0 : ALLDAY_BAR_GAP,
+                      }}
+                      className={`justify-center rounded overflow-hidden ${isMobile ? 'px-2' : 'px-3.5'}`}
                     >
                       <Text
-                        style={s.alldayBarText}
+                        className={`font-semibold text-white ${isMobile ? 'text-[10px]' : 'text-[12px]'}`}
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
                         {ev.schdNm}
                         {isRange ? (
-                          <Text style={s.alldayBarRange}>
+                          <Text
+                            className={`font-medium text-white opacity-85 ${isMobile ? 'text-[9px]' : 'text-[10px]'}`}
+                          >
                             {'  '}
                             {ev.displayStYmd.slice(4, 6)}/{ev.displayStYmd.slice(6, 8)} –{' '}
                             {ev.displayEndYmd.slice(4, 6)}/{ev.displayEndYmd.slice(6, 8)}
@@ -201,36 +198,35 @@ export function DayView({
 
       {/* 시간 그리드 (스크롤) */}
       <ScrollView
-        style={s.timelineScroll}
+        className="flex-1"
         contentContainerStyle={{ height: gridHeight }}
         showsVerticalScrollIndicator
       >
-        <View style={[s.timelineInner, { height: gridHeight }]}>
+        <View style={{ height: gridHeight }} className="flex-row relative">
           {/* 시간 라벨 컬럼 */}
           <View
-            style={[
-              s.timeLabelCol,
-              {
-                width: timeColWidth,
-                borderRightColor: theme.border.default,
-                backgroundColor: theme.bg.surfaceAlt,
-              },
-            ]}
+            style={{
+              width: timeColWidth,
+              borderRightColor: theme.border.default,
+              backgroundColor: theme.bg.surfaceAlt,
+            }}
+            className="border-r"
           >
             {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => {
               const h = HOUR_START + i;
               return (
                 <View
                   key={h}
-                  style={[
-                    s.timeLabelCell,
-                    {
-                      height: hourPx,
-                      borderBottomColor: theme.border.subtle,
-                    },
-                  ]}
+                  style={{
+                    height: hourPx,
+                    borderBottomColor: theme.border.subtle,
+                  }}
+                  className={`border-b items-end pt-0.5 ${isMobile ? 'px-1' : 'px-3'}`}
                 >
-                  <Text style={[s.timeLabelText, { color: theme.text.subtle }]}>
+                  <Text
+                    style={{ color: theme.text.subtle }}
+                    className={`font-mono ${isMobile ? 'text-[9px]' : 'text-[10px]'}`}
+                  >
                     {String(h).padStart(2, '0')}:00
                   </Text>
                 </View>
@@ -240,10 +236,8 @@ export function DayView({
 
           {/* 하루 컬럼 (배경 격자) */}
           <View
-            style={[
-              s.dayCol,
-              { borderRightColor: theme.border.subtle },
-            ]}
+            style={{ borderRightColor: theme.border.subtle }}
+            className="flex-1 border-r relative"
           >
             {/* 시간 셀 (격자 + 빈 셀 탭) */}
             {Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => {
@@ -253,22 +247,19 @@ export function DayView({
                   key={h}
                   activeOpacity={0.6}
                   onPress={() => onEmptyCellPress?.(dayYmd)}
-                  style={[
-                    s.timeCell,
-                    {
-                      height: hourPx,
-                      borderBottomColor: theme.border.subtle,
-                    },
-                  ]}
+                  style={{
+                    height: hourPx,
+                    borderBottomColor: theme.border.subtle,
+                  }}
+                  className="border-b"
                 />
               );
             })}
 
-            {/* 시간 일정 카드 (absolute) — 시각 겹침은 lane 분할 */}
+            {/* 시간 일정 카드 (absolute) */}
             {timedLanes.map((lane) => {
               const ev = lane.schedule;
               const { startMins, endMins, laneIdx, laneCount } = lane;
-              // 그리드 시작 이전 종료 / 끝 이후 시작은 안 그림
               if (endMins <= 0) return null;
               if (startMins >= (HOUR_END - HOUR_START + 1) * 60) return null;
 
@@ -287,20 +278,19 @@ export function DayView({
                   key={`${ev.schdSn}-${ev.occurrenceYmd ?? ev.displayStYmd}`}
                   activeOpacity={0.7}
                   onPress={() => onSchedulePress?.(ev)}
-                  style={[
-                    s.timedEvent,
-                    {
-                      top,
-                      height,
-                      left: `${leftPct}%`,
-                      width: `${widthPct}%`,
-                      backgroundColor: bgColor,
-                      borderLeftColor: color,
-                    },
-                  ]}
+                  style={{
+                    top,
+                    height,
+                    left: `${leftPct}%`,
+                    width: `${widthPct}%`,
+                    backgroundColor: bgColor,
+                    borderLeftColor: color,
+                  }}
+                  className={`absolute rounded border-l-3 overflow-hidden mx-[1px] ${isMobile ? 'px-1 py-0.5' : 'px-2 py-1'}`}
                 >
                   <Text
-                    style={[s.timedEventTitle, { color }]}
+                    style={{ color }}
+                    className={`font-bold ${isMobile ? 'text-[10px]' : 'text-[12px]'}`}
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
@@ -308,7 +298,8 @@ export function DayView({
                   </Text>
                   {height >= TIMED_MIN_HEIGHT + 12 && (
                     <Text
-                      style={[s.timedEventTime, { color }]}
+                      style={{ color }}
+                      className={`font-mono mt-0.5 opacity-85 ${isMobile ? 'text-[9px]' : 'text-[10px]'}`}
                       numberOfLines={1}
                       ellipsizeMode="tail"
                     >
@@ -324,20 +315,16 @@ export function DayView({
           {showNowLine && nowTopPx >= 0 && nowTopPx <= gridHeight && (
             <View
               pointerEvents="none"
-              style={[
-                s.nowLine,
-                {
-                  top: nowTopPx,
-                  left: timeColWidth,
-                  backgroundColor: theme.semantic.danger,
-                },
-              ]}
+              style={{
+                top: nowTopPx,
+                left: timeColWidth,
+                backgroundColor: theme.semantic.danger,
+              }}
+              className="absolute right-0 h-[2px] z-10"
             >
               <View
-                style={[
-                  s.nowLineDot,
-                  { backgroundColor: theme.semantic.danger },
-                ]}
+                style={{ backgroundColor: theme.semantic.danger }}
+                className="absolute left-[-5px] top-[-4px] w-2.5 h-2.5 rounded-full"
               />
             </View>
           )}
@@ -346,161 +333,3 @@ export function DayView({
     </View>
   );
 }
-
-/* ─── 스타일 ────────────────────────────────────────────────── */
-
-const makeStyles = (theme: AppTheme, isMobile: boolean) => {
-  const dayNumSize = isMobile ? 22 : 26;
-  const timedFontSize = isMobile ? 10 : fontSize.caption;
-  const timedTimeFontSize = isMobile ? 9 : 10;
-  const timeLabelFontSize = isMobile ? 9 : 10;
-
-  return StyleSheet.create({
-    root: {
-      flex: 1,
-      backgroundColor: theme.bg.surface,
-    },
-    // ─── 헤더 ─────────────────────────────────────────
-    headRow: {
-      flexDirection: 'row',
-      backgroundColor: theme.bg.surfaceAlt,
-      borderBottomWidth: 1,
-    },
-    headTimeCol: {
-      borderRightWidth: 1,
-    },
-    headDayCol: {
-      flex: 1,
-      paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.xs,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: spacing.sm,
-    },
-    headDow: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.semibold,
-    },
-    headNumCircle: {
-      width: dayNumSize,
-      height: dayNumSize,
-      borderRadius: dayNumSize / 2,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headNum: {
-      fontSize: isMobile ? fontSize.micro : fontSize.body,
-      fontWeight: fontWeight.bold,
-    },
-    // ─── 종일 영역 ─────────────────────────────────────
-    alldayRow: {
-      flexDirection: 'row',
-      backgroundColor: theme.bg.surface,
-      borderBottomWidth: 1,
-    },
-    alldayLabelCol: {
-      borderRightWidth: 1,
-      alignItems: 'flex-end',
-      justifyContent: 'center',
-      paddingRight: spacing.sm,
-    },
-    alldayLabelText: {
-      fontSize: isMobile ? 9 : 10,
-      fontWeight: fontWeight.bold,
-      letterSpacing: 0.4,
-    },
-    alldayScroll: {
-      flex: 1,
-    },
-    alldayCell: {
-      flex: 1,
-      paddingHorizontal: spacing.sm,
-      justifyContent: 'center',
-    },
-    alldayEmpty: {
-      fontSize: fontSize.caption,
-    },
-    alldayBar: {
-      paddingHorizontal: isMobile ? spacing.sm : spacing.md - 2,
-      justifyContent: 'center',
-      borderRadius: radius.sm,
-      overflow: 'hidden',
-    },
-    alldayBarText: {
-      fontSize: isMobile ? 10 : fontSize.caption,
-      fontWeight: fontWeight.semibold,
-      color: '#FFFFFF',
-    },
-    alldayBarRange: {
-      fontSize: isMobile ? 9 : 10,
-      fontWeight: fontWeight.medium,
-      color: '#FFFFFF',
-      opacity: 0.85,
-    },
-    // ─── 시간 그리드 ───────────────────────────────────
-    timelineScroll: {
-      flex: 1,
-    },
-    timelineInner: {
-      flexDirection: 'row',
-      position: 'relative',
-    },
-    timeLabelCol: {
-      borderRightWidth: 1,
-    },
-    timeLabelCell: {
-      borderBottomWidth: 1,
-      alignItems: 'flex-end',
-      paddingHorizontal: isMobile ? 4 : spacing.sm,
-      paddingTop: 2,
-    },
-    timeLabelText: {
-      fontSize: timeLabelFontSize,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    dayCol: {
-      flex: 1,
-      borderRightWidth: 1,
-      position: 'relative',
-    },
-    timeCell: {
-      borderBottomWidth: 1,
-    },
-    timedEvent: {
-      position: 'absolute',
-      borderRadius: radius.sm,
-      borderLeftWidth: 3,
-      paddingHorizontal: isMobile ? 4 : spacing.xs + 2,
-      paddingVertical: isMobile ? 2 : 3,
-      overflow: 'hidden',
-      marginLeft: 1,
-      marginRight: 1,
-    },
-    timedEventTitle: {
-      fontSize: timedFontSize,
-      fontWeight: fontWeight.bold,
-    },
-    timedEventTime: {
-      fontSize: timedTimeFontSize,
-      fontVariant: ['tabular-nums'] as any,
-      marginTop: 1,
-      opacity: 0.85,
-    },
-    // ─── 현재 시각 라인 ────────────────────────────────
-    nowLine: {
-      position: 'absolute',
-      right: 0,
-      height: 2,
-      zIndex: 5,
-    },
-    nowLineDot: {
-      position: 'absolute',
-      left: -5,
-      top: -4,
-      width: 10,
-      height: 10,
-      borderRadius: 5,
-    },
-  });
-};

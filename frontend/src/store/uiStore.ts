@@ -31,6 +31,8 @@ interface UiState {
   pinnedMenusAdmin: PanelId[];
   settingsCategory: SettingsCategory;
   lastUserMessage: string | null;
+  currentIntent: string | null;
+  currentActionType: string | null;
   themePreference: ThemePreference;
   assistantStage: AssistantStage;
   assistantMode: AssistantMode;
@@ -56,6 +58,7 @@ interface UiState {
   reorderPinnedMenus: (from: number, to: number) => void;
   setSettingsCategory: (category: SettingsCategory) => void;
   setLastUserMessage: (message: string | null) => void;
+  setAiContext: (intent: string | null, actionType: string | null) => void;
   setThemePreference: (pref: ThemePreference) => void;
   setAssistantStage: (stage: AssistantStage) => void;
   setAssistantMode: (mode: AssistantMode) => void;
@@ -87,6 +90,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   pinnedMenusAdmin: DEFAULT_PINNED_ADMIN,
   settingsCategory: 'account',
   lastUserMessage: null,
+  currentIntent: null,
+  currentActionType: null,
   themePreference: DEFAULT_THEME,
   assistantStage: 'medium',
   assistantMode: 'quickAction',
@@ -142,6 +147,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   markAiUnread: () => set({ hasUnreadAi: true }),
   markAiRead: () => set({ hasUnreadAi: false }),
   setLastUserMessage: (message) => set({ lastUserMessage: message }),
+  setAiContext: (intent, actionType) => set({ currentIntent: intent, currentActionType: actionType }),
 
   togglePinnedMenu: (panel, maxCount) =>
     set((s) => {
@@ -204,6 +210,8 @@ export const useUiStore = create<UiState>((set, get) => ({
   resetChat: () => {
     set((s) => ({
       lastUserMessage: null,
+      currentIntent: null,
+      currentActionType: null,
       assistantMode: 'quickAction',
       assistantContextCards: [],
       assistantContextSeen: false,
@@ -277,6 +285,8 @@ export const useUiStore = create<UiState>((set, get) => ({
       hasUnreadAi: false,
       settingsCategory: 'account',
       lastUserMessage: null,
+      currentIntent: null,
+      currentActionType: null,
       assistantStage: 'medium',
       assistantMode: 'quickAction',
       assistantContextCards: [],

@@ -11,11 +11,12 @@ public interface VehicleReservationRepository
 
     /**
      * 특정 날짜 범위에 걸친 예약 전체 조회
-     * (시작일 ≤ endYmd AND 종료일 ≥ stYmd 조건으로 범위 포함 예약 반환)
+     * 실제 종료시각 = 연장이면 ext_ymd/ext_hhmm, 아니면 rsv_end_ymd/rsv_end_hhmm
      */
     @Query("""
             SELECT r FROM VehicleReservation r
-            WHERE r.rsvStYmd <= :endYmd AND r.rsvEndYmd >= :stYmd
+            WHERE r.rsvStYmd <= :endYmd
+              AND CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END >= :stYmd
             ORDER BY r.vehId, r.rsvStYmd, r.rsvStHhmm
             """)
     List<VehicleReservation> findByDateRange(
@@ -26,15 +27,16 @@ public interface VehicleReservationRepository
     List<VehicleReservation> findByUserIdOrderByRsvStYmdDescRsvStHhmmDesc(String userId);
 
     /**
-     * 충돌 검사 — 같은 차량, 시간 겹침
-     * 겹침의 역: (종료 < 시작) OR (시작 > 종료) → NOT 이 두 조건 = 겹침
+     * 충돌 검사 — 같은 차량, 시간 겹침 (연장시간 포함)
+     * 실제 종료 = CASE WHEN ext_yn='Y' AND ext_ymd IS NOT NULL THEN ext_ymd/ext_hhmm ELSE rsv_end_ymd/rsv_end_hhmm END
      */
     @Query("""
             SELECT r FROM VehicleReservation r
             WHERE r.vehId = :vehId
               AND NOT (
-                  r.rsvEndYmd < :stYmd
-                  OR (r.rsvEndYmd = :stYmd AND r.rsvEndHhmm <= :stHhmm)
+                  CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END < :stYmd
+                  OR (CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END = :stYmd
+                      AND CASE WHEN r.extYn = 'Y' AND r.extHhmm IS NOT NULL THEN r.extHhmm ELSE r.rsvEndHhmm END <= :stHhmm)
                   OR r.rsvStYmd > :endYmd
                   OR (r.rsvStYmd = :endYmd AND r.rsvStHhmm >= :endHhmm)
               )
@@ -51,15 +53,15 @@ public interface VehicleReservationRepository
     Long nextRsvSn(@Param("vehId") String vehId);
 
     /**
-     * 연장 충돌 검사 — 자기 자신(excludeSn)은 제외
-     * 연장 시 변경된 종료 시각이 다른 예약과 겹치는지 확인
+     * 연장 충돌 검사 — 자기 자신(excludeSn)은 제외, 연장시간 포함
      */
     @Query("""
             SELECT r FROM VehicleReservation r
             WHERE r.vehId = :vehId AND r.rsvSn <> :excludeSn
               AND NOT (
-                  r.rsvEndYmd < :stYmd
-                  OR (r.rsvEndYmd = :stYmd AND r.rsvEndHhmm <= :stHhmm)
+                  CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END < :stYmd
+                  OR (CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END = :stYmd
+                      AND CASE WHEN r.extYn = 'Y' AND r.extHhmm IS NOT NULL THEN r.extHhmm ELSE r.rsvEndHhmm END <= :stHhmm)
                   OR r.rsvStYmd > :endYmd
                   OR (r.rsvStYmd = :endYmd AND r.rsvStHhmm >= :endHhmm)
               )

@@ -171,8 +171,11 @@ public class MtgrController {
         if (!rsv.getUserId().equals(currentUserId)) {
             return ResponseEntity.status(403).body(ApiResponse.fail("본인의 예약만 연장할 수 있습니다."));
         }
-        if (req.newEndYmd().compareTo(rsv.getRsvEndYmd()) < 0
-                || (req.newEndYmd().equals(rsv.getRsvEndYmd()) && req.newEndHhmm().compareTo(rsv.getRsvEndHhmm()) <= 0)) {
+        // 연장 방향 검증 (새 종료 > 현재 실제 종료)
+        String curEndYmd  = rsv.getEffectiveEndYmd();
+        String curEndHhmm = rsv.getEffectiveEndHhmm();
+        if (req.newEndYmd().compareTo(curEndYmd) < 0
+                || (req.newEndYmd().equals(curEndYmd) && req.newEndHhmm().compareTo(curEndHhmm) <= 0)) {
             throw new IllegalArgumentException("연장 종료 시각은 현재 종료 시각보다 늦어야 합니다.");
         }
 

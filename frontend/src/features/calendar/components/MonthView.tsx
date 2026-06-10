@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useTheme, AppTheme } from '../../../shared/hooks/useTheme';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { getDeptColor } from '../../../shared/constants/colors';
 import { fontSize, fontWeight } from '../../../shared/constants/typography';
@@ -242,26 +242,41 @@ export function MonthView({
 }: MonthViewProps) {
   const theme = useTheme();
   const { isMobile } = useResponsive();
-  const s = useMemo(() => makeStyles(theme, isMobile), [theme, isMobile]);
   const todayY = useMemo(() => toYmd(new Date()), []);
   const weeks = useMemo(() => buildMonthGrid(current), [current]);
 
+  const cellPadX = isMobile ? 2 : spacing.xs - 1;
+  const eventFontSize = isMobile ? 10 : fontSize.caption;
+  const dotSize = isMobile ? 6 : 7;
+  const eventGap = isMobile ? 3 : spacing.xs;
+
   return (
     <ScrollView
-      style={s.root}
-      contentContainerStyle={s.scrollContent}
+      style={{ backgroundColor: theme.bg.surface }}
+      className="flex-1"
+      contentContainerStyle={{ flexGrow: 1 }}
       showsVerticalScrollIndicator
     >
       {/* 요일 헤더 */}
-      <View style={s.dowRow}>
+      <View
+        style={{
+          backgroundColor: theme.bg.surfaceAlt,
+          borderBottomColor: theme.border.subtle,
+        }}
+        className="flex-row border-b"
+      >
         {DOW_LABELS.map((label, i) => (
-          <View key={label} style={s.dowCell}>
+          <View key={label} style={{ paddingVertical: spacing.sm }} className="flex-1 items-center">
             <Text
-              style={[
-                s.dowText,
-                i === 0 && { color: WEEKEND_COLORS.sun },
-                i === 6 && { color: WEEKEND_COLORS.sat },
-              ]}
+              style={{
+                color:
+                  i === 0
+                    ? WEEKEND_COLORS.sun
+                    : i === 6
+                    ? WEEKEND_COLORS.sat
+                    : theme.text.muted,
+              }}
+              className="text-[12px] font-bold tracking-[0.4px]"
             >
               {label}
             </Text>
@@ -277,7 +292,7 @@ export function MonthView({
         );
 
         return (
-          <View key={wi} style={s.weekRow}>
+          <View key={wi} style={{ minHeight: MONTH_CELL_MIN_HEIGHT }} className="flex-1 flex-row relative">
             {/* 셀들 */}
             {week.map((cell, di) => {
               const isToday = cell.ymd === todayY;
@@ -310,34 +325,31 @@ export function MonthView({
               return (
                 <TouchableOpacity
                   key={cell.ymd}
-                  style={[
-                    s.cell,
-                    {
-                      backgroundColor: cell.other
-                        ? theme.bg.surfaceAlt
-                        : theme.bg.surface,
-                      borderRightColor: theme.border.subtle,
-                      borderBottomColor: theme.border.subtle,
-                    },
-                    di === 6 && { borderRightWidth: 0 },
-                  ]}
+                  style={{
+                    backgroundColor: cell.other
+                      ? theme.bg.surfaceAlt
+                      : theme.bg.surface,
+                    borderRightColor: theme.border.subtle,
+                    borderBottomColor: theme.border.subtle,
+                    minHeight: MONTH_CELL_MIN_HEIGHT,
+                    paddingHorizontal: cellPadX,
+                    paddingBottom: spacing.xs - 1,
+                    borderRightWidth: di === 6 ? 0 : 1,
+                    borderBottomWidth: 1,
+                  }}
+                  className="flex-1 overflow-hidden"
                   activeOpacity={0.6}
                   onPress={() => onEmptyCellPress?.(cell.ymd)}
                 >
                   {/* 일자 번호 */}
-                  <View style={s.dayNumWrap}>
+                  <View className="flex-row justify-start px-0.5 pt-1">
                     <View
-                      style={[
-                        s.dayNumCircle,
-                        isToday && { backgroundColor: theme.brand.primary },
-                      ]}
+                      style={isToday ? { backgroundColor: theme.brand.primary } : undefined}
+                      className="w-[22px] h-[22px] rounded-full items-center justify-center"
                     >
                       <Text
-                        style={[
-                          s.dayNum,
-                          { color: dayNumColor },
-                          isToday && { fontWeight: fontWeight.bold },
-                        ]}
+                        style={{ color: dayNumColor, fontWeight: isToday ? '700' : '600' }}
+                        className="text-[10px]"
                       >
                         {cell.date.getDate()}
                       </Text>
@@ -356,12 +368,21 @@ export function MonthView({
                       return (
                         <TouchableOpacity
                           key={`${ev.schdSn}-${ev.occurrenceYmd ?? ev.displayStYmd}`}
-                          style={[s.singleAllday, { backgroundColor: color }]}
+                          style={{
+                            marginHorizontal: cellPadX,
+                            height: LANE_HEIGHT - 4,
+                            backgroundColor: color,
+                          }}
+                          className="mb-0.5 rounded-sm justify-center"
                           activeOpacity={0.7}
                           onPress={() => onSchedulePress?.(ev)}
                         >
                           <Text
-                            style={s.singleAlldayText}
+                            style={{
+                              fontSize: eventFontSize,
+                              lineHeight: LANE_HEIGHT - 4,
+                            }}
+                            className="font-semibold text-white"
                             numberOfLines={1}
                             ellipsizeMode="tail"
                           >
@@ -373,15 +394,32 @@ export function MonthView({
                     return (
                       <TouchableOpacity
                         key={`${ev.schdSn}-${ev.occurrenceYmd ?? ev.displayStYmd}`}
-                        style={s.singleTimed}
+                        style={{
+                          marginHorizontal: cellPadX,
+                          gap: eventGap,
+                          height: LANE_HEIGHT - 4,
+                        }}
+                        className="flex-row items-center mb-0.5 rounded-sm"
                         activeOpacity={0.7}
                         onPress={() => onSchedulePress?.(ev)}
                       >
-                        <View style={[s.timedDot, { backgroundColor: color }]} />
+                        <View
+                          style={{
+                            width: dotSize,
+                            height: dotSize,
+                            borderRadius: dotSize / 2,
+                            backgroundColor: color,
+                          }}
+                          className="shrink-0"
+                        />
                         {/* 모바일: 시간 숨김 — 좁은 셀에서 제목 글자 확보 우선 */}
                         {!isMobile && (
                           <Text
-                            style={s.timedTime}
+                            style={{
+                              fontSize: eventFontSize,
+                              color: theme.text.muted,
+                            }}
+                            className="font-semibold font-mono"
                             numberOfLines={1}
                             ellipsizeMode="tail"
                           >
@@ -389,7 +427,11 @@ export function MonthView({
                           </Text>
                         )}
                         <Text
-                          style={s.timedTitle}
+                          style={{
+                            fontSize: eventFontSize,
+                            color: theme.text.body,
+                          }}
+                          className="flex-1"
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
@@ -401,7 +443,17 @@ export function MonthView({
 
                   {/* +N 오버플로우 */}
                   {overflow > 0 && (
-                    <Text style={s.overflowText}>+{overflow}{isMobile ? '' : '개 더'}</Text>
+                    <Text
+                      style={{
+                        fontSize: eventFontSize,
+                        color: theme.text.muted,
+                        paddingHorizontal: isMobile ? 4 : spacing.xs + 2,
+                      }}
+                      className="pt-0.5"
+                    >
+                      +{overflow}
+                      {isMobile ? '' : '개 더'}
+                    </Text>
                   )}
                 </TouchableOpacity>
               );
@@ -419,22 +471,26 @@ export function MonthView({
                   key={`mlane-${lane.schedule.schdSn}`}
                   activeOpacity={0.7}
                   onPress={() => onSchedulePress?.(lane.schedule)}
-                  style={[
-                    s.multidayBar,
-                    {
-                      left: `${leftPct}%`,
-                      width: `${widthPct}%`,
-                      top: topPx,
-                      backgroundColor: color,
-                      borderTopLeftRadius: lane.continuesLeft ? 0 : radius.sm,
-                      borderBottomLeftRadius: lane.continuesLeft ? 0 : radius.sm,
-                      borderTopRightRadius: lane.continuesRight ? 0 : radius.sm,
-                      borderBottomRightRadius: lane.continuesRight ? 0 : radius.sm,
-                    },
-                  ]}
+                  style={{
+                    left: `${leftPct}%`,
+                    width: `${widthPct}%`,
+                    top: topPx,
+                    height: LANE_HEIGHT - 4,
+                    backgroundColor: color,
+                    borderTopLeftRadius: lane.continuesLeft ? 0 : 4,
+                    borderBottomLeftRadius: lane.continuesLeft ? 0 : 4,
+                    borderTopRightRadius: lane.continuesRight ? 0 : 4,
+                    borderBottomRightRadius: lane.continuesRight ? 0 : 4,
+                    paddingHorizontal: isMobile ? 4 : spacing.xs + 2,
+                  }}
+                  className="absolute justify-center overflow-hidden"
                 >
                   <Text
-                    style={s.multidayText}
+                    style={{
+                      fontSize: eventFontSize,
+                      color: '#FFFFFF',
+                    }}
+                    className="font-semibold"
                     numberOfLines={1}
                     ellipsizeMode="tail"
                   >
@@ -452,131 +508,3 @@ export function MonthView({
   );
 }
 
-/* ─── 스타일 ────────────────────────────────────────────────── */
-
-const makeStyles = (theme: AppTheme, isMobile: boolean) => {
-  // 모바일/데스크톱 공통 작은 토큰 값
-  const cellPadX = isMobile ? 2 : spacing.xs - 1;
-  const eventFontSize = isMobile ? 10 : fontSize.caption;
-  const dotSize = isMobile ? 6 : 7;
-  const eventGap = isMobile ? 3 : spacing.xs;
-
-  return StyleSheet.create({
-    root: {
-      flex: 1,
-      backgroundColor: theme.bg.surface,
-    },
-    scrollContent: {
-      flexGrow: 1,
-    },
-    dowRow: {
-      flexDirection: 'row',
-      backgroundColor: theme.bg.surfaceAlt,
-      borderBottomWidth: 1,
-      borderBottomColor: theme.border.subtle,
-    },
-    dowCell: {
-      flex: 1,
-      paddingVertical: spacing.sm,
-      alignItems: 'center',
-    },
-    dowText: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.bold,
-      color: theme.text.muted,
-      letterSpacing: 0.4,
-    },
-    weekRow: {
-      flex: 1,
-      flexDirection: 'row',
-      position: 'relative',
-      minHeight: MONTH_CELL_MIN_HEIGHT,
-    },
-    cell: {
-      flex: 1,
-      minHeight: MONTH_CELL_MIN_HEIGHT,
-      paddingHorizontal: cellPadX,
-      paddingBottom: spacing.xs - 1,
-      borderRightWidth: 1,
-      borderBottomWidth: 1,
-      overflow: 'hidden',
-    },
-    dayNumWrap: {
-      flexDirection: 'row',
-      justifyContent: 'flex-start',
-      paddingHorizontal: 2,
-      paddingTop: spacing.xs,
-    },
-    dayNumCircle: {
-      width: 22,
-      height: 22,
-      borderRadius: 11,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    dayNum: {
-      fontSize: fontSize.micro,
-      fontWeight: fontWeight.semibold,
-    },
-    singleAllday: {
-      marginHorizontal: cellPadX,
-      marginBottom: 2,
-      paddingHorizontal: isMobile ? 4 : spacing.xs + 2,
-      borderRadius: radius.sm,
-      height: LANE_HEIGHT - 4,
-      justifyContent: 'center',
-    },
-    singleAlldayText: {
-      fontSize: eventFontSize,
-      fontWeight: fontWeight.semibold,
-      color: '#FFFFFF',
-      lineHeight: LANE_HEIGHT - 4,
-    },
-    singleTimed: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginHorizontal: cellPadX,
-      marginBottom: 2,
-      paddingHorizontal: isMobile ? 2 : spacing.xs,
-      gap: eventGap,
-      borderRadius: radius.sm,
-      height: LANE_HEIGHT - 4,
-    },
-    timedDot: {
-      width: dotSize,
-      height: dotSize,
-      borderRadius: dotSize / 2,
-      flexShrink: 0,
-    },
-    timedTime: {
-      fontSize: eventFontSize,
-      fontWeight: fontWeight.semibold,
-      color: theme.text.muted,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    timedTitle: {
-      flex: 1,
-      fontSize: eventFontSize,
-      color: theme.text.body,
-    },
-    overflowText: {
-      fontSize: eventFontSize,
-      color: theme.text.muted,
-      paddingHorizontal: isMobile ? 4 : spacing.xs + 2,
-      paddingTop: 1,
-    },
-    multidayBar: {
-      position: 'absolute',
-      height: LANE_HEIGHT - 4,
-      paddingHorizontal: isMobile ? 4 : spacing.xs + 2,
-      justifyContent: 'center',
-      overflow: 'hidden',
-      // 좌우 셀 경계와 살짝 띄움 — left/width는 인라인으로 보정
-    },
-    multidayText: {
-      fontSize: eventFontSize,
-      fontWeight: fontWeight.semibold,
-      color: '#FFFFFF',
-    },
-  });
-};

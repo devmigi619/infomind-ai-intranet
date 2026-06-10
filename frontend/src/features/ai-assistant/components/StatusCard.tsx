@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, Platform } from 'react-native';
 import {
   Activity,
   Car,
@@ -35,58 +35,37 @@ export function StatusCard({ card }: StatusCardProps) {
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.bg.surface,
-          borderColor: theme.border.default,
-        },
-      ]}
+      style={{
+        backgroundColor: theme.bg.surface,
+        borderColor: theme.border.default,
+      }}
+      className="border rounded-xl p-3.5 gap-2"
     >
       {/* Header row: icon + label */}
-      <View style={styles.header}>
-        <View style={[styles.iconBox, { backgroundColor: theme.semanticTint.success }]}>
+      <View className="flex-row items-center gap-2">
+        <View
+          style={{ backgroundColor: theme.semanticTint.success }}
+          className="w-7 h-7 rounded-[7px] items-center justify-center flex-shrink-0"
+        >
           <Icon size={16} color={theme.semantic.success} />
         </View>
-        <Text style={[styles.label, { color: theme.text.muted }]} numberOfLines={1}>{card.title}</Text>
+        <Text
+          style={{ color: theme.text.muted, fontFamily: WEB_FONT }}
+          className="text-[12px] font-medium"
+          numberOfLines={1}
+        >
+          {card.title}
+        </Text>
       </View>
 
       {/* Value */}
-      <Text style={[styles.value, { color: theme.text.primary }]}>{card.value ?? '—'}</Text>
+      <Text
+        style={{ color: theme.text.primary, fontFamily: WEB_FONT }}
+        className="text-[15px] font-semibold"
+      >
+        {card.value ?? '—'}
+      </Text>
     </View>
   );
 }
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    gap: 8,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  iconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 7,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  label: {
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: WEB_FONT,
-  },
-  value: {
-    fontSize: 15,
-    fontWeight: '600',
-    fontFamily: WEB_FONT,
-  },
-});

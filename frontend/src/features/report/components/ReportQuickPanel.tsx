@@ -3,7 +3,6 @@ import {
   ActivityIndicator,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TouchableOpacity,
   View,
@@ -11,8 +10,7 @@ import {
 import { ArrowRight, X } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { spacing } from '../../../shared/constants/spacing';
-import { radius } from '../../../shared/constants/radius';
-import { fontSize, fontWeight } from '../../../shared/constants/typography';
+import { fontSize } from '../../../shared/constants/typography';
 import { fmtYmdDash, getWeekRange, parseYmd, toYmd } from '../../../shared/utils/date';
 import { useUiStore } from '../../../store/uiStore';
 import { type MyReportRound, type ReportStatus, useMyReportRounds } from '../api';
@@ -48,38 +46,39 @@ export function ReportQuickPanel({ onClose }: ReportQuickPanelProps) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
-        <Text style={[styles.headerTitle, { color: theme.text.primary }]}>보고</Text>
-        <View style={styles.headerActions}>
+    <View className="flex-1">
+      <View className="flex-row items-center justify-between px-4 py-3 border-b" style={{ borderBottomColor: theme.border.subtle }}>
+        <Text className="font-medium" style={{ fontSize: fontSize.body, color: theme.text.primary, fontFamily }}>보고</Text>
+        <View className="flex-row items-center gap-1">
           <TouchableOpacity
             onPress={handleOpenFull}
-            style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
+            className="flex-row items-center gap-1 px-3 py-[6px] rounded-md"
+            style={{ backgroundColor: theme.brand.primaryTint }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+            <Text className="font-medium" style={{ fontSize: fontSize.micro, color: theme.brand.primary, fontFamily }}>열기</Text>
             <ArrowRight size={12} color={theme.brand.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} className="w-7 h-7 items-center justify-center rounded-md" activeOpacity={0.7}>
             <X size={14} color={theme.text.muted} />
           </TouchableOpacity>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center p-6">
           <ActivityIndicator color={theme.brand.primary} size="small" />
         </View>
       ) : error ? (
-        <View style={styles.center}>
-          <Text style={[styles.emptyText, { color: theme.semantic.danger }]}>
+        <View className="flex-1 items-center justify-center p-6">
+          <Text className="text-center p-3" style={{ fontSize: fontSize.small, color: theme.semantic.danger, fontFamily }}>
             보고 정보를 불러오지 못했습니다.
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: spacing.md, gap: 4 }} showsVerticalScrollIndicator={false}>
           {currentReports.length === 0 ? (
-            <Text style={[styles.emptyText, { color: theme.text.subtle }]}>
+            <Text className="text-center p-3" style={{ fontSize: fontSize.small, color: theme.text.subtle, fontFamily }}>
               현재 진행 중인 보고가 없습니다.
             </Text>
           ) : (
@@ -113,36 +112,34 @@ function ReportCard({
 
   return (
     <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.bg.surfaceAlt,
-          borderColor: urgency === 'HIGH' ? theme.semantic.danger : theme.border.subtle,
-          borderLeftColor: statusColor,
-        },
-      ]}
+      className="border border-l-4 p-3 mb-2 gap-2 rounded-xl"
+      style={{
+        backgroundColor: theme.bg.surfaceAlt,
+        borderColor: urgency === 'HIGH' ? theme.semantic.danger : theme.border.subtle,
+        borderLeftColor: statusColor,
+      }}
     >
-      <View style={styles.cardTop}>
-        <View style={styles.cardTitleBlock}>
-          <Text style={[styles.cardTitle, { color: theme.text.primary }]} numberOfLines={1}>
+      <View className="flex-row items-start justify-between gap-2">
+        <View className="flex-1 gap-[3px]">
+          <Text className="font-semibold" style={{ fontSize: fontSize.small, color: theme.text.primary, fontFamily }} numberOfLines={1}>
             {round.rptTtl}
           </Text>
-          <Text style={[styles.cardSubtitle, { color: theme.text.muted }]} numberOfLines={1}>
+          <Text style={{ fontSize: fontSize.caption, color: theme.text.muted, fontFamily }} numberOfLines={1}>
             {round.roundNm}
           </Text>
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: statusBg }]}>
-          <Text style={[styles.statusText, { color: statusColor }]}>
+        <View className="rounded-full px-[7px] py-[3px]" style={{ backgroundColor: statusBg }}>
+          <Text className="text-[10px] font-semibold" style={{ color: statusColor, fontFamily }}>
             {STATUS_LABEL[round.status]}
           </Text>
         </View>
       </View>
 
-      <View style={styles.metaRow}>
-        <Text style={[styles.metaText, { color: theme.text.muted }]}>
+      <View className="flex-row items-center justify-between gap-2">
+        <Text className="flex-1" style={{ fontSize: fontSize.caption, color: theme.text.muted, fontFamily }}>
           기준일 {fmtSafeYmd(round.roundYmd)}
         </Text>
-        <Text style={[styles.dueText, { color: statusColor }]}>
+        <Text className="font-semibold" style={{ fontSize: fontSize.caption, color: statusColor, fontFamily }}>
           {round.status === 'SUBMITTED' && round.sbmtYmd
             ? `제출 ${fmtSafeYmd(round.sbmtYmd)}`
             : getDateDistanceLabel(round.roundYmd, today)}
@@ -236,114 +233,3 @@ function fmtSafeYmd(ymd: string | null) {
 function isYmd(value: string | null | undefined) {
   return !!value && /^\d{8}$/.test(value);
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-  },
-  openButtonText: {
-    fontSize: fontSize.micro,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-  },
-  center: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  body: {
-    padding: spacing.md,
-    gap: 4,
-  },
-  emptyText: {
-    fontSize: fontSize.small,
-    fontFamily,
-    padding: spacing.md,
-    textAlign: 'center',
-  },
-  card: {
-    borderWidth: 1,
-    borderLeftWidth: 4,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-  },
-  cardTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  cardTitleBlock: {
-    flex: 1,
-    gap: 3,
-  },
-  cardTitle: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  cardSubtitle: {
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-  },
-  metaText: {
-    flex: 1,
-    fontSize: fontSize.caption,
-    fontFamily,
-  },
-  dueText: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-});

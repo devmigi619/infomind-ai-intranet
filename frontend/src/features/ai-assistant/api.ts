@@ -408,6 +408,10 @@ export function getAssistantResponse(message: string): AssistantResponse | null 
   return ASSISTANT_DATA[intent] ?? null;
 }
 
+export function getAssistantResponseByIntent(intent: string): AssistantResponse | null {
+  return ASSISTANT_DATA[intent] ?? null;
+}
+
 /**
  * React Query 훅 — 현재는 더미 데이터 동기 반환.
  * 추후 FastAPI SSE 응답과 연결 예정.

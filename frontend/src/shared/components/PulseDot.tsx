@@ -1,17 +1,12 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleSheet, View } from 'react-native';
+import { Animated, Easing } from 'react-native';
 
 interface PulseDotProps {
-  // Color of the surrounding ring (visually merges with parent background).
   ringColor?: string;
-  // Position from top-right of the parent (parent must be position:relative).
   top?: number;
   right?: number;
 }
 
-// Small red pulsing dot used to indicate "unread AI" notifications.
-// 7x7px red core, surrounded by a 2px ring matching the parent background.
-// Animates scale 1↔1.15 with a 1.5s loop.
 export function PulseDot({ ringColor = '#FAFAFA', top = 6, right = 6 }: PulseDotProps) {
   const scale = useRef(new Animated.Value(1)).current;
 
@@ -38,24 +33,14 @@ export function PulseDot({ ringColor = '#FAFAFA', top = 6, right = 6 }: PulseDot
 
   return (
     <Animated.View
-      style={[styles.outer, { top, right, borderColor: ringColor, transform: [{ scale }] }]}
+      style={{
+        top,
+        right,
+        borderColor: ringColor,
+        transform: [{ scale }],
+      }}
+      className="absolute w-[8px] h-[8px] rounded-full border-2 bg-red-500"
       pointerEvents="none"
-    >
-      <View style={styles.inner} />
-    </Animated.View>
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  outer: {
-    position: 'absolute',
-    width: 7,
-    height: 7,
-    borderRadius: 100,
-    borderWidth: 2,
-    backgroundColor: '#EF4444',
-  },
-  inner: {
-    flex: 1,
-  },
-});

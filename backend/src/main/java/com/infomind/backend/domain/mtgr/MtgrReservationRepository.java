@@ -8,21 +8,29 @@ import java.util.List;
 
 public interface MtgrReservationRepository extends JpaRepository<MtgrReservation, MtgrReservationId> {
 
+    /**
+     * 특정 날짜 범위에 걸친 예약 전체 조회 (연장시간 포함)
+     */
     @Query("""
             SELECT r FROM MtgrReservation r
-            WHERE r.rsvStYmd <= :endYmd AND r.rsvEndYmd >= :stYmd
+            WHERE r.rsvStYmd <= :endYmd
+              AND CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END >= :stYmd
             ORDER BY r.mtgrId, r.rsvStYmd, r.rsvStHhmm
             """)
     List<MtgrReservation> findByDateRange(
             @Param("stYmd") String stYmd,
             @Param("endYmd") String endYmd);
 
+    /**
+     * 충돌 검사 — 같은 회의실, 시간 겹침 (연장시간 포함)
+     */
     @Query("""
             SELECT r FROM MtgrReservation r
             WHERE r.mtgrId = :mtgrId
               AND NOT (
-                  r.rsvEndYmd < :stYmd
-                  OR (r.rsvEndYmd = :stYmd AND r.rsvEndHhmm <= :stHhmm)
+                  CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END < :stYmd
+                  OR (CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END = :stYmd
+                      AND CASE WHEN r.extYn = 'Y' AND r.extHhmm IS NOT NULL THEN r.extHhmm ELSE r.rsvEndHhmm END <= :stHhmm)
                   OR r.rsvStYmd > :endYmd
                   OR (r.rsvStYmd = :endYmd AND r.rsvStHhmm >= :endHhmm)
               )
@@ -37,12 +45,16 @@ public interface MtgrReservationRepository extends JpaRepository<MtgrReservation
     @Query("SELECT COALESCE(MAX(r.rsvSn), 0) + 1 FROM MtgrReservation r WHERE r.mtgrId = :mtgrId")
     Long nextRsvSn(@Param("mtgrId") String mtgrId);
 
+    /**
+     * 연장 충돌 검사 — 자기 자신 제외, 연장시간 포함
+     */
     @Query("""
             SELECT r FROM MtgrReservation r
             WHERE r.mtgrId = :mtgrId AND r.rsvSn <> :excludeSn
               AND NOT (
-                  r.rsvEndYmd < :stYmd
-                  OR (r.rsvEndYmd = :stYmd AND r.rsvEndHhmm <= :stHhmm)
+                  CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END < :stYmd
+                  OR (CASE WHEN r.extYn = 'Y' AND r.extYmd IS NOT NULL THEN r.extYmd ELSE r.rsvEndYmd END = :stYmd
+                      AND CASE WHEN r.extYn = 'Y' AND r.extHhmm IS NOT NULL THEN r.extHhmm ELSE r.rsvEndHhmm END <= :stHhmm)
                   OR r.rsvStYmd > :endYmd
                   OR (r.rsvStYmd = :endYmd AND r.rsvStHhmm >= :endHhmm)
               )

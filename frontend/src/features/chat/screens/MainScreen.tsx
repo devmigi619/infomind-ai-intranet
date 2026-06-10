@@ -1,15 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
-  Text,
   ScrollView,
-  StyleSheet,
   Platform,
   TouchableOpacity,
   Animated,
   Easing,
   Pressable,
 } from 'react-native';
+import { Text } from '../../../shared/components/ui/text';
 import { Sparkles, Menu } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ChatMessage } from '../../../shared/components/ChatMessage';
@@ -20,11 +19,13 @@ import { useChatStore } from '../../../store/chatStore';
 import { useTheme } from '../../../shared/hooks/useTheme';
 import { useResponsive } from '../../../shared/hooks/useResponsive';
 import { ChatHistorySidebar } from '../components/ChatHistorySidebar';
-import { ChatAprvModal } from '../components/ChatAprvModal';
 import { InterruptReplyPanel } from '../components/InterruptReplyPanel';
+import { InterruptPanel } from '../components/InterruptPanel';
+import { MobileInterruptSheet } from '../components/MobileInterruptSheet';
 import { useChatSessionMessages } from '../api';
 import { useCurrentUser } from '../../auth/api';
-import type { AprvEntry } from '../../leave-req/api';
+import { getAssistantResponseByIntent } from '../../ai-assistant/api';
+import { apiClient } from '../../../shared/api/client';
 import type { Message } from '../types';
 
 interface MainScreenProps {
@@ -57,6 +58,14 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setInterruptAprvlList,
     interruptRefList,
     setInterruptRefList,
+    interruptPreviewText,
+    setInterruptPreviewText,
+    interruptFormFields,
+    setInterruptFormFields,
+    interruptFormTitle,
+    setInterruptFormTitle,
+    pendingQuickMessage,
+    setPendingQuickMessage,
     resetSession,
     hydrateFromStorage,
   } = useChatStore();
@@ -64,7 +73,6 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   // ─── 비영속 UI 상태 ───────────────────────────────────────────────────────
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
-  const [showAprvModal, setShowAprvModal] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // 현재 사용자 ID (AprvLineEditorPanel에서 본인 제외용)
@@ -117,16 +125,17 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     if (chatResetCounter === 0) return;
     resetSession();
     setSelectedSessId(null);
-    setShowAprvModal(false);
   }, [chatResetCounter, resetSession]);
 
   // ─── 핸들러: 새 세션 ─────────────────────────────────────────────────────
   const handleNewSession = useCallback(() => {
     resetSession();
     setSelectedSessId(null);
-    setShowAprvModal(false);
+    setInterruptPreviewText('');
+    setInterruptFormFields(null);
+    setInterruptFormTitle('');
     setDrawerOpen(false);
-  }, [resetSession]);
+  }, [resetSession, setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle]);
 
   // ─── 핸들러: 세션 선택 ───────────────────────────────────────────────────
   const handleSelectSession = useCallback((sessId: string) => {
@@ -136,19 +145,24 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setHumanInterruptQuestion('');
     setInterruptAprvlList(null);
     setInterruptRefList([]);
+    setInterruptPreviewText('');
+    setInterruptFormFields(null);
+    setInterruptFormTitle('');
     setTurnId('');
     setActiveSessionId(sessId);
     setSelectedSessId(sessId);
     setDrawerOpen(false);
   }, [
     setMessages, setPendingInterrupt, setHumanInterruptQuestion,
-    setInterruptAprvlList, setInterruptRefList, setTurnId, setActiveSessionId,
+    setInterruptAprvlList, setInterruptRefList,
+    setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle,
+    setTurnId, setActiveSessionId,
   ]);
 
   // ─── SSE 스트림 ──────────────────────────────────────────────────────────
   const _runSseStream = useCallback(
     async (url: string, body: object, token: string | null) => {
-      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://localhost:8000';
+      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.178:8000';
 
       setMessages((prev) => [
         ...prev,
@@ -173,7 +187,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         const decoder = new TextDecoder();
         let actions: { label: string; target: string }[] = [];
         let firstTokenReceived = false;
-        let detectedInterrupt: 'human' | 'excu' | null = null;
+        let detectedInterrupt: 'human' | 'excu' | 'form' | null = null;
         let interruptQuestion: string | null = null; // interrupt payload의 question/preview 텍스트
 
         for (;;) {
@@ -189,6 +203,31 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
                 setTurnId(data.turn_id);
               } else if (data.type === 'meta') {
                 actions = data.actions ?? [];
+                if (data.intent) {
+                  // 백엔드 API에서 동적 카드 정보 조회 (Spring Boot)
+                  apiClient.get(`/api/chat/assistant/cards`, { params: { intent: data.intent } })
+                    .then((res) => {
+                      if (res.data && res.data.data && res.data.data.cards) {
+                        useUiStore.getState().setAssistantContext(res.data.data.cards);
+                      }
+                    })
+                    .catch((err) => {
+                      console.error('Error fetching assistant cards:', err);
+                      // 실패 시 기존 로컬 더미 데이터로 폴백
+                      const res = getAssistantResponseByIntent(data.intent);
+                      if (res) {
+                        useUiStore.getState().setAssistantContext(res.cards);
+                      }
+                    });
+
+                  useUiStore.getState().setAiContext(data.intent, data.action_type || null);
+                  
+                  // 🌟 자동으로 AI 탭 포커싱 및 우측 패널 열기
+                  useUiStore.getState().setRpTab('ai');
+                  if (!useUiStore.getState().isRightPanelOpen) {
+                    useUiStore.setState({ isRightPanelOpen: true });
+                  }
+                }
               } else if (data.type === 'progress') {
                 // detail_status(상세)를 우선 사용, 없으면 status(coarse)로 폴백.
                 // thinking 버블에 단계를 누적 — 직전 단계와 동일하면 무시(중복 제거).
@@ -223,19 +262,29 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
                   );
                 }
               } else if (data.type === 'interrupt') {
-                detectedInterrupt = data.interrupt_type as 'human' | 'excu';
+                detectedInterrupt = data.interrupt_type as 'human' | 'excu' | 'form';
                 // node_excu_preflight처럼 토큰 스트리밍 없이 interrupt가 발생한 경우
                 // question/preview 텍스트를 payload에서 직접 추출한다.
                 interruptQuestion = data.question ?? data.preview ?? null;
-                // human interrupt라면 패널에 표시할 질문 텍스트를 state에 저장
+
                 if (data.interrupt_type === 'human' && interruptQuestion) {
+                  // human: 채팅 하단 InterruptReplyPanel용
                   setHumanInterruptQuestion(interruptQuestion);
-                }
-                // 결재선 데이터가 있으면 저장 (excu + 결재선 필요 intent일 때만 포함)
-                if (data.interrupt_type === 'excu' && data.aprvl_list !== undefined) {
-                  setInterruptAprvlList(data.aprvl_list as AprvEntry[]);
-                  setInterruptRefList((data.ref_list ?? []) as AprvEntry[]);
-                } else {
+                } else if (data.interrupt_type === 'excu') {
+                  // excu: 패널에 preview 텍스트 + 결재선 표시
+                  setInterruptPreviewText(data.preview ?? '');
+                  if (data.aprvl_list !== undefined) {
+                    setInterruptAprvlList(data.aprvl_list);
+                    setInterruptRefList(data.ref_list ?? []);
+                  } else {
+                    setInterruptAprvlList(null);
+                    setInterruptRefList([]);
+                  }
+                } else if (data.interrupt_type === 'form') {
+                  // form: 패널에 동적 폼 필드 표시
+                  setInterruptPreviewText(data.preview ?? '');
+                  setInterruptFormFields(data.form_fields ?? null);
+                  setInterruptFormTitle(data.form_title ?? '양식 작성');
                   setInterruptAprvlList(null);
                   setInterruptRefList([]);
                 }
@@ -314,6 +363,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     [
       setMessages, setTurnId, setHumanInterruptQuestion,
       setInterruptAprvlList, setInterruptRefList, setPendingInterrupt,
+      setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle,
       markAiUnread, onAiResponseComplete,
     ],
   );
@@ -361,7 +411,9 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       setHumanInterruptQuestion('');
       setInterruptAprvlList(null);
       setInterruptRefList([]);
-      setShowAprvModal(false);
+      setInterruptPreviewText('');
+      setInterruptFormFields(null);
+      setInterruptFormTitle('');
 
       const token = await AsyncStorage.getItem('token');
       await _runSseStream(
@@ -374,6 +426,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       isStreaming, turnId,
       setMessages, setPendingInterrupt, setHumanInterruptQuestion,
       setInterruptAprvlList, setInterruptRefList,
+      setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle,
       _runSseStream,
     ],
   );
@@ -381,6 +434,16 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const handleSend = useCallback(() => {
     sendMessage(inputText);
   }, [inputText, sendMessage]);
+
+  // ─── 빠른 액션 자동 전송 ─────────────────────────────────────────────────
+  useEffect(() => {
+    if (!pendingQuickMessage || isStreaming) return;
+    const msg = pendingQuickMessage;
+    setPendingQuickMessage(null);
+    sendMessage(msg);
+  // sendMessage는 useCallback 의존성이 변경되어도 동일 로직 — msg 기반 실행
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingQuickMessage]);
 
   const isEmpty = messages.length === 0;
 
@@ -396,29 +459,26 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   // ─── 채팅 영역 ────────────────────────────────────────────────────────────
   const chatArea = (
     <View
-      style={[
-        styles.chatArea,
-        isEmpty && styles.chatAreaEmpty,
-        { backgroundColor: theme.bg.surface },
-      ]}
+      style={{ backgroundColor: theme.bg.surface }}
+      className={`flex-1 ${isEmpty ? 'justify-end' : ''}`}
     >
       {isEmpty ? (
-        <View style={styles.welcome}>
-          <View style={[styles.iconWrap, { backgroundColor: theme.brand.primaryTint }]}>
+        <View className="absolute inset-0 items-center justify-center px-6 gap-2">
+          <View style={{ backgroundColor: theme.brand.primaryTint }} className="w-16 h-16 rounded-[20px] items-center justify-center mb-2">
             <Sparkles size={32} color={theme.brand.primary} />
           </View>
-          <Text style={[styles.welcomeTitle, { color: theme.text.primary }]}>
+          <Text style={{ color: theme.text.primary }} className="text-[22px] font-medium">
             안녕하세요, {user?.name ?? ''}님
           </Text>
-          <Text style={[styles.welcomeSubtitle, { color: theme.text.muted }]}>
+          <Text style={{ color: theme.text.muted }} className="text-[14px] mb-4">
             무엇을 도와드릴까요?
           </Text>
         </View>
       ) : (
         <ScrollView
           ref={scrollRef}
-          style={styles.messageList}
-          contentContainerStyle={styles.messageListContent}
+          className="flex-1"
+          contentContainerStyle={{ paddingHorizontal: 32, paddingVertical: 24, gap: 16 }}
           onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
         >
           {messages.map((msg) => (
@@ -432,16 +492,6 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
               isThinking={msg.isThinking}
               progressSteps={msg.progressSteps}
               interruptType={msg.interruptType}
-              onInterruptApprove={() => {
-                if (interruptAprvlList !== null) {
-                  // 결재선 편집 모달 열기
-                  setShowAprvModal(true);
-                } else {
-                  // 결재선 없는 일반 excu / human — 바로 resume
-                  sendResume('승인');
-                }
-              }}
-              onInterruptCancel={() => sendResume('취소')}
             />
           ))}
         </ScrollView>
@@ -461,54 +511,45 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
           value={inputText}
           onChangeText={setInputText}
           onSend={handleSend}
-          disabled={isStreaming || pendingInterrupt === 'excu'}
+          disabled={isStreaming || pendingInterrupt === 'excu' || pendingInterrupt === 'form'}
           theme={theme}
         />
       )}
     </View>
   );
 
-  // ─── 결재선 편집 모달 (공통) ─────────────────────────────────────────────
-  const aprvModal = (
-    <ChatAprvModal
-      visible={showAprvModal}
-      initialAprvList={interruptAprvlList ?? []}
-      initialRefList={interruptRefList}
-      currentUserId={currentUser?.userId}
-      onApprove={(editedAprvList, editedRefList) => {
-        // 편집된 결재선을 JSON으로 직렬화해 resume_value로 전송
-        // displayText('승인')를 별도 전달해 채팅 버블에는 JSON 대신 '승인'만 표시
-        const resumeValue = JSON.stringify({
-          decision:   '승인',
-          aprvl_list: editedAprvList.map((a) => ({ aprvUserId: a.aprvUserId })),
-          ref_list:   editedRefList.map((r) => r.aprvUserId),
-        });
-        sendResume(resumeValue, '승인');
-      }}
-      onCancel={() => {
-        setShowAprvModal(false);
-      }}
-    />
-  );
+  // ─── Interrupt Panel/Sheet 공통 props ───────────────────────────────────
+  const panelProps = {
+    isOpen: pendingInterrupt !== null && pendingInterrupt !== 'human',
+    interruptType: pendingInterrupt as 'excu' | 'form' | null,
+    previewText: interruptPreviewText,
+    formTitle: interruptFormTitle,
+    formFields: interruptFormFields,
+    aprvlList: interruptAprvlList,
+    refList: interruptRefList,
+    currentUserId: currentUser?.userId,
+    onApprove: (val: string, display?: string) => sendResume(val, display),
+    onCancel: () => sendResume('취소'),
+  };
 
   // ─── PC 레이아웃 ─────────────────────────────────────────────────────────
   if (!isMobile) {
     return (
-      <View style={styles.pcContainer}>
+      <View className="flex-1 flex-row">
         {sidebar}
         {chatArea}
-        {aprvModal}
+        <InterruptPanel {...panelProps} />
       </View>
     );
   }
 
   // ─── 모바일 레이아웃 ─────────────────────────────────────────────────────
   return (
-    <View style={styles.mobileContainer}>
-      {aprvModal}
+    <View className="flex-1 relative">
       {/* 햄버거 버튼 */}
       <TouchableOpacity
-        style={[styles.hamburger, { backgroundColor: theme.bg.surface }]}
+        style={{ backgroundColor: theme.bg.surface }}
+        className="absolute top-2.5 left-2.5 z-10 w-[34px] h-[34px] rounded-lg items-center justify-center shadow-md"
         onPress={() => setDrawerOpen(true)}
         activeOpacity={0.7}
         hitSlop={8}
@@ -521,123 +562,35 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       {/* 드로어 오버레이 */}
       {drawerOpen && (
         <Pressable
-          style={[styles.overlay]}
+          className="absolute inset-0 z-20"
           onPress={() => setDrawerOpen(false)}
         >
-          <View style={[styles.overlayBg, { backgroundColor: 'rgba(0,0,0,0.35)' }]} />
+          <View className="absolute inset-0 bg-black/35" />
         </Pressable>
       )}
 
       {/* 드로어 패널 */}
       <Animated.View
-        style={[
-          styles.drawer,
-          { backgroundColor: theme.bg.surfaceAlt },
-          { transform: [{ translateX: drawerAnim }] },
-        ]}
+        style={{
+          width: DRAWER_WIDTH,
+          shadowColor: '#000',
+          shadowOffset: { width: 2, height: 0 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 8,
+          backgroundColor: theme.bg.surfaceAlt,
+          transform: [{ translateX: drawerAnim }],
+        }}
+        className="absolute top-0 left-0 bottom-0 z-30"
         pointerEvents={drawerOpen ? 'auto' : 'none'}
       >
         {sidebar}
       </Animated.View>
+
+      {/* 바텀 시트 (excu / form interrupt) */}
+      <MobileInterruptSheet {...panelProps} />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  // ─── PC ────────────────────────────────────────────────────────────────
-  pcContainer: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  // ─── Mobile ────────────────────────────────────────────────────────────
-  mobileContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  hamburger: {
-    position: 'absolute',
-    top: 10,
-    left: 10,
-    zIndex: 10,
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 20,
-  },
-  overlayBg: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  drawer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    bottom: 0,
-    width: DRAWER_WIDTH,
-    zIndex: 30,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  // ─── 채팅 영역 ─────────────────────────────────────────────────────────
-  chatArea: {
-    flex: 1,
-  },
-  chatAreaEmpty: {
-    justifyContent: 'flex-end',
-  },
-  welcome: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 8,
-  },
-  iconWrap: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  welcomeTitle: {
-    fontSize: 22,
-    fontWeight: '500',
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  welcomeSubtitle: {
-    fontSize: 14,
-    marginBottom: 16,
-    fontFamily: Platform.select({
-      web: "'Noto Sans KR', sans-serif",
-      default: undefined,
-    }),
-  },
-  messageList: {
-    flex: 1,
-  },
-  messageListContent: {
-    paddingHorizontal: 32,
-    paddingVertical: 24,
-    gap: 16,
-  },
-});
+

@@ -8,7 +8,7 @@ from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 
 from app.hj.core.llm import get_llm, get_slm, get_structured_slm, count_tokens, is_dev
 from app.hj.models.state import GraphState
-from app.hj.models.intent import IntentResult
+from app.hj.models.intent import IntentResult, PreflightResult, ReactDecisionResult
 from app.hj.services.guardrail import check_guardrail
 from app.hj.services.prompt import (
     INTENT_SYSTEM_PROMPT,
@@ -16,9 +16,9 @@ from app.hj.services.prompt import (
     EXCU_PREVIEW_PROMPT,
     GENERATE_SYSTEM_PROMPT,
     PREFLIGHT_SYSTEM_PROMPT,
+    REACT_DECISION_PROMPT,
 )
 from app.hj.services.schema import get_schema_for_intent, get_preflight_fields
-from app.hj.models.intent import PreflightResult
 from app.hj.services.tools import parse_llm_json
 
 llm = get_llm(streaming=True)
@@ -115,8 +115,8 @@ async def node_route(state: GraphState) -> Command:
         return Command(goto="node_general")
 
     routes = {
-        "search":  "node_enrich_context",   # 날짜·참조 보강 → node_search
-        "excu":    "node_enrich_context",   # 날짜·참조 보강 → node_excu_preflight
+        "search":  "node_enrich_context",   # 날짜·참조 보강 → node_react_gather
+        "excu":    "node_enrich_context",   # 날짜·참조 보강 → node_react_gather
         "human":   "node_human",
         "general": "node_general",
     }
@@ -138,8 +138,7 @@ async def node_enrich_context(state: GraphState) -> Command:
     참조 쿼리 실패 시 해당 결과를 조용히 건너뛰고 계속 진행한다.
 
     분기:
-      action_type == excu   → node_excu_preflight
-      action_type == search → node_search
+      search / excu 모두 → node_react_gather (ReAct 루프)
     """
     import asyncio
     from app.hj.services.tools import execute_sql, build_date_reference, VECTOR_SEARCH_INTENTS, APRVL_LINE_INTENTS, APRVL_TABLE_MAP, fetch_default_aprvl_line
@@ -221,8 +220,8 @@ async def node_enrich_context(state: GraphState) -> Command:
 
             # LLM context에 주입 — LLM이 MAX+1 서브쿼리 대신 확정된 값을 사용하도록
             parts.append(
-                f"[요청 시퀀스] {cfg['pk_sn_col']}={pending_req_sn} "
-                f"(INSERT SQL에서 이 값을 직접 사용할 것 — 서브쿼리 금지)"
+                f"[요청 시퀀스] 신규 {cfg['pk_sn_col']}={pending_req_sn} "
+                f"(신규 INSERT 시에만 사용. 기존 데이터 수정 시에는 조회된 기존 값을 사용할 것)"
             )
 
             # 결재자가 있으면 context에도 노출 — 미리보기에서 결재자명 언급용(참고 정보).
@@ -243,7 +242,7 @@ async def node_enrich_context(state: GraphState) -> Command:
     enriched = "\n\n".join(parts)
     new_context = f"{existing_ctx}\n\n{enriched}".strip() if existing_ctx else enriched
 
-    next_node = "node_excu_preflight" if action_type == "excu" else "node_search"
+    next_node = "node_react_gather"   # search·excu 모두 ReAct 루프로 통일
     return Command(
         goto=next_node,
         update={
@@ -325,7 +324,23 @@ async def node_excu_preflight(state: GraphState) -> Command:
     required_fields = get_preflight_fields(intent)
     preflight_prompt = PREFLIGHT_SYSTEM_PROMPT.format(required_fields=required_fields)
 
-    human_content = f"intent={intent}, user_id={state['user_id']}\n질문: {user_message}"
+    # 직전 대화 히스토리 (현재 메시지 제외 최근 6개) — "그냥 취소해줘"처럼 맥락이 필요한 발화 대응
+    recent = list(state["messages"])[:-1][-6:]
+    if recent:
+        history_lines = []
+        for m in recent:
+            role = "사용자" if getattr(m, "type", "") == "human" else "AI"
+            raw = getattr(m, "content", "")
+            if isinstance(raw, list):   # content-list 포맷 방어
+                raw = "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in raw)
+            history_lines.append(f"[{role}] {str(raw)[:200]}")
+        human_content = (
+            f"intent={intent}, user_id={state['user_id']}\n"
+            "[직전 대화]\n" + "\n".join(history_lines) + f"\n질문: {user_message}"
+        )
+    else:
+        human_content = f"intent={intent}, user_id={state['user_id']}\n질문: {user_message}"
+
     if date_ref := state.get("date_reference"):
         human_content += f"\n\n{date_ref}"
     if context:
@@ -363,6 +378,62 @@ async def node_excu_preflight(state: GraphState) -> Command:
         goto="node_excu_preflight_ask",
         update={"pending_preflight_question": question},
     )
+
+
+async def node_react_gather_ask(state: GraphState) -> Command:
+    """
+    node_react_gather 추가 정보 요청 전담 노드 — interrupt() 분리.
+
+    [분리 이유]
+    interrupt()를 node_react_gather 내부에서 호출하면, resume 시 해당 노드 전체(ReAct 루프
+    포함)가 재실행된다. 전용 노드로 분리하면 resume 시 이 노드만 재실행되므로 불필요한
+    LLM 호출(최대 5회)을 방지할 수 있다.
+
+    라우팅:
+      excu  → node_excu_preflight  (context 보존, Q&A 추가)
+      search → node_react_gather   (re-query 필요: 사용자 답변을 반영해 DB 재조회)
+    """
+    question    = state.get("pending_react_question") or ""
+    action_type = state.get("action_type") or "general"
+    context     = state.get("context") or ""
+
+    # ── 사용자 답변 수집 (interrupt) ─────────────────────────────────────────
+    user_answer = interrupt({"type": "human", "question": question})
+
+    # ── 취소 키워드 감지 ──────────────────────────────────────────────────────
+    _CANCEL_KEYWORDS = {"취소", "cancel", "아니요", "아니오", "그만", "stop"}
+    if str(user_answer).strip().lower() in _CANCEL_KEYWORDS:
+        return Command(
+            goto="save_history",
+            update={"messages": [AIMessage("요청이 취소되었습니다.")]},
+        )
+
+    # ── Q&A를 context에 누적 ──────────────────────────────────────────────────
+    qa_entry    = f"[추가 정보]\nQ: {question}\nA: {user_answer}"
+    new_context = f"{context}\n{qa_entry}".strip() if context else qa_entry
+
+    if action_type == "excu":
+        # excu: context 보존한 채 preflight로 직행 (ReAct 재실행 불필요)
+        # node_excu_preflight가 Q&A가 추가된 context로 충분성 재검증
+        return Command(
+            goto="node_excu_preflight",
+            update={
+                "context":               new_context,
+                "messages":              [HumanMessage(content=str(user_answer))],
+                "pending_react_question": None,
+            },
+        )
+    else:
+        # search: 사용자 답변을 반영해 DB를 다시 조회해야 하므로 node_react_gather 재진입
+        # context 보존 + 사용자 답변을 대화 이력에 추가
+        return Command(
+            goto="node_react_gather",
+            update={
+                "context":               new_context,
+                "messages":              [AIMessage(content=question), HumanMessage(content=str(user_answer))],
+                "pending_react_question": None,
+            },
+        )
 
 
 async def node_excu_preflight_ask(state: GraphState) -> Command:
@@ -404,7 +475,7 @@ async def node_excu_preflight_ask(state: GraphState) -> Command:
         recheck = recheck_resp if is_dev() else parse_llm_json(recheck_resp.content, IntentResult)
         if recheck.intent != intent or recheck.action_type != state.get("action_type"):
             return Command(
-                goto="node_route",
+                goto="route",   # 그래프 등록명: g.add_node("route", node_route)
                 update={
                     "intent":                    recheck.intent,
                     "action_type":               recheck.action_type,
@@ -435,91 +506,225 @@ async def node_excu_preflight_ask(state: GraphState) -> Command:
     )
 
 
-async def node_search(state: GraphState) -> Command:
+async def node_react_gather(state: GraphState) -> Command:
     """
-    search: SQL 생성(SqlResult) → 실행 → 결과를 context에 담아 node_generate로 라우팅.
-    - missing_info가 있으면 context에 주의 메시지 추가.
-    - user_embedding이 있으면 VECTOR_SEARCH_SQL 고정 템플릿으로 벡터 검색 병렬 실행 후 섹션 분리 병합.
+    ReAct 루프 — SELECT 도구를 반복 실행해 컨텍스트를 동적으로 수집한다.
+
+    search : 여러 SELECT → context 축적 → node_generate
+    excu   : 추가 컨텍스트 확보 → node_excu_preflight
+
+    루프는 Python 레벨에서 실행(LangGraph sub-graph 미사용).
+    MemorySaver checkpoint와 충돌하지 않도록 루프 전체가 단일 노드 실행으로 처리된다.
+
+    벡터 검색(VECTOR_SEARCH_INTENTS)은 별도 실행 후 context에 병합한다.
+
+    탈출 조건:
+      1) LLM이 tool_calls 없는 응답 반환 (자발적 종료)
+      2) MAX_ITER(5회) 초과
     """
     import asyncio
-    from app.hj.services.tools import generate_sql, execute_sql, execute_vector_sql, VECTOR_SEARCH_SQL
+    import time
+    from langchain_core.messages import ToolMessage as _ToolMessage
+    from langchain_core.callbacks.manager import adispatch_custom_event
+    from app.hj.core.config import settings
+    from app.hj.core.llm import is_dev
+    from app.hj.services.tools import execute_select_tool, execute_vector_sql, VECTOR_SEARCH_SQL, VECTOR_SEARCH_INTENTS
 
-    user_message = state["messages"][-1].content
-    intent = state.get("intent") or "general"
-    user_id = state["user_id"]
-    ctx = state.get("context") or ""
+    _node_t0 = time.perf_counter()
 
-    # SQL 생성 (SqlResult 구조체)
-    sql_result = await generate_sql(
-        intent=intent,
-        action_type="search",
-        user_message=user_message,
-        user_id=user_id,
-        context=ctx,
-        date_reference=state.get("date_reference") or "",
-    )
-    sql = sql_result.sql
+    action_type = state.get("action_type") or "general"
+    intent      = state.get("intent") or "general"
+    user_id     = state["user_id"]
+    user_msg    = state["messages"][-1].content
+    schema      = get_schema_for_intent(intent, mode="lookup")   # 조회 루프용 경량 스키마
+    context     = state.get("context") or ""
+    date_ref    = state.get("date_reference") or ""
 
-    # ── 일반 SQL + 벡터 SQL 병렬 실행 ────────────────────────────────────────
-    user_embedding = state.get("user_embedding")
+    tools_list = [execute_select_tool]
+    # tool-calling 안정성을 위해 경량 모델(slm) 대신 기본 LLM 사용
+    llm_with_tools = get_llm(streaming=False).bind_tools(tools_list)
+    tools_map = {"execute_select_tool": execute_select_tool}
 
-    async def _run_sql() -> tuple[list[dict] | int | None, str | None]:
-        try:
-            rows = await execute_sql.ainvoke({"sql": sql, "user_id": user_id})
-            return rows, None
-        except Exception as e:
-            return None, str(e)
-
-    async def _run_vector() -> list[dict]:
-        # user_embedding이 있을 때만 실행 (VECTOR_SEARCH_INTENTS에 속한 intent에서만 생성됨)
-        if not user_embedding:
-            print("[VECTOR] user_embedding 없음 → 벡터 검색 skip")
-            return []
-        print(f"[VECTOR] 벡터 검색 시작 — embedding 차원: {len(user_embedding)}")
-        try:
-            rows = await execute_vector_sql(VECTOR_SEARCH_SQL, user_embedding)
-            print(f"[VECTOR] 벡터 검색 완료 — 결과 {len(rows)}건")
-            if rows:
-                for r in rows[:3]:  # 최대 3건만 출력
-                    print(f"[VECTOR]   similarity={r.get('similarity', '?'):.4f} | {str(r.get('emb_ttl', ''))[:50]}")
-            return rows
-        except Exception as e:
-            print(f"[VECTOR] 벡터 검색 예외 발생: {type(e).__name__}: {e}")
-            return []  # 벡터 검색 실패 시 무시하고 일반 결과만 반환
-
-    (rows, sql_err), vector_rows = await asyncio.gather(
-        _run_sql(), _run_vector()
+    # ── cold-start 진단 로그 ──────────────────────────────────────────────────
+    # react 루프는 get_llm(기본 모델)을 쓰고, 직전 node_classify는 get_structured_slm(경량 모델)을 쓴다.
+    # 두 모델이 다르면 Ollama가 모델을 교체 적재(cold-start)하므로 첫 호출이 유독 느리다.
+    # 아래 로그로 "모델명 + 호출별 소요시간"을 남겨 cold-start 여부를 판별한다.
+    _react_model = settings.openai_llm_model if is_dev() else settings.llm_model
+    _slm_model   = settings.openai_slm_model if is_dev() else settings.slm_model
+    print(
+        f"[REACT] 진입 — intent={intent} action={action_type} | "
+        f"react모델={_react_model} (분류모델={_slm_model}) | "
+        f"스키마={len(schema)}자 컨텍스트={len(context)}자 "
+        f"히스토리={len(state['messages'])}건"
     )
 
-    # ── 결과 섹션 병합 ────────────────────────────────────────────────────────
-    ctx_parts: list[str] = []
+    system_content = (
+        "당신은 postgreSQL DB에서 필요한 정보를 SELECT로 수집하는 **postgreSQL db 정보 수집 전용** 에이전트입니다.\n"
+        "당신의 유일한 임무는 **다음 실행 단계가 올바른 처리를 할 수 있도록 필요한 정보를 수집하고 요약하는 것**입니다.\n"
+        "정보가 충분히 모이면 도구 호출 없이 **수집한 사실만 요약**하세요.\n\n"
+        "★★★ 절대 금지 규칙 ★★★\n"
+        "- SELECT 도구만 사용하세요. (INSERT/UPDATE/DELETE 도구는 제공되지 않습니다)\n"
+        "- 절대로 '예약되었습니다', '등록 완료', '처리되었습니다', '삭제되었습니다' 등\n"
+        "  실행/완료/변경을 뜻하는 표현을 사용하지 마세요.\n"
+        "- '저는 조회만 해요', '저는 INSERT 권한이 없어요', '저는 실행할 수 없어요' 등\n"
+        "  자신의 역할 제약을 사용자에게 언급하지 마세요. 사용자 요청의 실행은 별도 단계가 처리합니다.\n"
+        "- 사용자 요청의 실행 가능 여부를 판단하거나 거절하지 마세요.\n"
+        "  단, DB 조회로 **비즈니스 제약**(기간 종료, 이미 처리됨, 권한 없음 등)이 실제로 확인된 경우에는\n"
+        "  그 사실을 명확히 보고하세요.\n"
+        "- 조회 결과가 비어있으면(빈 배열 []) '해당 데이터가 없습니다'로만 보고하세요.\n"
+        "- 최종 응답은 반드시 '~을 확인했습니다', '~건이 조회되었습니다' 등\n"
+        "  **조회 사실 보고** 형태로만 작성하세요.\n\n"
+        f"[현재 사용자 ID] {user_id}\n"
+        "결재·휴가 등 본인 데이터 조회 시에만 WHERE 조건에 이 값을 사용하세요.\n"
+        "마스터·코드 테이블(양식목록, 부서, 직급, 공통코드 등) 조회 시에는 user_id를 WHERE에 추가하지 마세요.\n\n"
+        f"[테이블 스키마]\n{schema}\n\n"
+        + (f"[기존 컨텍스트]\n{context}\n\n" if context else "")
+        + (date_ref or "")
+    )
 
-    if sql_err:
-        ctx_parts.append(f"조회 중 오류가 발생했습니다: {sql_err}")
-    elif rows:
-        block = json.dumps(rows, ensure_ascii=False, default=str)
-        if sql_result.missing_info:
-            missing_str = ", ".join(sql_result.missing_info)
-            block += f"\n[주의: 일부 정보가 부족해 결과가 정확하지 않을 수 있습니다 — {missing_str}]"
-        ctx_parts.append(f"[정확 조회 결과]\n{block}")
+    loop_msgs: list = [
+        SystemMessage(content=system_content),
+        *list(state["messages"]),   # 전체 대화 히스토리 포함 (마지막 = 현재 사용자 메시지)
+    ]
 
-    if vector_rows:
-        ctx_parts.append(
-            "[첨부파일 내용 검색 결과 — 사용자 질문과 관련 있는 경우에만 참고하고, 무관하면 무시할 것]\n"
-            + json.dumps(vector_rows, ensure_ascii=False, default=str)
+    MAX_ITER = 5
+    LOOP_TIMEOUT = 40   # 한 LLM 호출당 최대 대기(초) — 초과 시 수집분으로 진행
+    for i in range(MAX_ITER):
+        # 루프 진행 상태를 프론트에 알림 (단순 라벨)
+        await adispatch_custom_event(
+            "react_progress",
+            {"detail_status": f"정보를 조회하고 있어요 ({i + 1}/{MAX_ITER})"},
+        )
+        _call_t0 = time.perf_counter()
+        try:
+            response = await asyncio.wait_for(
+                llm_with_tools.ainvoke(loop_msgs), timeout=LOOP_TIMEOUT
+            )
+        except asyncio.TimeoutError:
+            _elapsed = time.perf_counter() - _call_t0
+            # ★ i==0(첫 호출)에서 타임아웃 = cold-start(모델 적재) 강력 의심
+            tag = " ★첫호출(cold-start 의심)" if i == 0 else ""
+            print(f"[REACT] LLM 호출 #{i + 1} 타임아웃 — {_elapsed:.1f}s 경과{tag}")
+            break  # 타임아웃 — 지금까지 수집분으로 진행
+        _elapsed = time.perf_counter() - _call_t0
+        n_calls = len(response.tool_calls) if response.tool_calls else 0
+        tag = " ★첫호출(이 시간에 모델 적재 포함)" if i == 0 else ""
+        print(f"[REACT] LLM 호출 #{i + 1} 완료 — {_elapsed:.1f}s, tool_calls={n_calls}{tag}")
+        loop_msgs.append(response)
+
+        if not response.tool_calls:
+            break  # LLM이 충분하다고 판단 → 루프 종료
+
+        for tc in response.tool_calls:
+            _tool_t0 = time.perf_counter()
+            result = await tools_map[tc["name"]].ainvoke(tc["args"])
+            _tool_el = time.perf_counter() - _tool_t0
+            print(f"[REACT]   tool {tc['name']} 실행 — {_tool_el:.2f}s")
+            loop_msgs.append(
+                _ToolMessage(content=str(result), tool_call_id=tc["id"], name=tc["name"])
+            )
+
+    # ── 수집 결과를 context에 병합 ────────────────────────────────────────────
+    # ① 루프 최종 AI 메시지(도구 호출 없는 응답) = 에이전트의 해석/결론.
+    #    이게 유실되면 다음 노드(preflight/generate)가 원시 JSON만 보고 맥락을 잃는다.
+    #    분량은 한 단락 수준이라 프롬프트 부담이 거의 없다.
+    # ② ToolMessage 원시 결과 = req_sn 등 구체값(node_excu의 UPDATE WHERE에 필요).
+    final_ai = ""
+    for m in reversed(loop_msgs):
+        if isinstance(m, AIMessage) and not getattr(m, "tool_calls", None):
+            c = m.content
+            if isinstance(c, list):   # content-list 포맷 방어
+                c = "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in c)
+            final_ai = str(c).strip()
+            break
+
+    tool_results = [m.content for m in loop_msgs if isinstance(m, _ToolMessage)]
+
+    parts: list[str] = []
+    if final_ai:
+        parts.append(f"[조회 분석]\n{final_ai}")
+    if tool_results:
+        parts.append("[동적 조회 결과]\n" + "\n".join(tool_results))
+
+    if parts:
+        gathered = "\n\n".join(parts)
+        new_context = f"{context}\n\n{gathered}".strip() if context else gathered
+    else:
+        new_context = context  # 도구·응답 모두 없으면 기존 컨텍스트 유지
+
+    # ── 벡터 검색 (search + VECTOR_SEARCH_INTENTS일 때만) ────────────────────
+    vector_sql_logged = None
+    if action_type == "search" and intent in VECTOR_SEARCH_INTENTS:
+        user_embedding = state.get("user_embedding")
+        if user_embedding:
+            try:
+                vector_rows = await execute_vector_sql(VECTOR_SEARCH_SQL, user_embedding)
+                if vector_rows:
+                    new_context += (
+                        "\n\n[첨부파일 내용 검색 결과 — 사용자 질문과 관련 있는 경우에만 참고하고, 무관하면 무시할 것]\n"
+                        + json.dumps(vector_rows, ensure_ascii=False, default=str)
+                    )
+                    vector_sql_logged = VECTOR_SEARCH_SQL
+            except Exception:
+                pass  # 벡터 검색 실패 시 무시
+
+    # ── 추가 정보 요구 및 다음 노드 진행 여부 판단 (LLM) ──────────────────
+    decision_slm = get_structured_slm(ReactDecisionResult).with_config(tags=["react_decision"])
+    decision_messages = [
+        SystemMessage(content=REACT_DECISION_PROMPT),
+        SystemMessage(content=f"[현재 action_type] {action_type}"),
+        SystemMessage(content=f"[수집된 컨텍스트]\n{new_context}"),
+        *list(state["messages"]),
+    ]
+
+    try:
+        decision_resp = await decision_slm.ainvoke(decision_messages)
+        if is_dev():
+            decision = decision_resp
+        else:
+            decision = parse_llm_json(decision_resp.content, ReactDecisionResult)
+    except Exception as e:
+        print(f"[REACT] 의사결정 LLM 호출 실패로 기존 흐름 폴백: {e}")
+        decision = ReactDecisionResult(need_more_info=False, proceed_to_next_node=True)
+
+
+
+    # A. 추가 정보 요구 (need_more_info == True)
+    # interrupt()를 이 노드 내부에서 직접 호출하지 않고 전용 노드(node_react_gather_ask)로 위임.
+    # → resume 시 node_react_gather 전체(ReAct 루프 포함)가 재실행되는 비용 문제 해결.
+    if decision.need_more_info and decision.more_info_question:
+        print(f"[REACT] 추가 정보 필요 → node_react_gather_ask 위임: {decision.more_info_question}")
+        return Command(
+            goto="node_react_gather_ask",
+            update={
+                "context":               new_context,   # 수집된 context 보존 (소실 방지)
+                "pending_react_question": decision.more_info_question,
+            },
         )
 
-    context = "\n\n".join(ctx_parts) if ctx_parts else "조회 결과가 없습니다."
+    # B. 다음 노드 진행 불필요 (proceed_to_next_node == False)
+    # excu에서도 비즈니스 제약(기간 종료, 권한 없음 등)이 확인된 경우 여기서 종료할 수 있다.
+    # 단, 프롬프트에서 "조회 에이전트의 역할 제약"은 proceed=False 사유가 아님을 명시해야 한다.
+    if not decision.proceed_to_next_node and decision.direct_response:
+        print(f"[REACT] 다음 노드 진행 불필요 → 즉시 최종 응답")
+        return Command(
+            goto="guardrail_output",
+            update={
+                "messages": [AIMessage(content=decision.direct_response)],
+                "context":  new_context,
+            },
+        )
 
-    # vector_sql: 실제 실행된 경우에만 감사 로그용으로 저장
-    executed_vector_sql = VECTOR_SEARCH_SQL if vector_rows else None
+    # C. 기존 로직대로 진행 (proceed_to_next_node == True, 또는 excu 항상)
+    _node_el = time.perf_counter() - _node_t0
+    print(f"[REACT] 종료 — 노드 총 {_node_el:.1f}s, 수집 {len(tool_results)}건 → {('node_generate' if action_type == 'search' else 'node_excu_preflight')}")
 
+    next_node = "node_generate" if action_type == "search" else "node_excu_preflight"
     return Command(
-        goto="node_generate",
+        goto=next_node,
         update={
-            "context": context,
-            "generated_sql": sql,
-            "vector_sql": executed_vector_sql,
+            "context":    new_context,
+            "vector_sql": vector_sql_logged,
         },
     )
 
@@ -543,6 +748,20 @@ async def node_excu(state: GraphState) -> Command:
     user_id = state["user_id"]
     ctx = state.get("context") or ""
 
+    # 직전 대화 히스토리 (현재 메시지 제외 최근 6개)
+    # "응", "네" 등 단답형 응답 시 SQL 생성 LLM이 INSERT/UPDATE 의도를 판단할 맥락 제공
+    recent = list(state["messages"])[:-1][-6:]
+    history_text = ""
+    if recent:
+        lines = []
+        for m in recent:
+            role = "사용자" if getattr(m, "type", "") == "human" else "AI"
+            raw = getattr(m, "content", "")
+            if isinstance(raw, list):
+                raw = "".join(b.get("text", "") if isinstance(b, dict) else str(b) for b in raw)
+            lines.append(f"[{role}] {str(raw)[:200]}")
+        history_text = "\n".join(lines)
+
     # DML SQL 생성 (SqlResult 구조체)
     sql_result = await generate_sql(
         intent=intent,
@@ -551,6 +770,7 @@ async def node_excu(state: GraphState) -> Command:
         user_id=user_id,
         context=ctx,
         date_reference=state.get("date_reference") or "",
+        conversation_history=history_text,
     )
     sql = sql_result.sql
 
@@ -568,7 +788,7 @@ async def node_excu(state: GraphState) -> Command:
         *list(state["messages"]),
         SystemMessage(content=f"[생성된 실행 내용]\n{sql}"),
     ]
-    preview_response = await llm.ainvoke(preview_messages)
+    preview_response = await slm.ainvoke(preview_messages)
     preview_text = preview_response.content.strip().strip('"\'').strip()
 
     meta = preview_response.response_metadata or {}
@@ -586,6 +806,69 @@ async def node_excu(state: GraphState) -> Command:
     )
 
 
+# ── 폼 interrupt 대상 intent 매핑 ────────────────────────────────────────────
+# INSERT/UPDATE 동작에서 사용자가 직접 입력해야 하는 필드가 있는 intent.
+# interrupt_payload의 type을 'excu' 대신 'form'으로 바꾸고 form_fields를 포함시킨다.
+# value 키: node_excu_confirm에서 context 파싱 후 기존 값으로 채워진다 (초기값 pre-load).
+_FORM_INTERRUPT_INTENTS: dict[str, dict] = {
+    "rpt": {
+        "title": "업무보고",
+        "fields": [
+            {
+                "key": "exec_desc",
+                "label": "수행 업무",
+                "type": "textarea",
+                "required": True,
+                "placeholder": "이번 기간에 수행한 업무를 작성하세요",
+            },
+            {
+                "key": "plan_desc",
+                "label": "계획 업무",
+                "type": "textarea",
+                "required": True,
+                "placeholder": "다음 기간에 계획된 업무를 작성하세요",
+            },
+            {
+                "key": "sbmt_yn",
+                "label": "제출 여부",
+                "type": "select",
+                "required": False,
+                "options": [
+                    {"label": "임시저장", "value": "N"},
+                    {"label": "제출완료", "value": "Y"},
+                ],
+            },
+        ],
+    },
+}
+
+
+def _extract_context_values(context: str, keys: list[str]) -> dict[str, str]:
+    """
+    context 문자열에서 JSON 배열을 파싱해 keys에 해당하는 값을 추출한다.
+    여러 JSON 배열에 걸쳐 있어도 마지막에 발견된 값으로 병합한다.
+
+    다른 intent의 form pre-load에도 공통으로 사용할 수 있도록 독립 함수로 분리.
+    """
+    import re as _re, json as _json
+
+    found: dict[str, str] = {}
+    for m in _re.finditer(r'\[[\s\S]*?\]', context):
+        try:
+            arr = _json.loads(m.group())
+            if not isinstance(arr, list):
+                continue
+            for rec in arr:
+                if not isinstance(rec, dict):
+                    continue
+                for k in keys:
+                    if k in rec and rec[k] is not None:
+                        found[k] = str(rec[k])
+        except Exception:
+            pass
+    return found
+
+
 async def node_excu_confirm(state: GraphState) -> Command:
     """
     excu 2단계: state에서 SQL/미리보기를 읽어 사용자 승인 대기 → 실행 or 취소.
@@ -598,9 +881,15 @@ async def node_excu_confirm(state: GraphState) -> Command:
       - resume_value: JSON {"decision":"승인","aprvl_list":[...],"ref_list":[...]}
         또는 단순 문자열 "승인" (결재선 없는 일반 excu 하위 호환)
       - 승인 시: 메인 SQL + aprv/ref INSERT를 단일 트랜잭션으로 실행
+
+    폼 처리 (_FORM_INTERRUPT_INTENTS):
+      - INSERT이고 해당 intent가 _FORM_INTERRUPT_INTENTS에 있으면 type='form'으로 전환
+      - resume_value: JSON {"decision":"승인","form_data":{"exec_desc":"...","plan_desc":"..."}}
+      - 승인 시: patch_form_values()로 SQL NULL 값을 form_data로 교체 후 실행
     """
     from app.hj.services.tools import (
         APRVL_LINE_INTENTS, build_aprvl_insert_sqls, execute_sql_transaction,
+        check_any_approved,
     )
 
     sql          = state.get("generated_sql") or ""
@@ -608,31 +897,72 @@ async def node_excu_confirm(state: GraphState) -> Command:
     user_id      = state["user_id"]
     intent       = state.get("intent") or ""
 
-    # ── interrupt 페이로드 구성 ────────────────────────────────────────────────
-    interrupt_payload: dict = {"type": "excu", "preview": preview_text}
+    # ── SQL 종류 판별 ─────────────────────────────────────────────────────────
+    is_insert = sql.strip().upper().startswith("INSERT")
 
+    # ── DELETE/UPDATE 전 승인 상태 검증 ──────────────────────────────────────
+    # 결재선 대상 intent이고 INSERT가 아니면, 이미 진행된 건인지 사전 확인
+    if not is_insert and intent in APRVL_LINE_INTENTS:
+        already_approved = await check_any_approved(intent, sql, user_id)
+        if already_approved:
+            return Command(
+                goto="save_history",
+                update={
+                    "messages":             [AIMessage(content="이미 결재가 진행된 건은 수정 또는 삭제할 수 없습니다.")],
+                    "pending_excu_preview": None,
+                    "pending_aprvl_list":   None,
+                    "pending_ref_list":     None,
+                    "pending_req_sn":       None,
+                },
+            )
+
+    # ── interrupt 페이로드 구성 ────────────────────────────────────────────────
     aprvl_list_state = state.get("pending_aprvl_list")
     ref_list_state   = state.get("pending_ref_list")
 
-    if aprvl_list_state is not None:    # APRVL_LINE_INTENTS에 속한 intent일 때만 포함
-        interrupt_payload["aprvl_list"] = aprvl_list_state
-        interrupt_payload["ref_list"]   = ref_list_state or []
+    # INSERT/UPDATE 모두 _FORM_INTERRUPT_INTENTS 대상이면 폼 interrupt로 전환
+    # (기존 데이터 pre-load + sbmt_yn 선택 포함)
+    form_cfg = _FORM_INTERRUPT_INTENTS.get(intent)
+
+    if form_cfg:
+        # context에서 기존 값을 추출해 form_fields에 pre-load (INSERT/UPDATE 공통)
+        field_keys = [f["key"] for f in form_cfg["fields"]]
+        existing   = _extract_context_values(state.get("context") or "", field_keys)
+        fields_with_values = [
+            {**f, "value": existing[f["key"]]} if f["key"] in existing else f
+            for f in form_cfg["fields"]
+        ]
+
+        interrupt_payload: dict = {
+            "type":        "form",
+            "preview":     preview_text,
+            "form_title":  form_cfg["title"],
+            "form_fields": fields_with_values,
+        }
+    else:
+        interrupt_payload = {"type": "excu", "preview": preview_text}
+        if is_insert and aprvl_list_state is not None:    # INSERT일 때만 결재선 모달 포함
+            interrupt_payload["aprvl_list"] = aprvl_list_state
+            interrupt_payload["ref_list"]   = ref_list_state or []
 
     # 사용자 승인 대기 — SSE에서 on_interrupt 이벤트로 프론트에 전달
     user_decision = interrupt(interrupt_payload)
 
     # ── resume_value 파싱 ─────────────────────────────────────────────────────
-    # JSON 구조체: {"decision": "승인", "aprvl_list": [...], "ref_list": [...]}
-    # 단순 문자열: "승인" / "취소" (결재선 없는 일반 excu 또는 구버전 프론트)
+    # JSON 구조체 (form):  {"decision":"승인","form_data":{"exec_desc":"...","plan_desc":"..."}}
+    # JSON 구조체 (excu):  {"decision":"승인","aprvl_list":[...],"ref_list":[...]}
+    # 단순 문자열:          "승인" / "취소" (일반 excu 또는 구버전 프론트)
     try:
         parsed     = json.loads(user_decision)
         decision   = parsed.get("decision", "")
         aprvl_list = parsed.get("aprvl_list", aprvl_list_state or [])
         ref_list   = parsed.get("ref_list",   ref_list_state   or [])
+        form_data  = parsed.get("form_data",  {}) if form_cfg else {}
     except (json.JSONDecodeError, TypeError):
         decision   = str(user_decision)
         aprvl_list = aprvl_list_state or []
         ref_list   = ref_list_state   or []
+        form_data  = {}
 
     approved = decision.strip().lower() in ("yes", "승인", "확인", "실행", "y")
 
@@ -649,13 +979,18 @@ async def node_excu_confirm(state: GraphState) -> Command:
             },
         )
 
+    # ── 승인: 폼 데이터 주입 (form interrupt인 경우) ──────────────────────────
+    if form_data:
+        from app.hj.services.tools import patch_form_values
+        sql = patch_form_values(sql, form_data)
+
     # ── 승인: 메인 SQL + 결재선 INSERT를 단일 트랜잭션으로 실행 ─────────────────
     try:
         main_sqls  = [sql]
         aprvl_sqls: list[str] = []
 
         req_sn = state.get("pending_req_sn")
-        if intent in APRVL_LINE_INTENTS and req_sn is not None:
+        if is_insert and intent in APRVL_LINE_INTENTS and req_sn is not None:
             # aprv intent: 3번째 PK(aprv_form_id)를 LLM 생성 SQL에서 추출
             form_id: str | None = None
             if intent == "aprv":
@@ -827,7 +1162,8 @@ async def build_graph():
     g.add_node("route",               node_route)
     g.add_node("node_enrich_context", node_enrich_context)
     g.add_node("node_human",          node_human)
-    g.add_node("node_search",         node_search)
+    g.add_node("node_react_gather",     node_react_gather)
+    g.add_node("node_react_gather_ask", node_react_gather_ask)
     g.add_node("node_excu_preflight",     node_excu_preflight)
     g.add_node("node_excu_preflight_ask", node_excu_preflight_ask)
     g.add_node("node_excu",               node_excu)

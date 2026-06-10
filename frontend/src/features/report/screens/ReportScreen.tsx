@@ -5,7 +5,6 @@ import {
   Modal,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
@@ -173,7 +172,7 @@ export function ReportScreen() {
   if (error) {
     return (
       <CenterState>
-        <Text style={[styles.emptyText, { color: theme.semantic.danger }]}>
+        <Text className="text-[14px]" style={{ color: theme.semantic.danger, fontFamily: WEB_FONT }}>
           보고 정보를 불러오지 못했습니다.
         </Text>
       </CenterState>
@@ -181,7 +180,7 @@ export function ReportScreen() {
   }
 
   return (
-    <View style={[styles.root, { backgroundColor: theme.bg.surface }]}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.surface }}>
       {mode === 'home' && (
         <ReportHome
           forms={forms}
@@ -249,35 +248,36 @@ function ReportHome({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-      <Text style={[styles.pageTitle, { color: theme.text.primary }]}>보고</Text>
+    <ScrollView className="flex-1" contentContainerStyle={{ padding: 28, gap: 28 }} showsVerticalScrollIndicator={false}>
+      <Text className="text-2xl font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>보고</Text>
 
-      <View style={styles.section}>
+      <View className="gap-[14px]">
         {currentReports.length === 0 ? (
           <EmptyBox text="현재 진행 중인 보고가 없습니다." theme={theme} />
         ) : (
-          <View style={styles.cardGrid}>
+          <View className="flex-row flex-wrap gap-3">
             {currentReports.map((round) => (
               <TouchableOpacity
                 key={`${round.rptFormId}-${round.roundSn}`}
                 onPress={() => onOpenRound(round)}
                 activeOpacity={0.75}
-                style={[styles.homeCard, { borderColor: theme.border.subtle, backgroundColor: theme.bg.surfaceAlt }]}
+                className="w-[280px] min-h-[136px] border rounded-[14px] p-4 justify-between gap-4"
+                style={{ borderColor: theme.border.subtle, backgroundColor: theme.bg.surfaceAlt }}
               >
-                <View style={styles.cardTop}>
-                  <View style={styles.cardTitleBlock}>
-                    <Text style={[styles.cardTitle, { color: theme.text.primary }]}>{round.rptTtl}</Text>
-                    <Text style={[styles.cardMeta, { color: theme.text.muted }]}>
+                <View className="flex-row items-start justify-between gap-[10px]">
+                  <View className="flex-1 gap-[5px]">
+                    <Text className="text-[15px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{round.rptTtl}</Text>
+                    <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                       {round.roundNm} · {fmtDisplay(round.roundYmd)}
                     </Text>
                   </View>
                   <StatusBadge status={round.status} />
                 </View>
-                <View style={styles.cardFooter}>
-                  <Text style={[styles.cardMeta, { color: theme.text.muted }]}>
+                <View className="flex-row items-center justify-between gap-[10px]">
+                  <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                     제출 {round.submittedCount} / {round.targetCount}명
                   </Text>
-                  <Text style={[styles.cardActionText, { color: theme.brand.primary }]}>
+                  <Text className="text-[13px] font-bold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>
                     {round.status === 'NOT_WRITTEN' ? '보고하기' : round.status === 'DRAFT' ? '이어쓰기' : '보기'}
                   </Text>
                 </View>
@@ -287,31 +287,31 @@ function ReportHome({
         )}
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>보고서 목록</Text>
+      <View className="gap-[14px]">
+        <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>보고서 목록</Text>
         {forms.length === 0 ? (
           <EmptyBox text="사용 가능한 보고서가 없습니다." theme={theme} />
         ) : (
-          <View style={[styles.table, { borderColor: theme.border.subtle }]}>
-            <View style={[styles.tableHeader, { backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }]}>
-              <Text style={[styles.th, { flex: 2, color: theme.text.muted }]}>보고서</Text>
-              <Text style={[styles.th, { flex: 1, color: theme.text.muted }]}>최근 회차</Text>
-              <Text style={[styles.th, { flex: 0.8, color: theme.text.muted }]}>회차</Text>
-              <Text style={[styles.th, { flex: 0.8, color: theme.text.muted }]}>보기</Text>
+          <View className="border rounded-xl overflow-hidden" style={{ borderColor: theme.border.subtle }}>
+            <View className="flex-row items-center px-4 py-3 border-b" style={{ backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }}>
+              <Text className="text-xs font-bold" style={{ flex: 2, color: theme.text.muted, fontFamily: WEB_FONT }}>보고서</Text>
+              <Text className="text-xs font-bold" style={{ flex: 1, color: theme.text.muted, fontFamily: WEB_FONT }}>최근 회차</Text>
+              <Text className="text-xs font-bold" style={{ flex: 0.8, color: theme.text.muted, fontFamily: WEB_FONT }}>회차</Text>
+              <Text className="text-xs font-bold" style={{ flex: 0.8, color: theme.text.muted, fontFamily: WEB_FONT }}>보기</Text>
             </View>
             {forms.map((form) => (
-              <View key={form.rptFormId} style={[styles.tableRow, { borderBottomColor: theme.border.subtle }]}>
+              <View key={form.rptFormId} className="flex-row items-center px-4 py-3.5 border-b gap-3" style={{ borderBottomColor: theme.border.subtle }}>
                 <View style={{ flex: 2 }}>
-                  <Text style={[styles.tdStrong, { color: theme.text.primary }]}>{form.rptTtl}</Text>
-                  <Text style={[styles.tdSub, { color: theme.text.muted }]} numberOfLines={1}>{form.rptDesc}</Text>
+                  <Text className="text-[13px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{form.rptTtl}</Text>
+                  <Text className="mt-[3px] text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }} numberOfLines={1}>{form.rptDesc}</Text>
                 </View>
-                <Text style={[styles.td, { flex: 1, color: theme.text.body }]}>
+                <Text className="text-[13px]" style={{ flex: 1, color: theme.text.body, fontFamily: WEB_FONT }}>
                   {form.rounds[0] ? fmtDisplay(form.rounds[0].roundYmd) : '-'}
                 </Text>
-                <Text style={[styles.td, { flex: 0.8, color: theme.text.body }]}>{form.rounds.length}개</Text>
+                <Text className="text-[13px]" style={{ flex: 0.8, color: theme.text.body, fontFamily: WEB_FONT }}>{form.rounds.length}개</Text>
                 <View style={{ flex: 0.8, alignItems: 'flex-start' }}>
-                  <TouchableOpacity onPress={() => onOpenForm(form.rptFormId)} style={[styles.smallBtn, { borderColor: theme.border.default }]} activeOpacity={0.7}>
-                    <Text style={[styles.smallBtnText, { color: theme.text.primary }]}>회차 보기</Text>
+                  <TouchableOpacity onPress={() => onOpenForm(form.rptFormId)} className="h-[30px] px-2.5 border rounded-lg items-center justify-center" style={{ borderColor: theme.border.default }} activeOpacity={0.7}>
+                    <Text className="text-xs font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>회차 보기</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -335,40 +335,40 @@ function ReportFormDetail({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView className="flex-1" contentContainerStyle={{ padding: 28, gap: 28 }} showsVerticalScrollIndicator={false}>
       <BackButton label="보고 홈" onPress={onBack} theme={theme} />
-      <View style={styles.titleBlock}>
-        <Text style={[styles.pageTitle, { color: theme.text.primary }]}>{form.rptTtl}</Text>
-        <Text style={[styles.pageSub, { color: theme.text.muted }]}>{form.rptDesc}</Text>
+      <View className="gap-2">
+        <Text className="text-2xl font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{form.rptTtl}</Text>
+        <Text className="text-[14px] leading-[21px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>{form.rptDesc}</Text>
       </View>
 
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>회차 목록</Text>
+      <View className="gap-[14px]">
+        <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>회차 목록</Text>
         {form.rounds.length === 0 ? (
           <EmptyBox text="생성된 회차가 없습니다." theme={theme} />
         ) : (
-          <View style={[styles.table, { borderColor: theme.border.subtle }]}>
-            <View style={[styles.tableHeader, { backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }]}>
-              <Text style={[styles.th, { flex: 1.8, color: theme.text.muted }]}>회차</Text>
-              <Text style={[styles.th, { flex: 1, color: theme.text.muted }]}>제출 현황</Text>
-              <Text style={[styles.th, { flex: 1, color: theme.text.muted }]}>내 작성</Text>
-              <Text style={[styles.th, { flex: 0.8, color: theme.text.muted }]}>회차 보기</Text>
+          <View className="border rounded-xl overflow-hidden" style={{ borderColor: theme.border.subtle }}>
+            <View className="flex-row items-center px-4 py-3 border-b" style={{ backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }}>
+              <Text className="text-xs font-bold" style={{ flex: 1.8, color: theme.text.muted, fontFamily: WEB_FONT }}>회차</Text>
+              <Text className="text-xs font-bold" style={{ flex: 1, color: theme.text.muted, fontFamily: WEB_FONT }}>제출 현황</Text>
+              <Text className="text-xs font-bold" style={{ flex: 1, color: theme.text.muted, fontFamily: WEB_FONT }}>내 작성</Text>
+              <Text className="text-xs font-bold" style={{ flex: 0.8, color: theme.text.muted, fontFamily: WEB_FONT }}>회차 보기</Text>
             </View>
             {form.rounds.map((round) => (
-              <View key={`${round.rptFormId}-${round.roundSn}`} style={[styles.tableRow, { borderBottomColor: theme.border.subtle }]}>
+              <View key={`${round.rptFormId}-${round.roundSn}`} className="flex-row items-center px-4 py-3.5 border-b gap-3" style={{ borderBottomColor: theme.border.subtle }}>
                 <View style={{ flex: 1.8 }}>
-                  <Text style={[styles.tdStrong, { color: theme.text.primary }]}>{round.roundNm}</Text>
-                  <Text style={[styles.tdSub, { color: theme.text.muted }]}>{fmtDisplay(round.roundYmd)}</Text>
+                  <Text className="text-[13px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{round.roundNm}</Text>
+                  <Text className="mt-[3px] text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>{fmtDisplay(round.roundYmd)}</Text>
                 </View>
-                <Text style={[styles.td, { flex: 1, color: theme.text.body }]}>
+                <Text className="text-[13px]" style={{ flex: 1, color: theme.text.body, fontFamily: WEB_FONT }}>
                   제출 {round.submittedCount} / {round.targetCount}명
                 </Text>
                 <View style={{ flex: 1, alignItems: 'flex-start' }}>
                   <StatusBadge status={round.status} />
                 </View>
                 <View style={{ flex: 0.8, alignItems: 'flex-start' }}>
-                  <TouchableOpacity onPress={() => onOpenRound(round)} style={[styles.smallBtn, { borderColor: theme.border.default }]} activeOpacity={0.7}>
-                    <Text style={[styles.smallBtnText, { color: theme.text.primary }]}>열기</Text>
+                  <TouchableOpacity onPress={() => onOpenRound(round)} className="h-[30px] px-2.5 border rounded-lg items-center justify-center" style={{ borderColor: theme.border.default }} activeOpacity={0.7}>
+                    <Text className="text-xs font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>열기</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -405,23 +405,23 @@ function ReportRoundDetail({
   const pendingUsers = submissions.filter((s) => s.status !== 'SUBMITTED');
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <ScrollView className="flex-1" contentContainerStyle={{ padding: 28, gap: 28 }} showsVerticalScrollIndicator={false}>
       <BackButton label={form.rptTtl} onPress={onBack} theme={theme} />
-      <View style={styles.titleBlock}>
-        <Text style={[styles.pageTitle, { color: theme.text.primary }]}>{form.rptTtl}</Text>
-        <Text style={[styles.pageSub, { color: theme.text.muted }]}>
+      <View className="gap-2">
+        <Text className="text-2xl font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{form.rptTtl}</Text>
+        <Text className="text-[14px] leading-[21px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
           {round.roundNm} · {fmtDisplay(round.roundYmd)}
         </Text>
       </View>
 
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text.primary }]}>
+      <View className="gap-[14px]">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
             제출 현황 (제출 {round.submittedCount}명 / 대상 {round.targetCount}명)
           </Text>
         </View>
         {submissionsLoading ? (
-          <View style={styles.inlineLoading}>
+          <View className="p-5 items-center">
             <ActivityIndicator color={theme.brand.primary} size="small" />
           </View>
         ) : (
@@ -463,12 +463,12 @@ function PeopleSection({
   onOpenOwn?: () => void;
 }) {
   return (
-    <View style={styles.peopleSection}>
-      <Text style={[styles.peopleTitle, { color: theme.text.muted }]}>{title}</Text>
+    <View className="gap-2">
+      <Text className="text-xs font-bold" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>{title}</Text>
       {items.length === 0 ? (
-        <Text style={[styles.inlineEmpty, { color: theme.text.subtle }]}>대상자가 없습니다.</Text>
+        <Text className="text-[13px]" style={{ color: theme.text.subtle, fontFamily: WEB_FONT }}>대상자가 없습니다.</Text>
       ) : (
-        <View style={styles.peopleGrid}>
+        <View className="flex-row flex-wrap gap-[10px]">
           {items.map((item) => {
             const isMe = item.userId === currentUserId;
             const clickable = item.status === 'SUBMITTED' ? !!onOpen : isMe && !!onOpenOwn;
@@ -485,21 +485,23 @@ function PeopleSection({
                 onPress={handlePress}
                 disabled={!clickable}
                 activeOpacity={0.75}
-                style={[
-                  styles.personCard,
-                  {
-                    borderColor: theme.border.subtle,
-                    backgroundColor: isMe ? '#FFF4EA' : theme.bg.surfaceAlt,
-                    opacity: clickable ? 1 : 0.86,
-                  },
-                ]}
+                className="w-[260px] min-h-[58px] border rounded-xl p-2.5 flex-row items-center gap-[10px]"
+                style={{
+                  borderColor: theme.border.subtle,
+                  backgroundColor: isMe ? '#FFF4EA' : theme.bg.surfaceAlt,
+                  opacity: clickable ? 1 : 0.86,
+                }}
               >
-                <View style={styles.avatar}><Text style={styles.avatarText}>{(item.userNm || item.userId).slice(0, 1)}</Text></View>
+                <View className="w-[34px] h-[34px] rounded-[17px] bg-[#E5E7EB] items-center justify-center">
+                  <Text className="text-[#6B7280] text-[13px] font-bold" style={{ fontFamily: WEB_FONT }}>
+                    {(item.userNm || item.userId).slice(0, 1)}
+                  </Text>
+                </View>
                 <View style={{ flex: 1 }}>
-                  <View style={styles.personNameRow}>
-                    <Text style={[styles.personName, { color: theme.text.primary }]}>{item.userNm}</Text>
+                  <View className="flex-row items-center gap-1.5">
+                    <Text className="text-[13px] font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>{item.userNm}</Text>
                   </View>
-                  <Text style={[styles.personMeta, { color: theme.text.muted }]}>
+                  <Text className="mt-0.5 text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                     {statusLabel[item.status]}{item.sbmtYmd ? ` · ${fmtDisplay(item.sbmtYmd)}` : ''}
                   </Text>
                 </View>
@@ -540,14 +542,14 @@ function ReportWriteModal({
   if (!visible || !round) return null;
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
-        <View style={[styles.modalCard, styles.wideModalCard, { backgroundColor: theme.bg.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: theme.border.subtle }]}>
+      <View className="flex-1 items-center justify-center p-6 bg-[rgba(0,0,0,0.38)]">
+        <View className="w-full max-w-[920px] max-h-[86%] rounded-[18px] overflow-hidden" style={{ backgroundColor: theme.bg.surface }}>
+          <View className="px-5 py-4 border-b flex-row items-center justify-between" style={{ borderBottomColor: theme.border.subtle }}>
             <View>
-              <Text style={[styles.modalTitle, { color: theme.text.primary }]}>
+              <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>
                 {round.status === 'DRAFT' ? '보고 이어쓰기' : '보고 작성'}
               </Text>
-              <Text style={[styles.modalSub, { color: theme.text.muted }]}>
+              <Text className="mt-1 text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                 {round.rptTtl} · {round.roundNm}
               </Text>
             </View>
@@ -555,16 +557,13 @@ function ReportWriteModal({
               <X size={20} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.modalBody}>
-            <View style={styles.modalColumns}>
-              <View style={[styles.field, styles.modalColumn]}>
-                <Text style={[styles.label, { color: theme.text.body }]}>수행 내용</Text>
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+            <View className="flex-row gap-[14px]">
+              <View className="flex-1 gap-[7px]">
+                <Text className="text-[13px] font-bold" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>수행 내용</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    styles.writeTextArea,
-                    { borderColor: theme.border.default, color: theme.text.primary, backgroundColor: theme.bg.surface },
-                  ]}
+                  className="border rounded-lg px-3 py-2.5 text-[14px] min-h-[240px] pt-2.5"
+                  style={{ borderColor: theme.border.default, color: theme.text.primary, backgroundColor: theme.bg.surface, fontFamily: WEB_FONT, lineHeight: 20 }}
                   value={execDesc}
                   onChangeText={setExecDesc}
                   multiline
@@ -573,14 +572,11 @@ function ReportWriteModal({
                   placeholderTextColor={theme.text.subtle}
                 />
               </View>
-              <View style={[styles.field, styles.modalColumn]}>
-                <Text style={[styles.label, { color: theme.text.body }]}>예정 내용</Text>
+              <View className="flex-1 gap-[7px]">
+                <Text className="text-[13px] font-bold" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>예정 내용</Text>
                 <TextInput
-                  style={[
-                    styles.input,
-                    styles.writeTextArea,
-                    { borderColor: theme.border.default, color: theme.text.primary, backgroundColor: theme.bg.surface },
-                  ]}
+                  className="border rounded-lg px-3 py-2.5 text-[14px] min-h-[240px] pt-2.5"
+                  style={{ borderColor: theme.border.default, color: theme.text.primary, backgroundColor: theme.bg.surface, fontFamily: WEB_FONT, lineHeight: 20 }}
                   value={planDesc}
                   onChangeText={setPlanDesc}
                   multiline
@@ -591,18 +587,18 @@ function ReportWriteModal({
               </View>
             </View>
           </ScrollView>
-          <View style={[styles.modalFooter, { borderTopColor: theme.border.subtle }]}>
-            <View style={styles.actionRow}>
-              <TouchableOpacity onPress={onClose} style={[styles.closeModalBtn, { borderColor: theme.border.default }]} activeOpacity={0.7}>
-                <Text style={[styles.closeModalText, { color: theme.text.primary }]}>취소</Text>
+          <View className="p-3.5 border-t items-end" style={{ borderTopColor: theme.border.subtle }}>
+            <View className="flex-row justify-end gap-[10px] mt-0.5">
+              <TouchableOpacity onPress={onClose} className="h-[38px] px-4 border rounded-[9px] justify-center" style={{ borderColor: theme.border.default }} activeOpacity={0.7}>
+                <Text className="text-[14px] font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>취소</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={onSaveDraft} disabled={pending} style={[styles.secondaryBtn, { borderColor: theme.brand.primary }, pending && styles.btnDisabled]} activeOpacity={0.8}>
+              <TouchableOpacity onPress={onSaveDraft} disabled={pending} className={`h-10 rounded-[9px] border px-3.5 flex-row items-center gap-1.5 ${pending ? 'opacity-[0.55]' : ''}`} style={{ borderColor: theme.brand.primary }} activeOpacity={0.8}>
                 <Save size={14} color={theme.brand.primary} />
-                <Text style={[styles.secondaryBtnText, { color: theme.brand.primary }]}>임시저장</Text>
+                <Text className="text-[14px] font-bold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>임시저장</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={onSubmit} disabled={pending} style={[styles.primaryBtn, { backgroundColor: theme.brand.primary }, pending && styles.btnDisabled]} activeOpacity={0.8}>
+              <TouchableOpacity onPress={onSubmit} disabled={pending} className={`h-10 rounded-[9px] px-[17px] flex-row items-center gap-1.5 ${pending ? 'opacity-[0.55]' : ''}`} style={{ backgroundColor: theme.brand.primary }} activeOpacity={0.8}>
                 {pending ? <ActivityIndicator size="small" color="#fff" /> : <CheckCircle2 size={14} color="#fff" />}
-                <Text style={styles.primaryBtnText}>제출</Text>
+                <Text className="text-white text-[14px] font-bold" style={{ fontFamily: WEB_FONT }}>제출</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -626,12 +622,12 @@ function SubmissionModal({
   if (!submission) return null;
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
-        <View style={[styles.modalCard, styles.wideModalCard, { backgroundColor: theme.bg.surface }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: theme.border.subtle }]}>
+      <View className="flex-1 items-center justify-center p-6 bg-[rgba(0,0,0,0.38)]">
+        <View className="w-full max-w-[920px] max-h-[86%] rounded-[18px] overflow-hidden" style={{ backgroundColor: theme.bg.surface }}>
+          <View className="px-5 py-4 border-b flex-row items-center justify-between" style={{ borderBottomColor: theme.border.subtle }}>
             <View>
-              <Text style={[styles.modalTitle, { color: theme.text.primary }]}>보고 내용</Text>
-              <Text style={[styles.modalSub, { color: theme.text.muted }]}>
+              <Text className="text-base font-bold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>보고 내용</Text>
+              <Text className="mt-1 text-xs" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>
                 {submission.userNm} · {round?.roundNm ?? ''}
               </Text>
             </View>
@@ -639,15 +635,15 @@ function SubmissionModal({
               <X size={20} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={styles.modalBody}>
-            <View style={styles.modalColumns}>
-            <DetailBlock label="수행 내용" value={submission.execDesc} theme={theme} />
-            <DetailBlock label="예정 내용" value={submission.planDesc} theme={theme} />
+          <ScrollView contentContainerStyle={{ padding: 20, gap: 14 }}>
+            <View className="flex-row gap-[14px]">
+              <DetailBlock label="수행 내용" value={submission.execDesc} theme={theme} />
+              <DetailBlock label="예정 내용" value={submission.planDesc} theme={theme} />
             </View>
           </ScrollView>
-          <View style={[styles.modalFooter, { borderTopColor: theme.border.subtle }]}>
-            <TouchableOpacity onPress={onClose} style={[styles.closeModalBtn, { borderColor: theme.border.default }]} activeOpacity={0.7}>
-              <Text style={[styles.closeModalText, { color: theme.text.primary }]}>닫기</Text>
+          <View className="p-3.5 border-t items-end" style={{ borderTopColor: theme.border.subtle }}>
+            <TouchableOpacity onPress={onClose} className="h-[38px] px-4 border rounded-[9px] justify-center" style={{ borderColor: theme.border.default }} activeOpacity={0.7}>
+              <Text className="text-[14px] font-semibold" style={{ color: theme.text.primary, fontFamily: WEB_FONT }}>닫기</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -666,10 +662,10 @@ function DetailBlock({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <View style={[styles.field, styles.modalColumn]}>
-      <Text style={[styles.label, { color: theme.text.body }]}>{label}</Text>
-      <View style={[styles.detailBox, { borderColor: theme.border.default, backgroundColor: theme.bg.surfaceAlt }]}>
-        <Text style={[styles.detailText, { color: theme.text.body }]}>{value || '-'}</Text>
+    <View className="flex-1 gap-[7px]">
+      <Text className="text-[13px] font-bold" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>{label}</Text>
+      <View className="border rounded-lg min-h-[110px] p-3" style={{ borderColor: theme.border.default, backgroundColor: theme.bg.surfaceAlt }}>
+        <Text className="text-[14px] leading-[21px]" style={{ color: theme.text.body, fontFamily: WEB_FONT }}>{value || '-'}</Text>
       </View>
     </View>
   );
@@ -685,9 +681,9 @@ function BackButton({
   theme: ReturnType<typeof useTheme>;
 }) {
   return (
-    <TouchableOpacity onPress={onPress} style={styles.backBtn} activeOpacity={0.7}>
+    <TouchableOpacity onPress={onPress} className="flex-row items-center gap-1.5 self-start py-1" activeOpacity={0.7}>
       <ArrowLeft size={15} color={theme.brand.primary} />
-      <Text style={[styles.backText, { color: theme.brand.primary }]}>{label}</Text>
+      <Text className="text-[13px] font-bold" style={{ color: theme.brand.primary, fontFamily: WEB_FONT }}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -695,23 +691,23 @@ function BackButton({
 function StatusBadge({ status }: { status: ReportStatus }) {
   const meta = statusColor[status];
   return (
-    <View style={[styles.badge, { backgroundColor: meta.bg }]}>
-      <Text style={[styles.badgeText, { color: meta.text }]}>{statusLabel[status]}</Text>
+    <View className="px-2 py-1 rounded-full self-start" style={{ backgroundColor: meta.bg }}>
+      <Text className="text-[11px] font-bold" style={{ color: meta.text, fontFamily: WEB_FONT }}>{statusLabel[status]}</Text>
     </View>
   );
 }
 
 function EmptyBox({ text, theme }: { text: string; theme: ReturnType<typeof useTheme> }) {
   return (
-    <View style={[styles.emptyBox, { borderColor: theme.border.subtle, backgroundColor: theme.bg.surfaceAlt }]}>
+    <View className="border rounded-[14px] min-h-[140px] items-center justify-center gap-2" style={{ borderColor: theme.border.subtle, backgroundColor: theme.bg.surfaceAlt }}>
       <FileText size={24} color={theme.text.subtle} />
-      <Text style={[styles.emptyText, { color: theme.text.muted }]}>{text}</Text>
+      <Text className="text-[14px]" style={{ color: theme.text.muted, fontFamily: WEB_FONT }}>{text}</Text>
     </View>
   );
 }
 
 function CenterState({ children }: { children: React.ReactNode }) {
-  return <View style={styles.center}>{children}</View>;
+  return <View className="flex-1 items-center justify-center p-6">{children}</View>;
 }
 
 function buildFormSummaries(rounds: MyReportRound[], today: string): ReportFormSummary[] {
@@ -774,76 +770,3 @@ function getErrorMessage(e: unknown) {
   }
   return e instanceof Error ? e.message : '요청 처리에 실패했습니다.';
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  scroll: { flex: 1 },
-  content: { padding: 28, gap: 28 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  pageTitle: { fontSize: 24, fontWeight: '700', fontFamily: WEB_FONT },
-  pageSub: { fontSize: 14, lineHeight: 21, fontFamily: WEB_FONT },
-  titleBlock: { gap: 8 },
-  section: { gap: 14 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', fontFamily: WEB_FONT },
-  sectionMeta: { fontSize: 13, fontFamily: WEB_FONT },
-  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  homeCard: { width: 280, minHeight: 136, borderWidth: 1, borderRadius: 14, padding: 16, justifyContent: 'space-between', gap: 16 },
-  cardTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 },
-  cardTitleBlock: { flex: 1, gap: 5 },
-  cardTitle: { fontSize: 15, fontWeight: '700', fontFamily: WEB_FONT },
-  cardMeta: { fontSize: 12, fontFamily: WEB_FONT },
-  cardFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  cardActionText: { fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  table: { borderWidth: 1, borderRadius: 12, overflow: 'hidden' },
-  tableHeader: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, gap: 12 },
-  th: { fontSize: 12, fontWeight: '700', fontFamily: WEB_FONT },
-  td: { fontSize: 13, fontFamily: WEB_FONT },
-  tdStrong: { fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  tdSub: { marginTop: 3, fontSize: 12, fontFamily: WEB_FONT },
-  smallBtn: { height: 30, paddingHorizontal: 10, borderWidth: 1, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  smallBtnText: { fontSize: 12, fontWeight: '600', fontFamily: WEB_FONT },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, alignSelf: 'flex-start' },
-  badgeText: { fontSize: 11, fontWeight: '700', fontFamily: WEB_FONT },
-  emptyBox: { borderWidth: 1, borderRadius: 14, minHeight: 140, alignItems: 'center', justifyContent: 'center', gap: 8 },
-  emptyText: { fontSize: 14, fontFamily: WEB_FONT },
-  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingVertical: 4 },
-  backText: { fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  peopleSection: { gap: 8 },
-  peopleTitle: { fontSize: 12, fontWeight: '700', fontFamily: WEB_FONT },
-  peopleGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  personCard: { width: 260, minHeight: 58, borderWidth: 1, borderRadius: 12, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#E5E7EB', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { color: '#6B7280', fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  personName: { fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  personNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  personMeta: { marginTop: 2, fontSize: 12, fontFamily: WEB_FONT },
-  inlineLoading: { padding: 20, alignItems: 'center' },
-  inlineEmpty: { fontSize: 13, fontFamily: WEB_FONT },
-  field: { gap: 7 },
-  label: { fontSize: 13, fontWeight: '700', fontFamily: WEB_FONT },
-  input: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontSize: 14, fontFamily: WEB_FONT },
-  textArea: { minHeight: 130, lineHeight: 20, paddingTop: 10 },
-  actionRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 2 },
-  secondaryBtn: { height: 40, borderRadius: 9, borderWidth: 1, paddingHorizontal: 15, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  secondaryBtnText: { fontSize: 14, fontWeight: '700', fontFamily: WEB_FONT },
-  primaryBtn: { height: 40, borderRadius: 9, paddingHorizontal: 17, flexDirection: 'row', alignItems: 'center', gap: 6 },
-  primaryBtnText: { color: '#fff', fontSize: 14, fontWeight: '700', fontFamily: WEB_FONT },
-  btnDisabled: { opacity: 0.55 },
-  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.38)', alignItems: 'center', justifyContent: 'center', padding: 24 },
-  modalCard: { width: '100%', maxWidth: 620, maxHeight: '86%', borderRadius: 18, overflow: 'hidden' },
-  wideModalCard: { maxWidth: 920 },
-  modalHeader: { paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  modalTitle: { fontSize: 16, fontWeight: '700', fontFamily: WEB_FONT },
-  modalSub: { marginTop: 4, fontSize: 12, fontFamily: WEB_FONT },
-  modalBody: { padding: 20, gap: 14 },
-  modalColumns: { flexDirection: 'row', gap: 14 },
-  modalColumn: { flex: 1 },
-  modalFooter: { padding: 14, borderTopWidth: 1, alignItems: 'flex-end' },
-  closeModalBtn: { height: 38, paddingHorizontal: 16, borderWidth: 1, borderRadius: 9, justifyContent: 'center' },
-  closeModalText: { fontSize: 14, fontWeight: '600', fontFamily: WEB_FONT },
-  writeTextArea: { minHeight: 240, lineHeight: 20, paddingTop: 10 },
-  detailBox: { borderWidth: 1, borderRadius: 10, minHeight: 110, padding: 12 },
-  detailText: { fontSize: 14, lineHeight: 21, fontFamily: WEB_FONT },
-});

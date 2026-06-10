@@ -1,8 +1,7 @@
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { useTheme, AppTheme } from '../../../shared/hooks/useTheme';
+import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { useTheme } from '../../../shared/hooks/useTheme';
 import { getDeptColor } from '../../../shared/constants/colors';
-import { fontSize, fontWeight } from '../../../shared/constants/typography';
 import { spacing } from '../../../shared/constants/spacing';
 import { toYmd, getWeekDates, WEEKEND_COLORS } from '../../../shared/utils/date';
 import type { ScheduleResponse } from '../api';
@@ -70,7 +69,6 @@ export function WeekListView({
   onEmptyCellPress,
 }: WeekListViewProps) {
   const theme = useTheme();
-  const s = useMemo(() => makeStyles(theme), [theme]);
 
   const weekDates = useMemo(() => getWeekDates(current), [current]);
   const todayY = useMemo(() => toYmd(new Date()), []);
@@ -81,7 +79,7 @@ export function WeekListView({
   );
 
   return (
-    <ScrollView style={s.root} contentContainerStyle={s.scrollContent}>
+    <ScrollView style={{ backgroundColor: theme.bg.surface }} className="flex-1" contentContainerStyle={{ flexGrow: 1, paddingBottom: spacing.lg }}>
       {sections.map((section) => {
         const isToday = section.ymd === todayY;
         const dowColor =
@@ -101,26 +99,28 @@ export function WeekListView({
         return (
           <View
             key={section.ymd}
-            style={[s.daySection, { borderBottomColor: theme.border.subtle }]}
+            style={{ borderBottomColor: theme.border.subtle }}
+            className="border-b"
           >
             {/* 요일 헤더 */}
             <TouchableOpacity
               activeOpacity={0.6}
               onPress={() => onEmptyCellPress?.(section.ymd)}
-              style={[
-                s.dayHeader,
-                {
-                  backgroundColor: isToday
-                    ? theme.brand.primaryTintSoft
-                    : theme.bg.surfaceAlt,
-                  borderBottomColor: theme.border.subtle,
-                },
-              ]}
+              style={{
+                backgroundColor: isToday
+                  ? theme.brand.primaryTintSoft
+                  : theme.bg.surfaceAlt,
+                borderBottomColor: theme.border.subtle,
+                borderBottomWidth: 1,
+                paddingHorizontal: spacing.base,
+                paddingVertical: spacing.sm + 2,
+              }}
+              className="flex-row items-baseline gap-1.5"
             >
-              <Text style={[s.dayHeaderDate, { color: dateColor }]}>
+              <Text style={{ color: dateColor }} className="text-[16px] font-bold">
                 {fmtMonthDay(section.date)}
               </Text>
-              <Text style={[s.dayHeaderDow, { color: dowColor }]}>
+              <Text style={{ color: dowColor }} className="text-[12px] font-semibold">
                 ({DOW_LABELS_EN_SHORT[section.dow]})
               </Text>
             </TouchableOpacity>
@@ -130,9 +130,9 @@ export function WeekListView({
               <TouchableOpacity
                 activeOpacity={0.6}
                 onPress={() => onEmptyCellPress?.(section.ymd)}
-                style={s.emptyRow}
+                style={{ paddingHorizontal: spacing.base, paddingVertical: spacing.md }}
               >
-                <Text style={[s.emptyText, { color: theme.text.subtle }]}>
+                <Text style={{ color: theme.text.subtle }} className="text-[12px]">
                   일정 없음
                 </Text>
               </TouchableOpacity>
@@ -145,27 +145,36 @@ export function WeekListView({
                     key={`${ev.schdSn}-${ev.occurrenceYmd ?? ev.displayStYmd}`}
                     activeOpacity={0.7}
                     onPress={() => onSchedulePress?.(ev)}
-                    style={[s.listRow, { borderLeftColor: color }]}
+                    style={{
+                      borderLeftColor: color,
+                      borderLeftWidth: 3,
+                      paddingHorizontal: spacing.base,
+                      paddingVertical: spacing.sm + 2,
+                    }}
+                    className="flex-row items-center gap-4"
                   >
-                    <View style={s.listRowTimeWrap}>
+                    <View className="w-[86px]">
                       {ev.allday || !isTimedValid ? (
                         <Text
-                          style={[s.listRowTimeAllday, { color: theme.text.muted }]}
+                          style={{ color: theme.text.muted }}
+                          className="text-[10px] font-bold tracking-[0.3px]"
                         >
                           All day
                         </Text>
                       ) : (
                         <Text
-                          style={[s.listRowTime, { color: theme.text.body }]}
+                          style={{ color: theme.text.body }}
+                          className="text-[14px] font-bold"
                           numberOfLines={1}
                         >
                           {fmtHhmm(ev.schdStHr)}~{fmtHhmm(ev.schdEndHr)}
                         </Text>
                       )}
                     </View>
-                    <View style={s.listRowBody}>
+                    <View className="flex-1 min-w-0">
                       <Text
-                        style={[s.listRowTitle, { color: theme.text.primary }]}
+                        style={{ color: theme.text.primary }}
+                        className="text-[15px] font-medium"
                         numberOfLines={1}
                         ellipsizeMode="tail"
                       >
@@ -173,7 +182,8 @@ export function WeekListView({
                       </Text>
                       {!!ev.deptNm && (
                         <Text
-                          style={[s.listRowMeta, { color: theme.text.muted }]}
+                          style={{ color: theme.text.muted }}
+                          className="text-[10px] mt-0.5"
                           numberOfLines={1}
                           ellipsizeMode="tail"
                         >
@@ -192,74 +202,3 @@ export function WeekListView({
   );
 }
 
-const makeStyles = (theme: AppTheme) =>
-  StyleSheet.create({
-    root: {
-      flex: 1,
-      backgroundColor: theme.bg.surface,
-    },
-    scrollContent: {
-      flexGrow: 1,
-      paddingBottom: spacing.lg,
-    },
-    daySection: {
-      borderBottomWidth: 1,
-    },
-    dayHeader: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      gap: spacing.xs + 2,
-      paddingHorizontal: spacing.base,
-      paddingVertical: spacing.sm + 2,
-      borderBottomWidth: 1,
-    },
-    dayHeaderDate: {
-      fontSize: fontSize.bodyLg,
-      fontWeight: fontWeight.bold,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    dayHeaderDow: {
-      fontSize: fontSize.caption,
-      fontWeight: fontWeight.semibold,
-    },
-    emptyRow: {
-      paddingHorizontal: spacing.base,
-      paddingVertical: spacing.md,
-    },
-    emptyText: {
-      fontSize: fontSize.caption,
-    },
-    listRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-      paddingHorizontal: spacing.base,
-      paddingVertical: spacing.sm + 2,
-      borderLeftWidth: 3,
-    },
-    listRowTimeWrap: {
-      width: 86,
-    },
-    listRowTime: {
-      fontSize: fontSize.small,
-      fontWeight: fontWeight.bold,
-      fontVariant: ['tabular-nums'] as any,
-    },
-    listRowTimeAllday: {
-      fontSize: fontSize.micro,
-      fontWeight: fontWeight.bold,
-      letterSpacing: 0.3,
-    },
-    listRowBody: {
-      flex: 1,
-      minWidth: 0,
-    },
-    listRowTitle: {
-      fontSize: fontSize.body,
-      fontWeight: fontWeight.medium,
-    },
-    listRowMeta: {
-      fontSize: fontSize.micro,
-      marginTop: 2,
-    },
-  });

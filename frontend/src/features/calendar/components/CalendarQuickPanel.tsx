@@ -5,7 +5,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TouchableWithoutFeedback,
-  StyleSheet,
   Platform,
   ActivityIndicator,
   Modal,
@@ -366,46 +365,47 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
   const monthLabel = `${monthDate.getFullYear()}년 ${monthDate.getMonth() + 1}월`;
 
   return (
-    <View style={styles.container}>
+    <View className="flex-1">
       {/* 1) 헤더 */}
-      <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
-        <Text style={[styles.headerTitle, { color: theme.text.primary }]}>
+      <View style={{ borderBottomColor: theme.border.subtle }} className="flex-row items-center justify-between px-4 py-3 border-b">
+        <Text style={{ color: theme.text.primary, fontFamily }} className="text-[14px] font-medium">
           캘린더
         </Text>
-        <View style={styles.headerActions}>
+        <View className="flex-row items-center gap-1">
           <TouchableOpacity
             onPress={handleOpenFull}
-            style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
+            style={{ backgroundColor: theme.brand.primaryTint }}
+            className="flex-row items-center gap-1 px-3 py-1.5 rounded-md"
             activeOpacity={0.7}
           >
-            <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>
+            <Text style={{ color: theme.brand.primary, fontFamily }} className="text-[11px] font-medium">
               열기
             </Text>
             <ArrowRight size={12} color={theme.brand.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} className="w-7 h-7 items-center justify-center rounded-md" activeOpacity={0.7}>
             <X size={14} color={theme.text.muted} />
           </TouchableOpacity>
         </View>
       </View>
 
       {/* 2) 미니 달력 */}
-      <View style={[styles.calBlock, { borderBottomColor: theme.border.subtle }]}>
+      <View style={{ borderBottomColor: theme.border.subtle }} className="px-3 pt-3 pb-2 border-b">
         {/* 월 헤더 */}
-        <View style={styles.monthHeader}>
+        <View className="flex-row items-center justify-center gap-3 mb-2">
           <TouchableOpacity
             onPress={goPrevMonth}
-            style={styles.navBtn}
+            className="w-[26px] h-[26px] items-center justify-center rounded-md"
             activeOpacity={0.6}
           >
             <ChevronLeft size={16} color={theme.text.muted} />
           </TouchableOpacity>
-          <Text style={[styles.monthLabel, { color: theme.text.primary }]}>
+          <Text style={{ color: theme.text.primary, fontFamily }} className="text-[13px] font-semibold min-w-[110px] text-center">
             {monthLabel}
           </Text>
           <TouchableOpacity
             onPress={goNextMonth}
-            style={styles.navBtn}
+            className="w-[26px] h-[26px] items-center justify-center rounded-md"
             activeOpacity={0.6}
           >
             <ChevronRight size={16} color={theme.text.muted} />
@@ -413,7 +413,7 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
         </View>
 
         {/* 요일 헤더 */}
-        <View style={styles.dowRow}>
+        <View className="flex-row mb-1">
           {DOW_LABELS.map((dow, i) => {
             const color =
               i === 0
@@ -422,7 +422,7 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
                 ? WEEKEND_COLORS.sat
                 : theme.text.muted;
             return (
-              <Text key={dow} style={[styles.dowCell, { color }]}>
+              <Text key={dow} style={{ color, fontFamily }} className="flex-1 text-center text-[11px] font-medium py-1">
                 {dow}
               </Text>
             );
@@ -430,7 +430,7 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
         </View>
 
         {/* 7x6 그리드 */}
-        <View style={styles.grid}>
+        <View className="flex-row flex-wrap">
           {gridDays.map((d) => {
             const ymd = toYmd(d);
             const isCurMonth = d.getMonth() === monthDate.getMonth();
@@ -454,44 +454,37 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
                 key={ymd}
                 onPress={() => handleDayPress(d)}
                 activeOpacity={0.6}
-                style={styles.dayCell}
+                style={{ width: '14.28%', aspectRatio: 1 }}
+                className="p-0.5"
               >
                 <View
-                  style={[
-                    styles.dayCellInner,
-                    isSelected && {
-                      backgroundColor: theme.brand.primary,
-                    },
-                    !isSelected && isToday && {
-                      borderWidth: 1,
-                      borderColor: theme.brand.primary,
-                    },
-                  ]}
+                  style={{
+                    ...(isSelected ? { backgroundColor: theme.brand.primary } : {}),
+                    ...(!isSelected && isToday ? { borderWidth: 1, borderColor: theme.brand.primary } : {}),
+                  }}
+                  className="flex-1 items-center justify-center rounded-md gap-0.5"
                 >
                   <Text
-                    style={[
-                      styles.dayNum,
-                      {
-                        color: dayNumColor,
-                        fontWeight: isToday || isSelected ? fontWeight.semibold : fontWeight.regular,
-                      },
-                    ]}
+                    style={{
+                      color: dayNumColor,
+                      fontWeight: isToday || isSelected ? fontWeight.semibold : fontWeight.regular,
+                      fontFamily,
+                    }}
+                    className="text-[13px] leading-4"
                   >
                     {d.getDate()}
                   </Text>
                   {dots.length > 0 && (
-                    <View style={styles.dotsRow}>
+                    <View className="flex-row items-center gap-0.5 h-1">
                       {dots.map((c, idx) => (
                         <View
                           key={idx}
-                          style={[
-                            styles.dot,
-                            {
-                              backgroundColor: isSelected
-                                ? theme.text.onBrand
-                                : c,
-                            },
-                          ]}
+                          style={{
+                            backgroundColor: isSelected
+                              ? theme.text.onBrand
+                              : c,
+                          }}
+                          className="w-1 h-1 rounded-full"
                         />
                       ))}
                     </View>
@@ -504,23 +497,23 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
       </View>
 
       {/* 3) 선택 날짜 일정 리스트 */}
-      <View style={styles.listBlock}>
-        <Text style={[styles.listHeader, { color: theme.text.subtle }]}>
+      <View className="flex-1 px-3 pt-3">
+        <Text style={{ color: theme.text.subtle, fontFamily }} className="text-[11px] font-semibold uppercase tracking-wider mb-2 mx-0.5">
           {fmtSelectedTitle(selectedYmd)}
         </Text>
 
         {isLoading ? (
-          <View style={styles.listLoading}>
+          <View className="py-4 items-center">
             <ActivityIndicator size="small" color={theme.brand.primary} />
           </View>
         ) : dayList.length === 0 ? (
-          <Text style={[styles.emptyText, { color: theme.text.subtle }]}>
+          <Text style={{ color: theme.text.subtle, fontFamily }} className="text-[13px] px-1 py-2">
             일정 없음
           </Text>
         ) : (
           <ScrollView
-            style={styles.listScroll}
-            contentContainerStyle={styles.listScrollContent}
+            className="flex-1"
+            contentContainerStyle={{ paddingBottom: 12, gap: 6 }}
             showsVerticalScrollIndicator={false}
           >
             {dayList.map((sc) => {
@@ -535,22 +528,22 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
                   key={`${sc.schdSn}-${sc.occurrenceYmd ?? sc.displayStYmd}`}
                   onPress={() => handleSchedulePress(sc)}
                   activeOpacity={0.7}
-                  style={[
-                    styles.listItem,
-                    {
-                      backgroundColor: theme.bg.surfaceAlt,
-                      borderLeftColor: color,
-                    },
-                  ]}
+                  style={{
+                    backgroundColor: theme.bg.surfaceAlt,
+                    borderLeftColor: color,
+                  }}
+                  className="flex-row items-center gap-3 px-3.5 py-2 rounded-md border-l-3"
                 >
                   <Text
-                    style={[styles.itemTime, { color: theme.text.muted }]}
+                    style={{ color: theme.text.muted, fontFamily }}
+                    className="text-[11px] font-medium min-w-[38px]"
                     numberOfLines={1}
                   >
                     {timeLabel}
                   </Text>
                   <Text
-                    style={[styles.itemTitle, { color: theme.text.primary }]}
+                    style={{ color: theme.text.primary, fontFamily }}
+                    className="flex-1 text-[13px]"
                     numberOfLines={1}
                   >
                     {sc.schdNm}
@@ -563,19 +556,17 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
       </View>
 
       {/* 4) + 새 일정 버튼 */}
-      <View style={[styles.footer, { borderTopColor: theme.border.subtle }]}>
+      <View style={{ borderTopColor: theme.border.subtle }} className="px-3 py-2.5 border-t">
         <TouchableOpacity
           onPress={handleAddPress}
           activeOpacity={0.8}
-          style={[
-            styles.addBtn,
-            {
-              backgroundColor: theme.brand.primary,
-            },
-          ]}
+          style={{
+            backgroundColor: theme.brand.primary,
+          }}
+          className="flex-row items-center justify-center gap-2 py-2.25 rounded-md"
         >
           <Plus size={14} color={theme.text.onBrand} />
-          <Text style={[styles.addBtnText, { color: theme.text.onBrand }]}>
+          <Text style={{ color: theme.text.onBrand, fontFamily }} className="text-[13px] font-semibold">
             새 일정
           </Text>
         </TouchableOpacity>
@@ -611,8 +602,6 @@ export function CalendarQuickPanel({ onClose }: CalendarQuickPanelProps) {
 }
 
 // ─── 반복 일정 삭제 범위 선택 다이얼로그 ───────────────────────────────
-// CalendarScreen의 LoopActionDialog(삭제 케이스)와 동일 동작.
-// LP에서는 삭제 진입점만 있으므로 'delete' 전용으로 단순화.
 interface LoopDeleteRangeDialogProps {
   data: { schedule: ScheduleResponse; occurrenceYmd: string } | null;
   onClose: () => void;
@@ -633,39 +622,34 @@ function LoopDeleteRangeDialog({
   return (
     <Modal visible transparent animationType="fade" onRequestClose={onClose}>
       <TouchableWithoutFeedback onPress={onClose}>
-        <View style={dialogStyles.backdrop}>
+        <View style={{ backgroundColor: 'rgba(0,0,0,0.45)' }} className="flex-1 items-center justify-center p-6">
           <TouchableWithoutFeedback>
             <View
-              style={[
-                dialogStyles.dialog,
-                {
-                  backgroundColor: theme.bg.surface,
-                  borderColor: theme.border.default,
-                },
-              ]}
+              style={{
+                backgroundColor: theme.bg.surface,
+                borderColor: theme.border.default,
+              }}
+              className="w-full max-w-[360px] border rounded-2xl p-6 gap-3"
             >
               <Text
-                style={[dialogStyles.title, { color: theme.text.primary }]}
+                style={{ color: theme.text.primary }}
+                className="text-[15px] font-semibold"
               >
                 반복 일정 삭제
               </Text>
-              <Text style={[dialogStyles.message, { color: theme.text.body }]}>
+              <Text style={{ color: theme.text.body }} className="text-[14px] leading-5">
                 어느 범위까지 삭제할까요?
               </Text>
-              <View style={dialogStyles.btnGroup}>
+              <View className="flex-col gap-2 mt-2">
                 <TouchableOpacity
                   onPress={onThisOnly}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.optionBtn,
-                    { borderColor: theme.border.default },
-                  ]}
+                  style={{ borderColor: theme.border.default }}
+                  className="py-3 px-3 rounded-lg border items-center justify-center"
                 >
                   <Text
-                    style={[
-                      dialogStyles.optionBtnText,
-                      { color: theme.text.primary },
-                    ]}
+                    style={{ color: theme.text.primary }}
+                    className="text-[14px] font-medium"
                   >
                     이 일정만
                   </Text>
@@ -673,16 +657,12 @@ function LoopDeleteRangeDialog({
                 <TouchableOpacity
                   onPress={onFromHere}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.optionBtn,
-                    { borderColor: theme.border.default },
-                  ]}
+                  style={{ borderColor: theme.border.default }}
+                  className="py-3 px-3 rounded-lg border items-center justify-center"
                 >
                   <Text
-                    style={[
-                      dialogStyles.optionBtnText,
-                      { color: theme.text.primary },
-                    ]}
+                    style={{ color: theme.text.primary }}
+                    className="text-[14px] font-medium"
                   >
                     이 일정부터 이후 전부
                   </Text>
@@ -690,19 +670,15 @@ function LoopDeleteRangeDialog({
                 <TouchableOpacity
                   onPress={onAll}
                   activeOpacity={0.7}
-                  style={[
-                    dialogStyles.optionBtn,
-                    {
-                      borderColor: theme.semantic.danger,
-                      backgroundColor: theme.semantic.danger,
-                    },
-                  ]}
+                  style={{
+                    borderColor: theme.semantic.danger,
+                    backgroundColor: theme.semantic.danger,
+                  }}
+                  className="py-3 px-3 rounded-lg border items-center justify-center"
                 >
                   <Text
-                    style={[
-                      dialogStyles.optionBtnText,
-                      { color: '#FFFFFF', fontWeight: fontWeight.semibold },
-                    ]}
+                    style={{ color: '#FFFFFF', fontWeight: fontWeight.semibold }}
+                    className="text-[14px]"
                   >
                     전체 반복 일정
                   </Text>
@@ -711,13 +687,11 @@ function LoopDeleteRangeDialog({
               <TouchableOpacity
                 onPress={onClose}
                 activeOpacity={0.7}
-                style={dialogStyles.cancelBtn}
+                className="py-2 items-center justify-center"
               >
                 <Text
-                  style={[
-                    dialogStyles.cancelBtnText,
-                    { color: theme.text.muted },
-                  ]}
+                  style={{ color: theme.text.muted }}
+                  className="text-[13px]"
                 >
                   취소
                 </Text>
@@ -729,250 +703,3 @@ function LoopDeleteRangeDialog({
     </Modal>
   );
 }
-
-// ─── 스타일 ────────────────────────────────────────────────────────────
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-
-  // 헤더
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.base,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  headerTitle: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: radius.md,
-  },
-  openButtonText: {
-    fontSize: fontSize.micro,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-  },
-
-  // 미니 달력 블록
-  calBlock: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-  },
-  monthHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  navBtn: {
-    width: 26,
-    height: 26,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-  },
-  monthLabel: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-    minWidth: 110,
-    textAlign: 'center',
-  },
-
-  // 요일 헤더
-  dowRow: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  dowCell: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-    paddingVertical: 4,
-  },
-
-  // 그리드 (7x6)
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  dayCell: {
-    width: `${100 / 7}%`,
-    aspectRatio: 1,
-    padding: 2,
-  },
-  dayCellInner: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.md,
-    gap: 2,
-  },
-  dayNum: {
-    fontSize: fontSize.small,
-    fontFamily,
-    lineHeight: fontSize.small * 1.2,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    height: 4,
-  },
-  dot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-  },
-
-  // 선택 날짜 리스트 블록
-  listBlock: {
-    flex: 1,
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.md,
-  },
-  listHeader: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-    textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: spacing.sm,
-    marginHorizontal: 2,
-  },
-  listLoading: {
-    paddingVertical: spacing.lg,
-    alignItems: 'center',
-  },
-  emptyText: {
-    fontSize: fontSize.small,
-    fontFamily,
-    paddingHorizontal: 4,
-    paddingVertical: spacing.sm,
-  },
-  listScroll: {
-    flex: 1,
-  },
-  listScrollContent: {
-    paddingBottom: spacing.sm,
-    gap: spacing.xs + 2,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderLeftWidth: 3,
-  },
-  itemTime: {
-    fontSize: fontSize.caption,
-    fontWeight: fontWeight.medium,
-    fontFamily,
-    minWidth: 38,
-  },
-  itemTitle: {
-    flex: 1,
-    fontSize: fontSize.small,
-    fontFamily,
-  },
-
-  // 푸터 (+ 새 일정 버튼)
-  footer: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderTopWidth: 1,
-  },
-  addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.xs + 2,
-    paddingVertical: 9,
-    borderRadius: radius.md,
-  },
-  addBtnText: {
-    fontSize: fontSize.small,
-    fontWeight: fontWeight.semibold,
-    fontFamily,
-  },
-});
-
-const dialogStyles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.lg,
-  },
-  dialog: {
-    width: '100%',
-    maxWidth: 360,
-    borderWidth: 1,
-    borderRadius: radius['2xl'],
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  title: {
-    fontSize: fontSize.base,
-    fontWeight: fontWeight.semibold,
-  },
-  message: {
-    fontSize: fontSize.body,
-    lineHeight: fontSize.body * 1.5,
-  },
-  btnGroup: {
-    flexDirection: 'column',
-    gap: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  optionBtn: {
-    paddingVertical: 12,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  optionBtnText: {
-    fontSize: fontSize.body,
-    fontWeight: fontWeight.medium,
-  },
-  cancelBtn: {
-    paddingVertical: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelBtnText: {
-    fontSize: fontSize.small,
-  },
-});

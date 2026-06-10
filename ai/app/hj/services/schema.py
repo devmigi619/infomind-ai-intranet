@@ -264,7 +264,48 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
         "-- [INSERT 규칙] rsv_sn: (SELECT COALESCE(MAX(rsv_sn),0)+1 FROM int_mtgr_rsv WHERE mtgr_id='선택회의실ID') 서브쿼리로 설정",
     ],
     "rpt": [
-        # 보고서 테이블 확정 후 추가
+        # 보고 양식 마스터
+        "-- int_rpt_form: 보고 양식 마스터 | PK: rpt_form_id | FK: dept_cd → int_dept.dept_cd, rpt_adm_id → int_user.user_id\n"
+        " 컬럼: rpt_form_id(VARCHAR 양식 ID 예:RPT_001), rpt_ttl(VARCHAR 양식 제목 예:주간보고), rpt_desc(TEXT 양식 설명),\n"
+        "        rpt_dt_se(VARCHAR 보고주기: 'DAILY'=일간 'WEEKLY'=주간 'MONTHLY'=월간),\n"
+        "        rpt_adm_id(VARCHAR 양식 관리자 user_id — 회차 등록/수정/삭제 권한 보유),\n"
+        "        st_ymd(VARCHAR(8) YYYYMMDD 양식 시작일), dept_cd(VARCHAR 부서코드),\n"
+        "        open_yn(VARCHAR: 'Y'=공개 'N'=비공개), use_yn(VARCHAR: 'Y'/'N'), rmk(TEXT 비고)",
+
+        # 보고 회차
+        "-- int_rpt_round: 보고 회차 | PK: (rpt_form_id, round_sn) | FK: rpt_form_id → int_rpt_form.rpt_form_id\n"
+        " 컬럼: round_sn(BIGINT 자동증가), round_nm(TEXT 회차명 예:1회차·2회차),\n"
+        "        round_ymd(VARCHAR(8) YYYYMMDD 회차 기준 날짜), rpt_sum(TEXT 회차 전체 요약 — 관리자 작성)\n"
+        " [권한] INSERT/UPDATE/DELETE: 해당 양식의 rpt_adm_id = 요청 user_id 인 경우만 허용\n"
+        " JOIN 힌트: rpt_form_id ↔ int_rpt_form.rpt_form_id",
+
+        # 업무보고 내용
+        "-- int_rpt_desc: 업무보고 내용 | PK: (rpt_form_id, round_sn, user_id)\n"
+        " FK: (rpt_form_id, round_sn) → int_rpt_round\n"
+        " 컬럼: user_id(VARCHAR 작성자 FK→int_user), exec_desc(TEXT 수행 업무 내용 — 이번 기간 한 일),\n"
+        "        plan_desc(TEXT 계획 업무 내용 — 다음 기간 할 일),\n"
+        "        sbmt_yn(VARCHAR: 'Y'=제출완료 'N'=미제출 — 제출완료 건 수정/삭제 금지),\n"
+        "        sbmt_ymd(VARCHAR(8) YYYYMMDD 제출 일자)\n"
+        " [권한] UPDATE/DELETE: WHERE user_id=요청user_id AND sbmt_yn='N' 조건 필수\n"
+        "         타인 보고 수정/삭제 금지 / 제출완료(sbmt_yn='Y') 건 변경 금지\n"
+        " [권한] SELECT: user_id 조건 없이 전체 조회 가능 (open_yn='Y' 양식 기준)",
+
+        # DML 규칙 (작성/수정 통합)
+        "-- [DML 규칙] 업무보고(int_rpt_desc) 작성·수정\n"
+        " [react 조회 힌트] 작성·수정 요청 시 반드시 아래 전체 조회:\n"
+        "   SELECT exec_desc, plan_desc, sbmt_yn FROM int_rpt_desc\n"
+        "   WHERE rpt_form_id=확정값 AND round_sn=확정값 AND user_id=요청user_id\n"
+        " ▶ 조회 결과 있음 → UPDATE (기존 레코드 덮어쓰기)\n"
+        "   UPDATE int_rpt_desc\n"
+        "   SET exec_desc=NULL, plan_desc=NULL, sbmt_yn='N'\n"
+        "   WHERE rpt_form_id=? AND round_sn=? AND user_id=요청user_id AND sbmt_yn='N'\n"
+        " ▶ 조회 결과 없음 → INSERT (신규 작성)\n"
+        "   INSERT INTO int_rpt_desc (rpt_form_id, round_sn, user_id, exec_desc, plan_desc, sbmt_yn)\n"
+        "   VALUES (?, ?, 요청user_id, NULL, NULL, 'N')\n"
+        " ※ exec_desc·plan_desc·sbmt_yn → NULL/'N'으로 두면 폼 패널 입력값이 자동 주입됨\n"
+        " · round_sn: [참조 코드] 확정값 사용. 없으면\n"
+        "   (SELECT COALESCE(MAX(round_sn),0)+1 FROM int_rpt_round WHERE rpt_form_id=?)\n"
+        " · 회차(int_rpt_round) INSERT: 관리자만. 컬럼 rpt_form_id·round_sn·round_nm·round_ymd",
     ],
     "general": [
         # 일반 대화 — 보통 DB 조회 불필요
@@ -272,16 +313,52 @@ INTENT_SCHEMAS: dict[str, list[str]] = {
 }
 
 
-def get_schema_for_intent(intent: str) -> str:
+# ── 경량(lookup) 스키마 변환 ──────────────────────────────────────────────────
+# ReAct 조회 루프(node_react_gather)는 "레코드 찾기"만 수행하므로
+# INSERT 규칙·예시 SQL·f_cm_cd 사용규칙 등 SQL 생성 전용 내용이 필요 없다.
+# 토큰 절감을 위해 테이블 헤더·컬럼·키(FK/JOIN/PK)·함수 시그니처만 남긴다.
+#
+#   - "-- [INSERT 규칙]" 으로 시작하는 항목은 통째로 제거
+#   - 항목 내 예시/사용예/규칙 블록은 다음 구조 라인(헤더/컬럼/키/함수)까지 건너뜀
+#   - ※ 주석(테이블 경계 설명 등)은 짧고 유용하므로 유지
+
+_LOOKUP_SKIP_TRIGGERS = ("사용 예", "예시", "예)", "[INSERT 주의]", "[JSONB 예시]", "[_SE 컬럼 규칙]")
+_LOOKUP_STRUCT_PREFIXES = ("-- int_", "컬럼:", "FK", "JOIN", "PK", "함수:", "-- [DB 함수]")
+
+
+def _to_lookup_entry(entry: str) -> str:
+    """단일 스키마 항목을 경량 버전으로 축약한다. 규칙 전용 블록이면 빈 문자열."""
+    if entry.lstrip().startswith("-- [INSERT 규칙]"):
+        return ""
+    kept: list[str] = []
+    skipping = False
+    for ln in entry.split("\n"):
+        s = ln.strip()
+        if any(trig in s for trig in _LOOKUP_SKIP_TRIGGERS):
+            skipping = True
+            continue
+        if skipping:
+            if s.startswith(_LOOKUP_STRUCT_PREFIXES):
+                skipping = False
+            else:
+                continue
+        kept.append(ln)
+    return "\n".join(kept).rstrip()
+
+
+def get_schema_for_intent(intent: str, mode: str = "full") -> str:
     """
-    공통 테이블(int_user, int_dept, int_jbgd) + intent 전용 테이블을 합쳐 반환한다.
+    공통 테이블(int_user, int_dept, int_jbgd, int_com_code) + intent 전용 테이블을 합쳐 반환한다.
     공통 테이블은 항상 앞에 위치해 LLM이 JOIN 대상을 먼저 인식하도록 한다.
+
+    mode:
+      "full"   — 전체 스키마 (SQL 생성용, 기본값). generate_sql이 사용.
+      "lookup" — 경량 스키마 (ReAct 조회 루프용). INSERT 규칙·예시 SQL 제거로 토큰 절감.
     """
-    common = "\n\n".join(COMMON_TABLES)
-    intent_schemas = [s for s in INTENT_SCHEMAS.get(intent, []) if s.strip()]
-    if intent_schemas:
-        return common + "\n\n" + "\n\n".join(intent_schemas)
-    return common
+    entries = list(COMMON_TABLES) + [s for s in INTENT_SCHEMAS.get(intent, []) if s.strip()]
+    if mode == "lookup":
+        entries = [e for e in (_to_lookup_entry(x) for x in entries) if e.strip()]
+    return "\n\n".join(entries)
 
 
 # ── intent별 참조 데이터 쿼리 ──────────────────────────────────────────────────
@@ -341,7 +418,19 @@ INTENT_REFERENCE_QUERIES: dict[str, list[dict]] = {
          "sql": "SELECT cd_nm AS nm, cd AS cd FROM int_com_code "
                 "WHERE use_yn='Y' AND up_cd='APRV_RSLT_SE' AND cd_lvl='2'"},
     ],
-    # rpt / general: 참조 데이터 불필요 → 미정의(빈 리스트 반환)
+    "rpt": [
+        {"label": "보고 양식(rpt_form_id) — 표기: 양식제목(보고주기)",
+         "sql": "SELECT rpt_ttl||'('||rpt_dt_se||')' AS nm, rpt_form_id AS cd "
+                "FROM int_rpt_form WHERE use_yn='Y' ORDER BY rpt_form_id"},
+        {"label": "최근 회차(round_sn) — 표기: 양식제목 회차명(기준날짜)(rpt_form_id=양식코드)=회차번호",
+         "sql": "SELECT f.rpt_ttl||' '||r.round_nm"
+                "||'(round_ymd='||COALESCE(r.round_ymd,'')||')"
+                "(rpt_form_id='||r.rpt_form_id||')' AS nm, "
+                "r.round_sn::VARCHAR AS cd "
+                "FROM int_rpt_round r JOIN int_rpt_form f ON r.rpt_form_id = f.rpt_form_id "
+                "WHERE f.use_yn='Y' ORDER BY r.rpt_form_id, r.round_sn DESC LIMIT 10"},
+    ],
+    # general: 참조 데이터 불필요 → 미정의(빈 리스트 반환)
 }
 
 
@@ -372,6 +461,12 @@ PREFLIGHT_REQUIRED_FIELDS: dict[str, str] = {
     "brd":  "필수: 게시판, 제목, 본문",
     "schd":  "필수: 일정이름, 일정시작일자, 일정종료일자\n"
              "[규칙] 반복일정으로 판단되면 공통코드 LOOP_SE를 판단하여 반복주기 입력 필수",
+    "rpt": (
+        "필수: 보고 양식, 회차 — [참조 코드]에서 자동 결정, 미언급이면 최신 회차\n"
+        "exec_desc·plan_desc·sbmt_yn: 폼 패널에서 입력 → 내용 없어도 is_complete=true\n"
+        "[권한] 수정/삭제: 본인 보고만. 제출완료(sbmt_yn='Y') 건 변경 불가\n"
+        "[회차관리] 양식 관리자(rpt_adm_id)만 가능"
+    ),
 }
 
 

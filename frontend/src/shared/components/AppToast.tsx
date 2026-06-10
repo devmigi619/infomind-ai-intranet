@@ -1,26 +1,15 @@
 import React, { useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  Animated,
-  StyleSheet,
-  Platform,
-} from 'react-native';
+import { Animated, TouchableOpacity, View, Platform } from 'react-native';
 import { CheckCircle2, XCircle, AlertTriangle, Info, X } from 'lucide-react-native';
+import { Toast, ToastTitle } from './ui/toast';
 import { useToastStore, type ToastItem, type ToastVariant } from '../../store/toastStore';
 import { zIndex } from '../constants/zIndex';
 
-// ─── 변형별 설정 ───────────────────────────────────────────────────────────
-
-const VARIANT: Record<
-  ToastVariant,
-  { accent: string; iconColor: string; Icon: React.ComponentType<any> }
-> = {
-  success: { accent: '#10B981', iconColor: '#10B981', Icon: CheckCircle2 },
-  error:   { accent: '#EF4444', iconColor: '#EF4444', Icon: XCircle       },
-  warning: { accent: '#F59E0B', iconColor: '#F59E0B', Icon: AlertTriangle  },
-  info:    { accent: '#0A2463', iconColor: '#0A2463', Icon: Info           },
+const VARIANT_ICONS: Record<ToastVariant, { color: string; Icon: React.ComponentType<any> }> = {
+  success: { color: '#10B981', Icon: CheckCircle2 },
+  error:   { color: '#EF4444', Icon: XCircle },
+  warning: { color: '#F59E0B', Icon: AlertTriangle },
+  info:    { color: '#0A2463', Icon: Info },
 };
 
 const DEFAULT_DURATION: Record<ToastVariant, number> = {
@@ -30,15 +19,13 @@ const DEFAULT_DURATION: Record<ToastVariant, number> = {
   info:    3200,
 };
 
-// ─── 단일 토스트 카드 ───────────────────────────────────────────────────────
-
 function ToastCard({ item }: { item: ToastItem }) {
-  const hide  = useToastStore((s) => s.hide);
-  const opacity    = useRef(new Animated.Value(0)).current;
+  const hide = useToastStore((s) => s.hide);
+  const opacity = useRef(new Animated.Value(0)).current;
   const translateY = useRef(new Animated.Value(-16)).current;
 
   const duration = item.duration ?? DEFAULT_DURATION[item.variant];
-  const { accent, iconColor, Icon } = VARIANT[item.variant];
+  const { color: iconColor, Icon } = VARIANT_ICONS[item.variant];
 
   const dismiss = () => {
     Animated.parallel([
@@ -48,7 +35,6 @@ function ToastCard({ item }: { item: ToastItem }) {
   };
 
   useEffect(() => {
-    // 진입
     Animated.parallel([
       Animated.timing(opacity,    { toValue: 1, duration: 220, useNativeDriver: false }),
       Animated.timing(translateY, { toValue: 0, duration: 220, useNativeDriver: false }),
@@ -60,28 +46,30 @@ function ToastCard({ item }: { item: ToastItem }) {
   }, []);
 
   return (
-    <Animated.View
-      style={[
-        s.card,
-        { opacity, transform: [{ translateY }], borderLeftColor: accent },
-      ]}
-    >
-      <Icon size={16} color={iconColor} />
-      <Text style={s.message} numberOfLines={3}>
-        {item.message}
-      </Text>
-      <TouchableOpacity
-        onPress={dismiss}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        activeOpacity={0.6}
+    <Animated.View style={{ opacity, transform: [{ translateY }], width: '100%', alignItems: 'center' }}>
+      <Toast
+        action={item.variant}
+        variant="outline"
+        className="flex-row items-center gap-3 bg-background-0 rounded-lg p-3 w-[360px] max-w-[90%] border-l-4 border-l-primary-500 shadow-lg"
+        style={{
+          borderLeftColor: iconColor,
+        }}
       >
-        <X size={14} color="rgba(0,0,0,0.35)" />
-      </TouchableOpacity>
+        <Icon size={16} color={iconColor} />
+        <ToastTitle size="sm" className="flex-1 text-typography-800 font-normal leading-relaxed text-xs">
+          {item.message}
+        </ToastTitle>
+        <TouchableOpacity
+          onPress={dismiss}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.6}
+        >
+          <X size={14} color="rgba(0,0,0,0.35)" />
+        </TouchableOpacity>
+      </Toast>
     </Animated.View>
   );
 }
-
-// ─── 루트 컨테이너 ─────────────────────────────────────────────────────────
 
 export function AppToast() {
   const toasts = useToastStore((s) => s.toasts);
@@ -89,55 +77,17 @@ export function AppToast() {
   if (toasts.length === 0) return null;
 
   return (
-    <View style={s.container} pointerEvents="box-none">
+    <View
+      pointerEvents="box-none"
+      className="absolute left-0 right-0 items-center gap-2"
+      style={{
+        top: Platform.select({ web: 16, default: 52 }),
+        zIndex: zIndex.toast,
+      }}
+    >
       {toasts.map((item) => (
         <ToastCard key={item.id} item={item} />
       ))}
     </View>
   );
 }
-
-// ─── 스타일 ────────────────────────────────────────────────────────────────
-
-const FF = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
-
-const s = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    top: Platform.select({ web: 16, default: 52 }),
-    left: 0,
-    right: 0,
-    zIndex: zIndex.toast,
-    alignItems: 'center',
-    gap: 8,
-    pointerEvents: 'box-none',
-  } as any,
-
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    borderLeftWidth: 4,
-    paddingVertical: 12,
-    paddingLeft: 14,
-    paddingRight: 12,
-    maxWidth: 420,
-    width: '90%',
-    // 그림자 (iOS/Android)
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-
-  message: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    color: 'rgba(0,0,0,0.85)',
-    fontFamily: FF,
-  },
-});

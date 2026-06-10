@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   Animated,
   Easing,
   Platform,
@@ -88,54 +87,90 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
 
   return (
     <Animated.View
-      style={[
-        styles.container,
-        {
-          width: widthAnim,
-          backgroundColor: theme.bg.surface,
-          borderRightColor: theme.border.default,
-        },
-      ]}
+      style={{
+        borderRightWidth: 1,
+        overflow: 'hidden',
+        width: widthAnim,
+        backgroundColor: theme.bg.surface,
+        borderRightColor: theme.border.default,
+      }}
     >
-      <View style={styles.inner}>
+      <View
+        className="flex-1 flex-col"
+        style={{ width: 360 }}
+      >
         {QuickPanel ? (
           // ── 실데이터 패널: 자체 UI 전체 위임 ──────────────────────────────
           <Animated.View
-            style={[
-              styles.contentWrap,
-              { opacity: fadeAnim, transform: [{ translateY: translateAnim }] },
-            ]}
+            className="flex-1"
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: translateAnim }],
+            }}
           >
             <QuickPanel onClose={onClose} />
           </Animated.View>
         ) : (
           // ── 미연동 패널: 표준 헤더 + 빈 상태 ─────────────────────────────
           <>
-            <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
-              <Text style={[styles.title, { color: theme.text.primary }]}>{title}</Text>
-              <View style={styles.actions}>
+            <View
+              className="flex-row items-center justify-between px-4 py-3 border-b"
+              style={{ borderBottomColor: theme.border.subtle }}
+            >
+              <Text
+                className="font-medium"
+                style={{
+                  fontSize: 14,
+                  color: theme.text.primary,
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
+              >
+                {title}
+              </Text>
+              <View className="flex-row items-center" style={{ gap: 4 }}>
                 <TouchableOpacity
                   onPress={onOpenFullScreen}
-                  style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
+                  className="flex-row items-center px-3 py-1.5 rounded-[6px]"
+                  style={{ gap: 4, backgroundColor: theme.brand.primaryTint }}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+                  <Text
+                    className="font-medium"
+                    style={{
+                      fontSize: 12,
+                      color: theme.brand.primary,
+                      fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                    }}
+                  >
+                    열기
+                  </Text>
                   <ArrowRight size={12} color={theme.brand.primary} />
                 </TouchableOpacity>
-                <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+                <TouchableOpacity
+                  onPress={onClose}
+                  className="w-7 h-7 items-center justify-center rounded-[6px]"
+                  activeOpacity={0.7}
+                >
                   <X size={14} color={theme.text.muted} />
                 </TouchableOpacity>
               </View>
             </View>
 
             <Animated.View
-              style={[
-                styles.contentWrap,
-                { opacity: fadeAnim, transform: [{ translateY: translateAnim }] },
-              ]}
+              className="flex-1"
+              style={{
+                opacity: fadeAnim,
+                transform: [{ translateY: translateAnim }],
+              }}
             >
-              <View style={styles.emptyState}>
-                <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+              <View className="flex-1 items-center justify-center">
+                <Text
+                  style={{
+                    fontSize: 13,
+                    color: theme.text.muted,
+                    fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                  }}
+                >
                   데이터가 존재하지 않습니다.
                 </Text>
               </View>
@@ -146,65 +181,3 @@ export function LeftPanel({ activePanel, onClose, onOpenFullScreen }: LeftPanelP
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    borderRightWidth: 1,
-    overflow: 'hidden',
-  },
-  inner: {
-    width: 360,
-    flex: 1,
-    flexDirection: 'column',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  openButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
-  },
-  openButtonText: {
-    fontSize: 12,
-    fontWeight: '500',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  closeButton: {
-    width: 28,
-    height: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 6,
-  },
-  contentWrap: {
-    flex: 1,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyText: {
-    fontSize: 13,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-});

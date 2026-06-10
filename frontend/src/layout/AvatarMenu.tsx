@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Settings, LogOut, User } from 'lucide-react-native';
 import { useTheme } from '../shared/hooks/useTheme';
 
@@ -17,29 +17,79 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
 
   return (
     <View>
-      <TouchableOpacity onPress={() => setOpen(true)} activeOpacity={0.7} style={styles.trigger}>
-        <View style={[styles.avatar, { backgroundColor: theme.bg.surfaceMute }]}>
+      <TouchableOpacity
+        onPress={() => setOpen(true)}
+        activeOpacity={0.7}
+        className="flex-row items-center ml-1"
+      >
+        <View
+          className="w-7 h-7 rounded-full items-center justify-center"
+          style={{ backgroundColor: theme.bg.surfaceMute }}
+        >
           <User size={16} color={theme.text.muted} />
         </View>
-        <Text style={[styles.nameText, { color: theme.text.primary }]}>
+        <Text
+          className="ml-2 font-medium"
+          style={{
+            fontSize: 13,
+            color: theme.text.primary,
+            fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+          }}
+        >
           {name}{position ? ` ${position}` : ''}
         </Text>
       </TouchableOpacity>
 
-      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setOpen(false)}>
+      <Modal
+        visible={open}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setOpen(false)}
+      >
+        <TouchableOpacity
+          className="flex-1 bg-transparent"
+          activeOpacity={1}
+          onPress={() => setOpen(false)}
+        >
           <View
-            style={[
-              styles.dropdown,
-              {
-                backgroundColor: theme.bg.surface,
-                borderColor: theme.border.default,
-              },
-            ]}
+            className="absolute overflow-hidden"
+            style={{
+              top: 44,
+              right: 16,
+              width: 220,
+              borderWidth: 1,
+              borderRadius: 12,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 8 },
+              shadowOpacity: 0.1,
+              shadowRadius: 24,
+              elevation: 8,
+              backgroundColor: theme.bg.surface,
+              borderColor: theme.border.default,
+            }}
           >
-            <View style={[styles.userBlock, { borderBottomColor: theme.border.subtle }]}>
-              <Text style={[styles.userName, { color: theme.text.primary }]}>{name}</Text>
-              <Text style={[styles.userMeta, { color: theme.text.muted }]}>
+            <View
+              className="px-4 py-3.5 border-b"
+              style={{ borderBottomColor: theme.border.subtle }}
+            >
+              <Text
+                className="font-medium"
+                style={{
+                  fontSize: 14,
+                  color: theme.text.primary,
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
+              >
+                {name}
+              </Text>
+              <Text
+                className="mt-0.5"
+                style={{
+                  fontSize: 12,
+                  color: theme.text.muted,
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
+              >
                 {department}
                 {department && position ? ' · ' : ''}
                 {position}
@@ -47,7 +97,8 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
             </View>
 
             <TouchableOpacity
-              style={styles.item}
+              className="flex-row items-center px-4 py-2.5"
+              style={{ gap: 10 }}
               activeOpacity={0.7}
               onPress={() => {
                 setOpen(false);
@@ -55,13 +106,27 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
               }}
             >
               <Settings size={16} color={theme.text.primary} />
-              <Text style={[styles.itemText, { color: theme.text.primary }]}>설정</Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: theme.text.primary,
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
+              >
+                설정
+              </Text>
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: theme.border.subtle }]} />
+            <View
+              style={{
+                height: 1,
+                backgroundColor: theme.border.subtle,
+              }}
+            />
 
             <TouchableOpacity
-              style={styles.item}
+              className="flex-row items-center px-4 py-2.5"
+              style={{ gap: 10 }}
               activeOpacity={0.7}
               onPress={() => {
                 setOpen(false);
@@ -69,7 +134,15 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
               }}
             >
               <LogOut size={16} color={theme.semantic.danger} />
-              <Text style={[styles.itemText, { color: theme.semantic.danger }]}>로그아웃</Text>
+              <Text
+                style={{
+                  fontSize: 13,
+                  color: theme.semantic.danger,
+                  fontFamily: Platform.OS === 'web' ? "'Noto Sans KR', sans-serif" : undefined,
+                }}
+              >
+                로그아웃
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -77,71 +150,3 @@ export function AvatarMenu({ name, department, position, onLogout, onSettingsCli
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  trigger: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginLeft: 4,
-  },
-  avatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  nameText: {
-    marginLeft: 8,
-    fontSize: 13,
-    fontWeight: '500',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  overlay: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  dropdown: {
-    position: 'absolute',
-    top: 44,
-    right: 16,
-    width: 220,
-    borderWidth: 1,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 8,
-    overflow: 'hidden',
-  },
-  userBlock: {
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '500',
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  userMeta: {
-    fontSize: 12,
-    marginTop: 2,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  item: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  itemText: {
-    fontSize: 13,
-    fontFamily: Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined }),
-  },
-  divider: {
-    height: 1,
-  },
-});

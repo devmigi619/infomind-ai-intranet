@@ -49,12 +49,20 @@ public class MtgrReservation extends BaseEntity {
     @Column(name = "RMK", columnDefinition = "TEXT")
     private String rmk;
 
-    /** 연장 처리 */
+    /** 연장 처리: ext_ 컬럼만 기록 (기존 rsv_end는 원본 유지) */
     public void extend(String newEndYmd, String newEndHhmm) {
-        this.rsvEndYmd = newEndYmd;
-        this.rsvEndHhmm = newEndHhmm;
         this.extYn = "Y";
         this.extYmd = newEndYmd;
         this.extHhmm = newEndHhmm;
+    }
+
+    /** 실제 종료일: 연장이면 ext_ymd, 아니면 rsv_end_ymd */
+    public String getEffectiveEndYmd() {
+        return "Y".equals(extYn) && extYmd != null ? extYmd : rsvEndYmd;
+    }
+
+    /** 실제 종료시각: 연장이면 ext_hhmm, 아니면 rsv_end_hhmm */
+    public String getEffectiveEndHhmm() {
+        return "Y".equals(extYn) && extHhmm != null ? extHhmm : rsvEndHhmm;
     }
 }

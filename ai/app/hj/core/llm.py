@@ -73,12 +73,14 @@ def get_structured_slm(schema: type[_M], model : str = "ssl"):
         return ChatOpenAI(
             model=settings.openai_slm_model,
             api_key=settings.openai_api_key,
+            streaming=False,
         ).with_structured_output(schema)
     from langchain_ollama import ChatOllama
     return ChatOllama(
         base_url=settings.ollama_url,
         model=settings.slm_model,
         format=schema.model_json_schema(),
+        streaming=False,
     )
 
 
