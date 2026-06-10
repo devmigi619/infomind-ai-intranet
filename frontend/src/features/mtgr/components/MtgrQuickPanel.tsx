@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  StyleSheet,
   Platform,
   ActivityIndicator,
 } from 'react-native';
@@ -66,42 +65,43 @@ export function MtgrQuickPanel({ onClose }: MtgrQuickPanelProps) {
   }
 
   return (
-    <View style={styles.container}>
-      <View style={[styles.header, { borderBottomColor: theme.border.subtle }]}>
-        <Text style={[styles.headerTitle, { color: theme.text.primary }]}>회의실</Text>
-        <View style={styles.headerActions}>
+    <View className="flex-1">
+      <View className="flex-row items-center justify-between px-4 py-3 border-b" style={{ borderBottomColor: theme.border.subtle }}>
+        <Text className="text-sm font-medium" style={{ color: theme.text.primary, fontFamily }}>회의실</Text>
+        <View className="flex-row items-center gap-1">
           <TouchableOpacity
             onPress={handleOpenFull}
-            style={[styles.openButton, { backgroundColor: theme.brand.primaryTint }]}
+            className="flex-row items-center gap-1 px-3 py-[6px] rounded-md"
+            style={{ backgroundColor: theme.brand.primaryTint }}
             activeOpacity={0.7}
           >
-            <Text style={[styles.openButtonText, { color: theme.brand.primary }]}>열기</Text>
+            <Text className="text-xs font-medium" style={{ color: theme.brand.primary, fontFamily }}>열기</Text>
             <ArrowRight size={12} color={theme.brand.primary} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton} activeOpacity={0.7}>
+          <TouchableOpacity onPress={onClose} className="w-7 h-7 items-center justify-center rounded-md" activeOpacity={0.7}>
             <X size={14} color={theme.text.muted} />
           </TouchableOpacity>
         </View>
       </View>
 
       {isLoading ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center gap-2 py-8">
           <ActivityIndicator size="small" color={theme.brand.primary} />
         </View>
       ) : mtgrs.length === 0 ? (
-        <View style={styles.center}>
+        <View className="flex-1 items-center justify-center gap-2 py-8">
           <Building2 size={28} color={theme.text.subtle} />
-          <Text style={[styles.emptyText, { color: theme.text.muted }]}>
+          <Text className="text-xs" style={{ color: theme.text.muted, fontFamily }}>
             등록된 회의실이 없습니다.
           </Text>
         </View>
       ) : (
         <ScrollView
-          style={styles.scroll}
-          contentContainerStyle={styles.scrollContent}
+          className="flex-1"
+          contentContainerStyle={{ padding: 12, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.dateLabel, { color: theme.text.subtle }]}>
+          <Text className="text-[10px] font-semibold uppercase tracking-[0.6px] mb-[10px] mx-0.5" style={{ color: theme.text.subtle, fontFamily }}>
             오늘 예약 현황
           </Text>
 
@@ -111,25 +111,23 @@ export function MtgrQuickPanel({ onClose }: MtgrQuickPanelProps) {
             );
 
             return (
-              <View key={mtgr.mtgrId} style={styles.vehBlock}>
-                <View style={[styles.vehHeader, { borderLeftColor: theme.brand.primary }]}>
-                  <Text style={[styles.vehNm, { color: theme.text.primary }]}>
+              <View key={mtgr.mtgrId} className="mb-[14px]">
+                <View className="flex-row items-center gap-[6px] pl-2 border-l-2 mb-[6px]" style={{ borderLeftColor: theme.brand.primary }}>
+                  <Text className="text-xs font-semibold" style={{ color: theme.text.primary, fontFamily }}>
                     {mtgr.mtgrNm}
                   </Text>
-                  <Text style={[styles.vehNo, { color: theme.text.muted }]}>{mtgr.mtgrPlc}</Text>
+                  <Text className="text-[11px]" style={{ color: theme.text.muted, fontFamily }}>{mtgr.mtgrPlc}</Text>
                 </View>
 
                 {mtgrRsvs.length === 0 ? (
                   <View
-                    style={[
-                      styles.rsvCard,
-                      {
-                        backgroundColor: theme.bg.surfaceAlt,
-                        borderColor: theme.border.subtle,
-                      },
-                    ]}
+                    className="p-[10px] rounded-[7px] border mb-[5px]"
+                    style={{
+                      backgroundColor: theme.bg.surfaceAlt,
+                      borderColor: theme.border.subtle,
+                    }}
                   >
-                    <Text style={[styles.rsvEmpty, { color: theme.text.muted }]}>
+                    <Text className="text-[11px] italic" style={{ color: theme.text.muted, fontFamily }}>
                       예약 없음
                     </Text>
                   </View>
@@ -137,38 +135,33 @@ export function MtgrQuickPanel({ onClose }: MtgrQuickPanelProps) {
                   mtgrRsvs.map((rsv) => (
                     <View
                       key={`${rsv.mtgrId}-${rsv.rsvSn}`}
-                      style={[
-                        styles.rsvCard,
-                        {
-                          backgroundColor: rsv.mine
-                            ? theme.brand.primaryTintSoft ?? theme.brand.primaryTint
-                            : theme.bg.surfaceAlt,
-                          borderColor: rsv.mine ? theme.brand.primary : theme.border.subtle,
-                        },
-                      ]}
+                      className="p-[10px] rounded-[7px] border mb-[5px]"
+                      style={{
+                        backgroundColor: rsv.mine
+                          ? theme.brand.primaryTintSoft ?? theme.brand.primaryTint
+                          : theme.bg.surfaceAlt,
+                        borderColor: rsv.mine ? theme.brand.primary : theme.border.subtle,
+                      }}
                     >
-                      <View style={styles.rsvRow}>
+                      <View className="flex-row items-center justify-between mb-0.5">
                         <Text
-                          style={[
-                            styles.rsvTime,
-                            { color: rsv.mine ? theme.brand.primary : theme.text.body },
-                          ]}
+                          className="text-xs font-medium"
+                          style={{ color: rsv.mine ? theme.brand.primary : theme.text.body, fontFamily }}
                         >
                           {formatTime(rsv.rsvStHhmm)} ~ {formatTime(getEffectiveEndHhmm(rsv))}
                         </Text>
                         {rsv.mine && (
                           <View
-                            style={[
-                              styles.mineBadge,
-                              { backgroundColor: theme.brand.primary },
-                            ]}
+                            className="px-[5px] py-0.5 rounded-[3px]"
+                            style={{ backgroundColor: theme.brand.primary }}
                           >
-                            <Text style={styles.mineBadgeText}>내 예약</Text>
+                            <Text className="text-[9px] text-white font-semibold" style={{ fontFamily }}>내 예약</Text>
                           </View>
                         )}
                       </View>
                       <Text
-                        style={[styles.rsvUser, { color: theme.text.muted }]}
+                        className="text-[11px]"
+                        style={{ color: theme.text.muted, fontFamily }}
                         numberOfLines={1}
                       >
                         {rsv.userNm}
@@ -187,29 +180,3 @@ export function MtgrQuickPanel({ onClose }: MtgrQuickPanelProps) {
 }
 
 const fontFamily = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
-
-const styles = StyleSheet.create({
-  container: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1 },
-  headerTitle: { fontSize: 14, fontWeight: '500', fontFamily },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  openButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-  openButtonText: { fontSize: 12, fontWeight: '500', fontFamily },
-  closeButton: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 6 },
-  scroll: { flex: 1 },
-  scrollContent: { padding: 12, paddingBottom: 20 },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 32 },
-  emptyText: { fontSize: 12, fontFamily },
-  dateLabel: { fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 10, marginHorizontal: 2, fontFamily },
-  vehBlock: { marginBottom: 14 },
-  vehHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingLeft: 8, borderLeftWidth: 2, marginBottom: 6 },
-  vehNm: { fontSize: 12, fontWeight: '600', fontFamily },
-  vehNo: { fontSize: 11, fontFamily },
-  rsvCard: { padding: 10, borderRadius: 7, borderWidth: 1, marginBottom: 5 },
-  rsvRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 },
-  rsvTime: { fontSize: 12, fontWeight: '500', fontFamily },
-  mineBadge: { paddingHorizontal: 5, paddingVertical: 2, borderRadius: 3 },
-  mineBadgeText: { fontSize: 9, color: '#ffffff', fontWeight: '600', fontFamily },
-  rsvUser: { fontSize: 11, fontFamily },
-  rsvEmpty: { fontSize: 11, fontStyle: 'italic', fontFamily },
-});

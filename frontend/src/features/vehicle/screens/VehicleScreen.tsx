@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  StyleSheet,
   ScrollView,
   TextInput,
   ActivityIndicator,
@@ -211,8 +210,6 @@ export function VehicleScreen() {
     }
   }, [cancelMutation, confirm, toast]);
 
-  const s = makeStyles(theme);
-
   // ── 폼 모드 ───────────────────────────────────────────────────────
 
   if (mode === 'form') {
@@ -235,46 +232,53 @@ export function VehicleScreen() {
   const selectedVeh = vehicles.find((v) => v.vehId === selectedVehId);
 
   return (
-    <View style={s.root}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.app }}>
 
       {/* ── 탑바 ── */}
-      <View style={s.topBar}>
-        <View style={s.tabs}>
+      <View className="flex-row items-center justify-between px-4 py-2.5 border-b" style={{ backgroundColor: theme.bg.surface, borderBottomColor: theme.border.default }}>
+        <View className="flex-row gap-0.5">
           {(['grid', 'my'] as Mode[]).map((m) => (
             <TouchableOpacity
-              key={m} style={[s.tab, mode === m && s.tabActive]}
+              key={m}
+              className="px-[14px] py-[7px] rounded-[7px]"
+              style={{ backgroundColor: mode === m ? theme.brand.primaryTint : 'transparent' }}
               onPress={() => setMode(m)} activeOpacity={0.7}
             >
-              <Text style={[s.tabText, mode === m && s.tabTextActive]}>
+              <Text
+                className={`text-[13px] ${mode === m ? 'font-semibold' : ''}`}
+                style={{ color: mode === m ? theme.brand.primary : theme.text.muted, fontFamily: FF }}
+              >
                 {m === 'grid' ? '전체 현황' : '내 예약'}
               </Text>
             </TouchableOpacity>
           ))}
         </View>
         <TouchableOpacity
-          style={s.addBtn} activeOpacity={0.7}
+          className="flex-row items-center gap-[5px] px-[13px] py-2 rounded-[7px]"
+          style={{ backgroundColor: theme.brand.primary }}
+          activeOpacity={0.7}
           onPress={() => openForm(selectedVehId || vehicles[0]?.vehId || '', selectedDate, '0900')}
         >
           <Plus size={14} color="#fff" />
-          <Text style={s.addBtnText}>예약하기</Text>
+          <Text className="text-xs text-white font-semibold" style={{ fontFamily: FF }}>예약하기</Text>
         </TouchableOpacity>
       </View>
 
       {/* ── 날짜 네비게이터 ── */}
-      <View style={s.dateNav}>
+      <View className="flex-row items-center justify-center gap-2 py-2.5 border-b" style={{ backgroundColor: theme.bg.surface, borderBottomColor: theme.border.subtle }}>
         <TouchableOpacity
           onPress={goPrev} disabled={selectedDate <= today}
           activeOpacity={0.7}
-          style={[s.navArrow, selectedDate <= today && s.navDisabled]}
+          className={`p-1.5 rounded-md ${selectedDate <= today ? 'opacity-30' : ''}`}
         >
           <ChevronLeft size={20} color={selectedDate <= today ? theme.border.default : theme.text.primary} />
         </TouchableOpacity>
 
-        <View style={s.dateCenter}>
-          <Text style={s.dateText}>{fmtDate(selectedDate)}</Text>
+        <View className="flex-row items-center justify-center gap-2 min-w-[140px]">
+          <Text className="text-[15px] font-semibold" style={{ color: theme.text.primary, fontFamily: FF }}>{fmtDate(selectedDate)}</Text>
           {selectedDate === today && (
-            <View style={[s.todayBadge, { backgroundColor: theme.brand.primaryTint }]}>
-              <Text style={[s.todayBadgeText, { color: theme.brand.primary }]}>오늘</Text>
+            <View className="px-[7px] py-0.5 rounded" style={{ backgroundColor: theme.brand.primaryTint }}>
+              <Text className="text-[11px] font-semibold" style={{ color: theme.brand.primary, fontFamily: FF }}>오늘</Text>
             </View>
           )}
         </View>
@@ -282,7 +286,7 @@ export function VehicleScreen() {
         <TouchableOpacity
           onPress={goNext} disabled={selectedDate >= max}
           activeOpacity={0.7}
-          style={[s.navArrow, selectedDate >= max && s.navDisabled]}
+          className={`p-1.5 rounded-md ${selectedDate >= max ? 'opacity-30' : ''}`}
         >
           <ChevronRight size={20} color={selectedDate >= max ? theme.border.default : theme.text.primary} />
         </TouchableOpacity>
@@ -292,8 +296,9 @@ export function VehicleScreen() {
       {mode === 'grid' && (
         <ScrollView
           horizontal showsHorizontalScrollIndicator={false}
-          style={s.vehChipScroll}
-          contentContainerStyle={s.vehChipContent}
+          className="max-h-14 border-b"
+          style={{ backgroundColor: theme.bg.surface, borderBottomColor: theme.border.subtle }}
+          contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' }}
         >
           {vehLoading ? (
             <ActivityIndicator size="small" color={theme.brand.primary} style={{ marginLeft: 8 }} />
@@ -303,21 +308,19 @@ export function VehicleScreen() {
               return (
                 <TouchableOpacity
                   key={v.vehId}
-                  style={[
-                    s.vehChip,
-                    {
-                      backgroundColor: active ? theme.brand.primary : theme.bg.surface,
-                      borderColor: active ? theme.brand.primary : theme.border.default,
-                    },
-                  ]}
+                  className="flex-row items-center gap-[5px] px-3 py-1.5 rounded-full border"
+                  style={{
+                    backgroundColor: active ? theme.brand.primary : theme.bg.surface,
+                    borderColor: active ? theme.brand.primary : theme.border.default,
+                  }}
                   activeOpacity={0.7}
                   onPress={() => setSelectedVehId(v.vehId)}
                 >
                   <Car size={12} color={active ? '#fff' : theme.text.muted} />
-                  <Text style={[s.vehChipName, { color: active ? '#fff' : theme.text.primary }]}>
+                  <Text className="text-[13px] font-medium" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                     {v.vehNm}
                   </Text>
-                  <Text style={[s.vehChipNo, { color: active ? 'rgba(255,255,255,0.75)' : theme.text.muted }]}>
+                  <Text className="text-[11px]" style={{ color: active ? 'rgba(255,255,255,0.75)' : theme.text.muted, fontFamily: FF }}>
                     {v.vehNo}
                   </Text>
                 </TouchableOpacity>
@@ -415,16 +418,14 @@ function TimelineView({
   vehicle, reservations, loading, selectedDate,
   onEmptySlotPress, onMinePress, theme,
 }: TimelineViewProps) {
-  const s = makeStyles(theme);
-
   if (loading) {
-    return <View style={s.center}><ActivityIndicator size="large" color={theme.brand.primary} /></View>;
+    return <View className="flex-1 items-center justify-center gap-2.5"><ActivityIndicator size="large" color={theme.brand.primary} /></View>;
   }
   if (!vehicle) {
     return (
-      <View style={s.center}>
+      <View className="flex-1 items-center justify-center gap-2.5">
         <Car size={40} color={theme.text.subtle} />
-        <Text style={[s.emptyText, { color: theme.text.muted }]}>등록된 차량이 없습니다.</Text>
+        <Text className="text-[13px]" style={{ color: theme.text.muted, fontFamily: FF }}>등록된 차량이 없습니다.</Text>
       </View>
     );
   }
@@ -447,24 +448,27 @@ function TimelineView({
       showsVerticalScrollIndicator
     >
       {/* 헤더: 선택 차량명 */}
-      <View style={[s.tlHeader, { backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }]}>
+      <View className="flex-row items-center gap-2 px-4 py-2.5 border-b" style={{ backgroundColor: theme.bg.surfaceAlt, borderBottomColor: theme.border.subtle }}>
         <Car size={14} color={theme.brand.primary} />
-        <Text style={[s.tlVehNm, { color: theme.text.primary }]}>{vehicle.vehNm}</Text>
-        <Text style={[s.tlVehNo, { color: theme.text.muted }]}>{vehicle.vehNo}</Text>
+        <Text className="text-sm font-semibold" style={{ color: theme.text.primary, fontFamily: FF }}>{vehicle.vehNm}</Text>
+        <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: FF }}>{vehicle.vehNo}</Text>
       </View>
 
       {/* 타임라인 */}
-      <View style={[s.tlBody, { height: TOTAL_HEIGHT }]}>
+      <View className="relative mx-0" style={{ height: TOTAL_HEIGHT }}>
 
         {/* 시간 눈금 + 라벨 (배경 레이어) */}
         {Array.from({ length: TOTAL_HOURS + 1 }, (_, i) => i + HOUR_START).map((h) => {
           const top = (h - HOUR_START) * HOUR_HEIGHT;
           return (
-            <View key={h} style={[s.hourLine, { top }]}>
-              <Text style={[s.hourLabel, { color: theme.text.subtle }]}>
+            <View key={h} className="absolute left-0 right-0 flex-row items-center h-[1px]" style={{ top }}>
+              <Text
+                className="text-[11px] font-semibold text-right pr-2.5 leading-4"
+                style={{ width: TIME_LABEL_W, color: theme.text.subtle, fontFamily: FF }}
+              >
                 {String(h).padStart(2, '0')}:00
               </Text>
-              <View style={[s.hourRule, { backgroundColor: theme.border.default }]} />
+              <View className="flex-1 h-px" style={{ backgroundColor: theme.border.default }} />
             </View>
           );
         })}
@@ -473,11 +477,14 @@ function TimelineView({
         {Array.from({ length: TOTAL_HOURS }, (_, i) => i + HOUR_START).map((h) => {
           const top = (h - HOUR_START) * HOUR_HEIGHT + HOUR_HEIGHT / 2;
           return (
-            <View key={`half-${h}`} style={[s.halfLine, { top }]}>
-              <Text style={[s.halfLabel, { color: theme.text.subtle }]}>
+            <View key={`half-${h}`} className="absolute left-0 right-0 flex-row items-center h-[1px]" style={{ top }}>
+              <Text
+                className="text-[9px] text-right pr-2.5 leading-[14px] opacity-65"
+                style={{ width: TIME_LABEL_W, color: theme.text.subtle, fontFamily: FF }}
+              >
                 {String(h).padStart(2, '0')}:30
               </Text>
-              <View style={[s.halfRule, { borderColor: theme.border.subtle }]} />
+              <View className="flex-1 border-t border-dashed" style={{ borderColor: theme.border.subtle }} />
             </View>
           );
         })}
@@ -489,7 +496,8 @@ function TimelineView({
             <TouchableOpacity
               key={`empty-${slot}`}
               activeOpacity={0.15}
-              style={[s.emptySlotTap, { top: toTop(slot), height: HOUR_HEIGHT / 2, left: TIME_LABEL_W }]}
+              className="absolute right-0"
+              style={{ top: toTop(slot), height: HOUR_HEIGHT / 2, left: TIME_LABEL_W }}
               onPress={() => onEmptySlotPress(slot)}
             />
           );
@@ -505,16 +513,14 @@ function TimelineView({
             <TouchableOpacity
               key={`${rsv.vehId}-${rsv.rsvSn}`}
               activeOpacity={0.8}
-              style={[
-                s.rsvBlock,
-                {
-                  top,
-                  height,
-                  left: TIME_LABEL_W + 4,
-                  backgroundColor: isMine ? theme.brand.primary : theme.bg.surfaceAlt,
-                  borderColor:     isMine ? theme.brand.primary : theme.border.default,
-                },
-              ]}
+              className="absolute right-1.5 rounded-lg border-[1.5px] px-2.5 py-1.5 overflow-hidden"
+              style={{
+                top,
+                height,
+                left: TIME_LABEL_W + 4,
+                backgroundColor: isMine ? theme.brand.primary : theme.bg.surfaceAlt,
+                borderColor:     isMine ? theme.brand.primary : theme.border.default,
+              }}
               onPress={() => {
                 if (isMine) {
                   onMinePress(rsv);
@@ -526,19 +532,19 @@ function TimelineView({
                 }
               }}
             >
-              <Text style={[s.rsvBlockTitle, { color: isMine ? '#fff' : theme.text.primary }]} numberOfLines={1}>
+              <Text className="text-[13px] font-semibold" style={{ color: isMine ? '#fff' : theme.text.primary, fontFamily: FF }} numberOfLines={1}>
                 {rsv.userNm}
               </Text>
-              <Text style={[s.rsvBlockTime, { color: isMine ? 'rgba(255,255,255,0.85)' : theme.text.muted }]}>
+              <Text className="text-[11px] mt-0.5" style={{ color: isMine ? 'rgba(255,255,255,0.85)' : theme.text.muted, fontFamily: FF }}>
                 {fmtTime(rsv.rsvStHhmm)} ~ {fmtTime(effEnd.hhmm)}
               </Text>
               {rsv.rmk ? (
-                <Text style={[s.rsvBlockRmk, { color: isMine ? 'rgba(255,255,255,0.75)' : theme.text.muted }]} numberOfLines={1}>
+                <Text className="text-[11px] mt-px" style={{ color: isMine ? 'rgba(255,255,255,0.75)' : theme.text.muted, fontFamily: FF }} numberOfLines={1}>
                   {rsv.rmk}
                 </Text>
               ) : null}
               {isMine && (
-                <View style={s.mineDot} />
+                <View className="absolute top-1.5 right-2 w-1.5 h-1.5 rounded-full bg-[rgba(255,255,255,0.6)]" />
               )}
             </TouchableOpacity>
           );
@@ -562,18 +568,17 @@ interface MyViewProps {
 }
 
 function MyView({ vehicles, reservations, loading, selectedDate, onCancel, onReturn, onExtend, theme }: MyViewProps) {
-  const s = makeStyles(theme);
   const vehMap = Object.fromEntries(vehicles.map((v) => [v.vehId, v]));
 
   if (loading) {
-    return <View style={s.center}><ActivityIndicator size="large" color={theme.brand.primary} /></View>;
+    return <View className="flex-1 items-center justify-center gap-2.5"><ActivityIndicator size="large" color={theme.brand.primary} /></View>;
   }
 
   if (reservations.length === 0) {
     return (
-      <View style={s.center}>
+      <View className="flex-1 items-center justify-center gap-2.5">
         <Car size={40} color={theme.text.subtle} />
-        <Text style={[s.emptyText, { color: theme.text.muted }]}>
+        <Text className="text-[13px]" style={{ color: theme.text.muted, fontFamily: FF }}>
           {fmtDate(selectedDate)} 내 예약이 없습니다.
         </Text>
       </View>
@@ -594,44 +599,41 @@ function MyView({ vehicles, reservations, loading, selectedDate, onCancel, onRet
         return (
           <View
             key={`${rsv.vehId}-${rsv.rsvSn}`}
-            style={[
-              s.myCard,
-              {
-                backgroundColor: theme.bg.surface,
-                borderColor: returned ? theme.border.default : theme.brand.primary,
-                marginBottom: 10,
-              },
-            ]}
+            className="flex-row rounded-[10px] border overflow-hidden mb-2.5"
+            style={{
+              backgroundColor: theme.bg.surface,
+              borderColor: returned ? theme.border.default : theme.brand.primary,
+            }}
           >
             {/* 왼쪽 색띠 */}
-            <View style={[s.myCardAccent, { backgroundColor: returned ? theme.border.default : theme.brand.primary }]} />
+            <View className="w-1 self-stretch" style={{ backgroundColor: returned ? theme.border.default : theme.brand.primary }} />
 
-            <View style={{ flex: 1, padding: 12, gap: 4 }}>
+            <View className="flex-1 p-3 gap-1">
               {/* 차량명 + 상태 배지 */}
-              <View style={s.myCardRow}>
+              <View className="flex-row items-center gap-1.5">
                 <Car size={13} color={returned ? theme.text.muted : theme.brand.primary} />
-                <Text style={[s.myCardVeh, { color: theme.text.primary, flex: 1 }]} numberOfLines={1}>
+                <Text className="flex-1 text-sm font-semibold" style={{ color: theme.text.primary, fontFamily: FF }} numberOfLines={1}>
                   {veh ? `${veh.vehNm}  ${veh.vehNo}` : rsv.vehId}
                 </Text>
                 {extended && (
-                  <View style={[s.statusBadge, { backgroundColor: '#FEF3C7' }]}>
-                    <Text style={[s.statusBadgeText, { color: '#D97706' }]}>연장됨</Text>
+                  <View className="px-[7px] py-0.5 rounded" style={{ backgroundColor: '#FEF3C7' }}>
+                    <Text className="text-[10px] font-semibold" style={{ color: '#D97706', fontFamily: FF }}>연장됨</Text>
                   </View>
                 )}
                 {returned && (
-                  <View style={[s.statusBadge, { backgroundColor: '#D1FAE5' }]}>
-                    <Text style={[s.statusBadgeText, { color: '#059669' }]}>반납 완료</Text>
+                  <View className="px-[7px] py-0.5 rounded" style={{ backgroundColor: '#D1FAE5' }}>
+                    <Text className="text-[10px] font-semibold" style={{ color: '#059669', fontFamily: FF }}>반납 완료</Text>
                   </View>
                 )}
               </View>
 
               {/* 시간 + 소요 */}
-              <View style={s.myCardTimeRow}>
-                <Text style={[s.myCardTime, { color: theme.text.primary }]}>
+              <View className="flex-row items-center gap-2">
+                <Text className="text-sm" style={{ color: theme.text.primary, fontFamily: FF }}>
                   {fmtTime(rsv.rsvStHhmm)} ~ {fmtTime(effEnd.hhmm)}
                 </Text>
-                <View style={[s.durBadge, { backgroundColor: theme.brand.primaryTint }]}>
-                  <Text style={[s.durText, { color: theme.brand.primary }]}>
+                <View className="px-[7px] py-0.5 rounded" style={{ backgroundColor: theme.brand.primaryTint }}>
+                  <Text className="text-[11px] font-semibold" style={{ color: theme.brand.primary, fontFamily: FF }}>
                     {dur >= 60 ? `${Math.floor(dur / 60)}h${dur % 60 > 0 ? ` ${dur % 60}m` : ''}` : `${dur}m`}
                   </Text>
                 </View>
@@ -639,7 +641,7 @@ function MyView({ vehicles, reservations, loading, selectedDate, onCancel, onRet
 
               {/* 반납 정보 */}
               {returned && rsv.rtnYmd && (
-                <Text style={[s.myCardRmk, { color: theme.text.muted }]}>
+                <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: FF }}>
                   반납: {fmtDate(rsv.rtnYmd)} {rsv.rtnHhmm ? fmtTime(rsv.rtnHhmm) : ''}
                   {rsv.rtnPlc ? `  ·  ${rsv.rtnPlc}` : ''}
                 </Text>
@@ -647,51 +649,51 @@ function MyView({ vehicles, reservations, loading, selectedDate, onCancel, onRet
 
               {/* 비고 */}
               {rsv.rmk ? (
-                <Text style={[s.myCardRmk, { color: theme.text.muted }]} numberOfLines={2}>{rsv.rmk}</Text>
+                <Text className="text-xs" style={{ color: theme.text.muted, fontFamily: FF }} numberOfLines={2}>{rsv.rmk}</Text>
               ) : null}
 
               {/* 액션 버튼 행 */}
-              <View style={[s.myCardBtns]}>
+              <View className="flex-row gap-2 mt-2">
                 {/* 연장 — 반납 완료 시 비활성 */}
                 <TouchableOpacity
-                  style={[
-                    s.actionBtn,
-                    { borderColor: returned ? theme.border.default : theme.brand.primary },
-                    returned && { opacity: 0.4 },
-                  ]}
+                  className="px-3 py-1.5 rounded-md border"
+                  style={{
+                    borderColor: returned ? theme.border.default : theme.brand.primary,
+                    opacity: returned ? 0.4 : 1,
+                  }}
                   activeOpacity={0.7}
                   disabled={returned}
                   onPress={() => onExtend(rsv)}
                 >
-                  <Text style={[s.actionBtnText, { color: returned ? theme.text.muted : theme.brand.primary }]}>연장</Text>
+                  <Text className="text-xs font-semibold" style={{ color: returned ? theme.text.muted : theme.brand.primary, fontFamily: FF }}>연장</Text>
                 </TouchableOpacity>
 
                 {/* 반납 — 이미 반납 완료 시 비활성 */}
                 <TouchableOpacity
-                  style={[
-                    s.actionBtn,
-                    { borderColor: returned ? theme.border.default : '#10B981' },
-                    returned && { opacity: 0.4 },
-                  ]}
+                  className="px-3 py-1.5 rounded-md border"
+                  style={{
+                    borderColor: returned ? theme.border.default : '#10B981',
+                    opacity: returned ? 0.4 : 1,
+                  }}
                   activeOpacity={0.7}
                   disabled={returned}
                   onPress={() => onReturn(rsv)}
                 >
-                  <Text style={[s.actionBtnText, { color: returned ? theme.text.muted : '#10B981' }]}>반납</Text>
+                  <Text className="text-xs font-semibold" style={{ color: returned ? theme.text.muted : '#10B981', fontFamily: FF }}>반납</Text>
                 </TouchableOpacity>
 
                 {/* 취소 — 반납 완료 시 비활성 */}
                 <TouchableOpacity
-                  style={[
-                    s.actionBtn,
-                    { borderColor: returned ? theme.border.default : '#EF4444' },
-                    returned && { opacity: 0.4 },
-                  ]}
+                  className="px-3 py-1.5 rounded-md border"
+                  style={{
+                    borderColor: returned ? theme.border.default : '#EF4444',
+                    opacity: returned ? 0.4 : 1,
+                  }}
                   activeOpacity={0.7}
                   disabled={returned}
                   onPress={() => onCancel(rsv)}
                 >
-                  <Text style={[s.actionBtnText, { color: returned ? theme.text.muted : '#EF4444' }]}>취소</Text>
+                  <Text className="text-xs font-semibold" style={{ color: returned ? theme.text.muted : '#EF4444', fontFamily: FF }}>취소</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -729,32 +731,32 @@ function FormView({
   onVehChange, onDateChange, onStartChange, onEndChange, onRmkChange,
   onSubmit, onBack, theme,
 }: FormViewProps) {
-  const s = makeStyles(theme);
   const dateOptions = getDateOptions(todayYmd, maxYmd);
   const endOptions  = getEndOptions(formStartHhmm);
   const safeEnd     = endOptions.includes(formEndHhmm) ? formEndHhmm : endOptions[0] ?? formEndHhmm;
 
   return (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 40 }}>
-      <TouchableOpacity style={s.backRow} onPress={onBack} activeOpacity={0.7}>
+      <TouchableOpacity className="flex-row items-center gap-1 mb-4" onPress={onBack} activeOpacity={0.7}>
         <ArrowLeft size={16} color={theme.text.muted} />
-        <Text style={[s.backText, { color: theme.text.muted }]}>뒤로</Text>
+        <Text className="text-[13px]" style={{ color: theme.text.muted, fontFamily: FF }}>뒤로</Text>
       </TouchableOpacity>
 
-      <Text style={[s.formTitle, { color: theme.text.primary }]}>예약 신청</Text>
+      <Text className="text-xl font-bold mb-6" style={{ color: theme.text.primary, fontFamily: FF }}>예약 신청</Text>
 
       {/* 차량 */}
-      <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>차량</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+      <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>차량</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
         {vehicles.map((v) => {
           const active = formVehId === v.vehId;
           return (
             <TouchableOpacity
               key={v.vehId}
-              style={[s.chip, { backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }]}
+              className="px-[14px] py-2 rounded-full border mr-2"
+              style={{ backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }}
               activeOpacity={0.7} onPress={() => onVehChange(v.vehId)}
             >
-              <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>
+              <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                 {v.vehNm}  <Text style={{ opacity: 0.75 }}>{v.vehNo}</Text>
               </Text>
             </TouchableOpacity>
@@ -763,17 +765,18 @@ function FormView({
       </ScrollView>
 
       {/* 날짜 */}
-      <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>날짜</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+      <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>날짜</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
         {dateOptions.map((d) => {
           const active = formDate === d;
           return (
             <TouchableOpacity
               key={d}
-              style={[s.chip, { backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }]}
+              className="px-[14px] py-2 rounded-full border mr-2"
+              style={{ backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }}
               activeOpacity={0.7} onPress={() => onDateChange(d)}
             >
-              <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>
+              <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                 {fmtDate(d)}{d === todayYmd ? '  (오늘)' : ''}
               </Text>
             </TouchableOpacity>
@@ -782,14 +785,15 @@ function FormView({
       </ScrollView>
 
       {/* 시작 시각 */}
-      <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>시작 시각</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+      <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>시작 시각</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
         {HALF_SLOT_HHMM.slice(0, -1).map((slot) => {
           const active = formStartHhmm === slot;
           return (
             <TouchableOpacity
               key={slot}
-              style={[s.chip, s.chipTime, { backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }]}
+              className="px-3 py-2 rounded-full border mr-2"
+              style={{ backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }}
               activeOpacity={0.7}
               onPress={() => {
                 onStartChange(slot);
@@ -797,33 +801,35 @@ function FormView({
                 if (!newEnd.includes(safeEnd)) onEndChange(newEnd[1] ?? newEnd[0]);
               }}
             >
-              <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>{fmtTime(slot)}</Text>
+              <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>{fmtTime(slot)}</Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
       {/* 종료 시각 */}
-      <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>종료 시각</Text>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+      <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>종료 시각</Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
         {endOptions.map((slot) => {
           const active = safeEnd === slot;
           return (
             <TouchableOpacity
               key={slot}
-              style={[s.chip, s.chipTime, { backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }]}
+              className="px-3 py-2 rounded-full border mr-2"
+              style={{ backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt, borderColor: active ? theme.brand.primary : theme.border.default }}
               activeOpacity={0.7} onPress={() => onEndChange(slot)}
             >
-              <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>{fmtTime(slot)}</Text>
+              <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>{fmtTime(slot)}</Text>
             </TouchableOpacity>
           );
         })}
       </ScrollView>
 
       {/* 비고 */}
-      <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>비고 (선택)</Text>
+      <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>비고 (선택)</Text>
       <TextInput
-        style={[s.textArea, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default, color: theme.text.primary }]}
+        className="border rounded-lg p-3 text-sm min-h-[76px]"
+        style={{ backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default, color: theme.text.primary, textAlignVertical: 'top', fontFamily: FF }}
         placeholder="사용 목적 등을 입력하세요"
         placeholderTextColor={theme.text.muted}
         value={formRmk} onChangeText={onRmkChange}
@@ -831,20 +837,22 @@ function FormView({
       />
 
       {/* 버튼 */}
-      <View style={s.formBtns}>
+      <View className="flex-row gap-3 mt-8">
         <TouchableOpacity
-          style={[s.formBtn, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default }]}
+          className="flex-1 h-[46px] rounded-[9px] border items-center justify-center"
+          style={{ backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default }}
           onPress={onBack} activeOpacity={0.7}
         >
-          <Text style={[s.formBtnText, { color: theme.text.primary }]}>취소</Text>
+          <Text className="text-sm font-semibold" style={{ color: theme.text.primary, fontFamily: FF }}>취소</Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[s.formBtn, { backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }]}
+          className="flex-1 h-[46px] rounded-[9px] border items-center justify-center"
+          style={{ backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }}
           onPress={onSubmit} activeOpacity={0.7} disabled={loading}
         >
           {loading
             ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={[s.formBtnText, { color: '#fff' }]}>신청</Text>
+            : <Text className="text-sm font-semibold" style={{ color: '#fff', fontFamily: FF }}>신청</Text>
           }
         </TouchableOpacity>
       </View>
@@ -898,32 +906,34 @@ function ReturnModal({ visible, reservation, loading, onClose, onSubmit, theme }
     : HALF_SLOT_HHMM;
   const safeRtnHhmm = timeSlots.includes(rtnHhmm) ? rtnHhmm : (timeSlots[0] ?? rtnHhmm);
 
-  const s = makeStyles(theme);
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s.modalOverlay}>
-        <View style={[s.modalBox, { backgroundColor: theme.bg.surface }]}>
+      <View className="flex-1 items-center justify-center p-5 bg-[rgba(0,0,0,0.45)]">
+        <View
+          className="w-full max-w-[480px] rounded-[14px] p-5 shadow-lg"
+          style={{ backgroundColor: theme.bg.surface }}
+        >
           {/* 헤더 */}
-          <View style={s.modalHeader}>
-            <Text style={[s.modalTitle, { color: theme.text.primary }]}>반납 처리</Text>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-[17px] font-bold" style={{ color: theme.text.primary, fontFamily: FF }}>반납 처리</Text>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
               <X size={20} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
 
           {/* 반납 날짜 */}
-          <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>반납 날짜</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>반납 날짜</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
             {dateOptions.map((d) => {
               const active = rtnYmd === d;
               return (
                 <TouchableOpacity
                   key={d}
-                  style={[s.chip, {
+                  className="px-[14px] py-2 rounded-full border mr-2"
+                  style={{
                     backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt,
                     borderColor: active ? theme.brand.primary : theme.border.default,
-                  }]}
+                  }}
                   activeOpacity={0.7}
                   onPress={() => {
                     setRtnYmd(d);
@@ -934,7 +944,7 @@ function ReturnModal({ visible, reservation, loading, onClose, onSubmit, theme }
                     if (!newSlots.includes(rtnHhmm)) setRtnHhmm(newSlots[0] ?? '');
                   }}
                 >
-                  <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>
+                  <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                     {fmtDate(d)}{d === today ? '  (오늘)' : ''}
                   </Text>
                 </TouchableOpacity>
@@ -943,21 +953,22 @@ function ReturnModal({ visible, reservation, loading, onClose, onSubmit, theme }
           </ScrollView>
 
           {/* 반납 시각 — 예약 시작일과 같은 날이면 예약 시작 시각 이후만 표시 */}
-          <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>반납 시각</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>반납 시각</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
             {timeSlots.map((slot) => {
               const active = safeRtnHhmm === slot;
               return (
                 <TouchableOpacity
                   key={slot}
-                  style={[s.chip, s.chipTime, {
+                  className="px-3 py-2 rounded-full border mr-2"
+                  style={{
                     backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt,
                     borderColor: active ? theme.brand.primary : theme.border.default,
-                  }]}
+                  }}
                   activeOpacity={0.7}
                   onPress={() => setRtnHhmm(slot)}
                 >
-                  <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>
+                  <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                     {fmtTime(slot)}
                   </Text>
                 </TouchableOpacity>
@@ -966,13 +977,15 @@ function ReturnModal({ visible, reservation, loading, onClose, onSubmit, theme }
           </ScrollView>
 
           {/* 반납 장소 */}
-          <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>반납 장소 (선택)</Text>
+          <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>반납 장소 (선택)</Text>
           <TextInput
-            style={[s.modalInput, {
+            className="border rounded-lg px-3 py-2.5 text-sm"
+            style={{
               backgroundColor: theme.bg.surfaceAlt,
               borderColor: theme.border.default,
               color: theme.text.primary,
-            }]}
+              fontFamily: FF,
+            }}
             placeholder="예: 주차장 B구역"
             placeholderTextColor={theme.text.muted}
             value={rtnPlc}
@@ -980,22 +993,24 @@ function ReturnModal({ visible, reservation, loading, onClose, onSubmit, theme }
           />
 
           {/* 버튼 */}
-          <View style={[s.formBtns, { marginTop: 20 }]}>
+          <View className="flex-row gap-3 mt-5">
             <TouchableOpacity
-              style={[s.formBtn, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default }]}
+              className="flex-1 h-[46px] rounded-[9px] border items-center justify-center"
+              style={{ backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default }}
               onPress={onClose} activeOpacity={0.7}
             >
-              <Text style={[s.formBtnText, { color: theme.text.primary }]}>취소</Text>
+              <Text className="text-sm font-semibold" style={{ color: theme.text.primary, fontFamily: FF }}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.formBtn, { backgroundColor: '#10B981', borderColor: '#10B981' }]}
+              className="flex-1 h-[46px] rounded-[9px] border items-center justify-center"
+              style={{ backgroundColor: '#10B981', borderColor: '#10B981' }}
               onPress={() => onSubmit({ rtnYmd, rtnHhmm: safeRtnHhmm, rtnPlc: rtnPlc || undefined })}
               activeOpacity={0.7}
               disabled={loading}
             >
               {loading
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={[s.formBtnText, { color: '#fff' }]}>반납 처리</Text>
+                : <Text className="text-sm font-semibold" style={{ color: '#fff', fontFamily: FF }}>반납 처리</Text>
               }
             </TouchableOpacity>
           </View>
@@ -1049,40 +1064,42 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
 
   const safeHhmm = timeOptions.includes(newEndHhmm) ? newEndHhmm : (timeOptions[0] ?? newEndHhmm);
 
-  const s = makeStyles(theme);
-
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={s.modalOverlay}>
-        <View style={[s.modalBox, { backgroundColor: theme.bg.surface }]}>
+      <View className="flex-1 items-center justify-center p-5 bg-[rgba(0,0,0,0.45)]">
+        <View
+          className="w-full max-w-[480px] rounded-[14px] p-5 shadow-lg"
+          style={{ backgroundColor: theme.bg.surface }}
+        >
           {/* 헤더 */}
-          <View style={s.modalHeader}>
-            <Text style={[s.modalTitle, { color: theme.text.primary }]}>예약 연장</Text>
+          <View className="flex-row items-center justify-between mb-4">
+            <Text className="text-[17px] font-bold" style={{ color: theme.text.primary, fontFamily: FF }}>예약 연장</Text>
             <TouchableOpacity onPress={onClose} activeOpacity={0.7}>
               <X size={20} color={theme.text.muted} />
             </TouchableOpacity>
           </View>
 
           {/* 현재 종료 (읽기 전용) */}
-          <View style={[s.extInfoBox, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.subtle }]}>
-            <Text style={[s.extInfoLabel, { color: theme.text.subtle }]}>현재 종료</Text>
-            <Text style={[s.extInfoValue, { color: theme.text.primary }]}>
+          <View className="flex-row items-center justify-between border rounded-lg px-3 py-2.5 mb-1" style={{ backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.subtle }}>
+            <Text className="text-xs" style={{ color: theme.text.subtle, fontFamily: FF }}>현재 종료</Text>
+            <Text className="text-sm font-semibold" style={{ color: theme.text.primary, fontFamily: FF }}>
               {fmtDate(effEnd.ymd)}  {fmtTime(effEnd.hhmm)}
             </Text>
           </View>
 
           {/* 새 종료 날짜 */}
-          <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>새 종료 날짜</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>새 종료 날짜</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
             {dateOptions.map((d) => {
               const active = newEndYmd === d;
               return (
                 <TouchableOpacity
                   key={d}
-                  style={[s.chip, {
+                  className="px-[14px] py-2 rounded-full border mr-2"
+                  style={{
                     backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt,
                     borderColor: active ? theme.brand.primary : theme.border.default,
-                  }]}
+                  }}
                   activeOpacity={0.7}
                   onPress={() => {
                     setNewEndYmd(d);
@@ -1093,7 +1110,7 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
                     if (!opts.includes(safeHhmm)) setNewEndHhmm(opts[0] ?? '');
                   }}
                 >
-                  <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>
+                  <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                     {fmtDate(d)}
                   </Text>
                 </TouchableOpacity>
@@ -1102,21 +1119,22 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
           </ScrollView>
 
           {/* 새 종료 시각 */}
-          <Text style={[s.fieldLabel, { color: theme.text.subtle }]}>새 종료 시각</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.chipScroll}>
+          <Text className="text-[10px] font-bold uppercase tracking-[0.8px] mb-2 mt-5" style={{ color: theme.text.subtle, fontFamily: FF }}>새 종료 시각</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-1">
             {timeOptions.map((slot) => {
               const active = safeHhmm === slot;
               return (
                 <TouchableOpacity
                   key={slot}
-                  style={[s.chip, s.chipTime, {
+                  className="px-3 py-2 rounded-full border mr-2"
+                  style={{
                     backgroundColor: active ? theme.brand.primary : theme.bg.surfaceAlt,
                     borderColor: active ? theme.brand.primary : theme.border.default,
-                  }]}
+                  }}
                   activeOpacity={0.7}
                   onPress={() => setNewEndHhmm(slot)}
                 >
-                  <Text style={[s.chipText, { color: active ? '#fff' : theme.text.primary }]}>
+                  <Text className="text-[13px]" style={{ color: active ? '#fff' : theme.text.primary, fontFamily: FF }}>
                     {fmtTime(slot)}
                   </Text>
                 </TouchableOpacity>
@@ -1125,22 +1143,24 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
           </ScrollView>
 
           {/* 버튼 */}
-          <View style={[s.formBtns, { marginTop: 20 }]}>
+          <View className="flex-row gap-3 mt-5">
             <TouchableOpacity
-              style={[s.formBtn, { backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default }]}
+              className="flex-1 h-[46px] rounded-[9px] border items-center justify-center"
+              style={{ backgroundColor: theme.bg.surfaceAlt, borderColor: theme.border.default }}
               onPress={onClose} activeOpacity={0.7}
             >
-              <Text style={[s.formBtnText, { color: theme.text.primary }]}>취소</Text>
+              <Text className="text-sm font-semibold" style={{ color: theme.text.primary, fontFamily: FF }}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[s.formBtn, { backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }]}
+              className="flex-1 h-[46px] rounded-[9px] border items-center justify-center"
+              style={{ backgroundColor: theme.brand.primary, borderColor: theme.brand.primary }}
               onPress={() => onSubmit({ newEndYmd, newEndHhmm: safeHhmm })}
               activeOpacity={0.7}
               disabled={loading}
             >
               {loading
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={[s.formBtnText, { color: '#fff' }]}>연장</Text>
+                : <Text className="text-sm font-semibold" style={{ color: '#fff', fontFamily: FF }}>연장</Text>
               }
             </TouchableOpacity>
           </View>
@@ -1153,187 +1173,3 @@ function ExtendModal({ visible, reservation, maxYmd, loading, onClose, onSubmit,
 // ─── Styles ────────────────────────────────────────────────────────────
 
 const FF = Platform.select({ web: "'Noto Sans KR', sans-serif", default: undefined });
-
-const makeStyles = (theme: any) => StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.bg.canvas },
-
-  // 탑바
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 10,
-    backgroundColor: theme.bg.surface,
-    borderBottomWidth: 1, borderBottomColor: theme.border.default,
-  },
-  tabs: { flexDirection: 'row', gap: 2 },
-  tab: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 7 },
-  tabActive: { backgroundColor: theme.brand.primaryTint },
-  tabText: { fontSize: 13, color: theme.text.muted, fontFamily: FF },
-  tabTextActive: { color: theme.brand.primary, fontWeight: '600' },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    backgroundColor: theme.brand.primary,
-    paddingHorizontal: 13, paddingVertical: 8, borderRadius: 7,
-  },
-  addBtnText: { fontSize: 12, color: '#fff', fontWeight: '600', fontFamily: FF },
-
-  // 날짜 네비게이터
-  dateNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, paddingVertical: 10,
-    backgroundColor: theme.bg.surface,
-    borderBottomWidth: 1, borderBottomColor: theme.border.subtle,
-  },
-  navArrow: { padding: 6, borderRadius: 6 },
-  navDisabled: { opacity: 0.3 },
-  dateCenter: { flexDirection: 'row', alignItems: 'center', gap: 8, minWidth: 140, justifyContent: 'center' },
-  dateText: { fontSize: 15, fontWeight: '600', color: theme.text.primary, fontFamily: FF },
-  todayBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 },
-  todayBadgeText: { fontSize: 11, fontWeight: '600', fontFamily: FF },
-
-  // 차량 칩
-  vehChipScroll: { backgroundColor: theme.bg.surface, borderBottomWidth: 1, borderBottomColor: theme.border.subtle, maxHeight: 56 },
-  vehChipContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: 'row', alignItems: 'center' },
-  vehChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1,
-  },
-  vehChipName: { fontSize: 13, fontWeight: '500', fontFamily: FF },
-  vehChipNo: { fontSize: 11, fontFamily: FF },
-
-  // 타임라인
-  tlHeader: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderBottomWidth: 1,
-  },
-  tlVehNm: { fontSize: 14, fontWeight: '600', fontFamily: FF },
-  tlVehNo: { fontSize: 12, fontFamily: FF },
-  tlBody: { position: 'relative', marginHorizontal: 0 },
-
-  hourLine: {
-    position: 'absolute', left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center',
-    height: 1,
-  },
-  hourLabel: {
-    width: TIME_LABEL_W, fontSize: 11, fontWeight: '600',
-    textAlign: 'right', paddingRight: 10, fontFamily: FF,
-    lineHeight: 16,
-  },
-  hourRule: { flex: 1, height: 1 },
-
-  halfLine: {
-    position: 'absolute', left: 0, right: 0,
-    flexDirection: 'row', alignItems: 'center',
-    height: 1,
-  },
-  halfLabel: {
-    width: TIME_LABEL_W, fontSize: 9,
-    textAlign: 'right', paddingRight: 10, fontFamily: FF,
-    lineHeight: 14, opacity: 0.65,
-  },
-  halfRule: { flex: 1, borderTopWidth: 1, borderStyle: 'dashed' },
-
-  emptySlotTap: { position: 'absolute', right: 0 },
-
-  rsvBlock: {
-    position: 'absolute', right: 6,
-    borderRadius: 8, borderWidth: 1.5,
-    paddingHorizontal: 10, paddingVertical: 6,
-    overflow: 'hidden',
-    // left is set inline
-  },
-  rsvBlockTitle: { fontSize: 13, fontWeight: '600', fontFamily: FF },
-  rsvBlockTime:  { fontSize: 11, marginTop: 2, fontFamily: FF },
-  rsvBlockRmk:   { fontSize: 11, marginTop: 1, fontFamily: FF },
-  mineDot: {
-    position: 'absolute', top: 6, right: 8,
-    width: 6, height: 6, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.6)',
-  },
-
-  // 내 예약
-  myCard: {
-    flexDirection: 'row', alignItems: 'center',
-    borderRadius: 10, borderWidth: 1,
-    overflow: 'hidden', marginBottom: 4,
-  },
-  myCardAccent: { width: 4, alignSelf: 'stretch' },
-  myCardBody: { flex: 1, padding: 12, gap: 4 },
-  myCardRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  myCardVeh: { fontSize: 14, fontWeight: '600', fontFamily: FF },
-  myCardTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  myCardTime: { fontSize: 14, fontFamily: FF },
-  durBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 },
-  durText: { fontSize: 11, fontWeight: '600', fontFamily: FF },
-  myCardRmk: { fontSize: 12, fontFamily: FF },
-  cancelBtn: { marginRight: 12, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 7, borderWidth: 1 },
-  cancelText: { fontSize: 12, color: '#EF4444', fontWeight: '600', fontFamily: FF },
-
-  // 상태 배지
-  statusBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 4 },
-  statusBadgeText: { fontSize: 10, fontWeight: '600', fontFamily: FF },
-
-  // 내 예약 액션 버튼
-  myCardBtns: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  actionBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6, borderWidth: 1 },
-  actionBtnText: { fontSize: 12, fontWeight: '600', fontFamily: FF },
-
-  // 모달
-  modalOverlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center', justifyContent: 'center', padding: 20,
-  },
-  modalBox: {
-    width: '100%', maxWidth: 480, borderRadius: 14,
-    padding: 20, shadowColor: '#000', shadowOpacity: 0.2,
-    shadowRadius: 16, elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', marginBottom: 16,
-  },
-  modalTitle: { fontSize: 17, fontWeight: '700', fontFamily: FF },
-  modalInput: {
-    borderWidth: 1, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 14, fontFamily: FF,
-  },
-  extInfoBox: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1, borderRadius: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    marginBottom: 4,
-  },
-  extInfoLabel: { fontSize: 12, fontFamily: FF },
-  extInfoValue: { fontSize: 14, fontWeight: '600', fontFamily: FF },
-
-  // 공통
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-  emptyText: { fontSize: 13, fontFamily: FF },
-
-  // 폼
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 16 },
-  backText: { fontSize: 13, fontFamily: FF },
-  formTitle: { fontSize: 20, fontWeight: '700', marginBottom: 24, fontFamily: FF },
-  fieldLabel: {
-    fontSize: 10, fontWeight: '700', textTransform: 'uppercase',
-    letterSpacing: 0.8, marginBottom: 8, marginTop: 20, fontFamily: FF,
-  },
-  chipScroll: { marginBottom: 4 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1, marginRight: 8,
-  },
-  chipTime: { paddingHorizontal: 12 },
-  chipText: { fontSize: 13, fontFamily: FF },
-  textArea: {
-    borderWidth: 1, borderRadius: 8, padding: 12,
-    fontSize: 14, minHeight: 76, textAlignVertical: 'top', fontFamily: FF,
-  },
-  formBtns: { flexDirection: 'row', gap: 12, marginTop: 32 },
-  formBtn: { flex: 1, height: 46, borderRadius: 9, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  formBtnText: { fontSize: 14, fontWeight: '600', fontFamily: FF },
-});

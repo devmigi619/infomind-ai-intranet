@@ -211,7 +211,7 @@ export function MtgrScreen() {
   const selectedMtgr = mtgrs.find((v) => v.mtgrId === selectedMtgrId);
 
   return (
-    <View className="flex-1" style={{ backgroundColor: theme.bg.canvas }}>
+    <View className="flex-1" style={{ backgroundColor: theme.bg.app }}>
       <View className="flex-row items-center justify-between px-4 h-14 border-b" style={{ borderBottomColor: theme.border.subtle, backgroundColor: theme.bg.surface }}>
         <View className="flex-row gap-4">
           {(['grid', 'my'] as Mode[]).map((m) => (

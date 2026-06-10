@@ -350,8 +350,14 @@ export function NavRailCustomizationModal({ isOpen, onClose }: NavRailCustomizat
           setRowLayout(index, y, height);
         }}
         {...(mobileResponder ? mobileResponder.panHandlers : {})}
-        className="flex-row items-center relative px-6 py-2.5"
         style={{
+          // Animated.View에는 NativeWind className 스타일이 안정적으로 적용되지 않을 수 있다.
+          // 이 패턴이 커지면 Animated.View는 모션만 담당하고, 내부 View가 레이아웃을 담당하도록 분리한다.
+          flexDirection: 'row',
+          alignItems: 'center',
+          position: 'relative',
+          paddingHorizontal: 24,
+          paddingVertical: 10,
           gap: 12,
           backgroundColor: theme.bg.surface,
           opacity: isDragging ? 0.4 : isActiveMobileDrag ? 0.7 : 1,
