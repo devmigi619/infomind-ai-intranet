@@ -35,6 +35,43 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
     useChatStore.getState().setPendingResumeValue({ value: '취소', display: '취소' });
   };
 
+  // 드래프트 이양(handoff) — 내용을 들고 휴가신청 폼으로 이동.
+  // 설계(jarvis-panel-design.md §3 소멸 조건 ⑤): 이양 시 채팅 쪽 드래프트는 회수한다.
+  const handleHandoff = () => {
+    const get = (k: string) => artifact.fields.find((f) => f.key === k)?.value;
+    const toYmd = (s?: string) =>
+      s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.replace(/-/g, '') : undefined;
+
+    // 시작~종료 범위를 주말 제외 YYYYMMDD 목록으로 (폼의 dates[] 형식)
+    const st = toYmd(get('시작날짜'));
+    const end = toYmd(get('종료날짜')) ?? st;
+    let dates: string[] | undefined;
+    if (st && end) {
+      dates = [];
+      const cur = new Date(+st.slice(0, 4), +st.slice(4, 6) - 1, +st.slice(6, 8));
+      const last = new Date(+end.slice(0, 4), +end.slice(4, 6) - 1, +end.slice(6, 8));
+      while (cur <= last) {
+        const dow = cur.getDay();
+        if (dow !== 0 && dow !== 6) {
+          dates.push(
+            `${cur.getFullYear()}${String(cur.getMonth() + 1).padStart(2, '0')}${String(cur.getDate()).padStart(2, '0')}`,
+          );
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    const ui = useUiStore.getState();
+    ui.setLeaveReqHandoff({ dates, leaveNm: get('휴가유형'), reason: get('사유') });
+
+    // 대기 중인 excu interrupt 해소 — 대화 관점에선 '직접 작성'으로 정리
+    const chat = useChatStore.getState();
+    if (chat.pendingInterrupt === 'excu') {
+      chat.setPendingResumeValue({ value: '취소', display: '폼에서 직접 작성할게요' });
+    }
+    ui.setActiveFullScreen('leave-req-form' as any);
+  };
+
   return (
     <View
       style={{ backgroundColor: theme.bg.surface, borderColor: theme.border.subtle }}
@@ -106,25 +143,12 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
 
       {/* Submit / hint */}
       {artifact.submit.enabled ? (
-        <View className="flex-row gap-2 pt-1">
-          <TouchableOpacity
-            activeOpacity={0.75}
-            onPress={handleCancel}
-            style={{ borderColor: theme.border.default }}
-            className="flex-1 border rounded-lg py-2 items-center"
-          >
-            <Text
-              style={{ color: theme.text.body, fontFamily: WEB_FONT }}
-              className="text-[13px] font-medium"
-            >
-              취소
-            </Text>
-          </TouchableOpacity>
+        <View className="gap-2 pt-1">
           <TouchableOpacity
             activeOpacity={0.75}
             onPress={handleSubmit}
             style={{ backgroundColor: theme.brand.primary }}
-            className="flex-1 rounded-lg py-2 items-center"
+            className="rounded-lg py-2 items-center"
           >
             <Text
               style={{ color: '#ffffff', fontFamily: WEB_FONT }}
@@ -133,6 +157,34 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
               {artifact.submit.label}
             </Text>
           </TouchableOpacity>
+          <View className="flex-row gap-2">
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleCancel}
+              style={{ borderColor: theme.border.default }}
+              className="flex-1 border rounded-lg py-2 items-center"
+            >
+              <Text
+                style={{ color: theme.text.body, fontFamily: WEB_FONT }}
+                className="text-[13px] font-medium"
+              >
+                취소
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={handleHandoff}
+              style={{ borderColor: theme.border.default }}
+              className="flex-1 border rounded-lg py-2 items-center"
+            >
+              <Text
+                style={{ color: theme.text.body, fontFamily: WEB_FONT }}
+                className="text-[13px] font-medium"
+              >
+                폼에서 이어 작성
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : artifact.fields.length > 0 ? (
         <Text

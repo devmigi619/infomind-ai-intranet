@@ -19,6 +19,13 @@ export interface BoardLpHandoff {
   pstSn?: number;
 }
 
+/** 자비스패널(ai-context) → 휴가신청 폼 드래프트 이양용 */
+export interface LeaveReqHandoff {
+  dates?: string[];   // YYYYMMDD 목록 (주말 제외)
+  leaveNm?: string;   // 휴가유형 표시명 — 폼에서 leaveCd 매칭
+  reason?: string;
+}
+
 interface UiState {
   // State
   activePanel: PanelId | null;
@@ -42,6 +49,7 @@ interface UiState {
   isCustomizationOpen: boolean;
   previousFullScreen: PanelId | null;
   boardLpHandoff: BoardLpHandoff | null;
+  leaveReqHandoff: LeaveReqHandoff | null;
 
   // Actions
   handleNavClick: (panel: PanelId | 'home') => void;
@@ -67,6 +75,7 @@ interface UiState {
   setActiveFullScreen: (panelId: PanelId | null) => void;
   setCustomizationOpen: (open: boolean) => void;
   setBoardLpHandoff: (handoff: BoardLpHandoff | null) => void;
+  setLeaveReqHandoff: (handoff: LeaveReqHandoff | null) => void;
   hydrateFromStorage: (userId: string) => Promise<void>;
   resetUiToDefaults: () => void;
 }
@@ -101,6 +110,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   isCustomizationOpen: false,
   previousFullScreen: null,
   boardLpHandoff: null,
+  leaveReqHandoff: null,
 
   handleNavClick: (panel) => {
     if (panel === 'home') {
@@ -202,6 +212,8 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   setBoardLpHandoff: (handoff) => set({ boardLpHandoff: handoff }),
 
+  setLeaveReqHandoff: (handoff) => set({ leaveReqHandoff: handoff }),
+
   setAssistantMode: (mode) => set({ assistantMode: mode }),
 
   setAssistantContext: (cards) =>
@@ -294,6 +306,7 @@ export const useUiStore = create<UiState>((set, get) => ({
       isCustomizationOpen: false,
       previousFullScreen: null,
       boardLpHandoff: null,
+      leaveReqHandoff: null,
     });
   },
 }));

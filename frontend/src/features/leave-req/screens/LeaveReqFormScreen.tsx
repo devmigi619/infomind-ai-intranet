@@ -533,6 +533,21 @@ export function LeaveReqFormScreen() {
     autoSeedDone.current = true;
   }, [tmpls]);
 
+  // 자비스패널(ai-context) 드래프트 이양 — 날짜·사유는 즉시, 휴가유형은 목록 로딩 후 이름 매칭
+  const leaveReqHandoff = useUiStore(s => s.leaveReqHandoff);
+  useEffect(() => {
+    if (!leaveReqHandoff) return;
+    if (leaveReqHandoff.leaveNm && mstList.length === 0) return; // 목록 로딩 대기 후 재실행
+    if (leaveReqHandoff.dates?.length) setDates(leaveReqHandoff.dates);
+    if (leaveReqHandoff.reason) setLeaveRsn(leaveReqHandoff.reason);
+    if (leaveReqHandoff.leaveNm) {
+      const nm = leaveReqHandoff.leaveNm;
+      const matched = mstList.find(m => m.useYn === 'Y' && (m.leaveNm === nm || m.leaveNm.includes(nm)));
+      if (matched) setLeaveCd(matched.leaveCd);
+    }
+    useUiStore.getState().setLeaveReqHandoff(null); // 1회 소비
+  }, [leaveReqHandoff, mstList]);
+
   const mstOpts = mstList.filter(m => m.useYn === 'Y').map(m => ({ value: m.leaveCd, label: m.leaveNm }));
   const dtlOpts = dtlList.filter(d => d.useYn === 'Y').map(d => ({ value: d.leaveDtlCd, label: d.leaveDtlNm ?? d.leaveDtlCd }));
 
