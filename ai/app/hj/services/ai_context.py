@@ -133,12 +133,9 @@ def compose_leave(
         "label": "잔여 연차",
     })
 
-    # 휴가 페이지 바로가기
-    blocks.append({
-        "kind": "action",
-        "label": "휴가 페이지 열기",
-        "screen": "leave-req",
-    })
+    # NOTE: ambient 블록 구성(현황·문의·규정 등)은 사용자와 도메인별로
+    # 하나하나 정리하기로 한 항목 — 합의 전까지 최소 구성 유지.
+    # "휴가 페이지 열기" 단순 이동 액션은 artifact의 이양 버튼과 중복이라 제거됨.
 
     return {
         "domain": "leave",
