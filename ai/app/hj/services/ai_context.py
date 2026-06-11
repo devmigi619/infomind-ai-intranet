@@ -126,16 +126,21 @@ def compose_leave(
             "value": "신청 완료 · 결재 진행",
         })
 
-    # 잔여 연차 — resolver가 DB 조회로 값을 채운다
+    # 연차 현황 — "잔여 n일 / 부여 m일" 통합 fact. resolver가 DB 조회로 값을 채운다
     blocks.append({
         "kind": "fact_query",
-        "query": "remaining_leave",
-        "label": "잔여 연차",
+        "query": "leave_balance",
+        "label": "연차",
     })
 
-    # NOTE: ambient 블록 구성(현황·문의·규정 등)은 사용자와 도메인별로
-    # 하나하나 정리하기로 한 항목 — 합의 전까지 최소 구성 유지.
-    # "휴가 페이지 열기" 단순 이동 액션은 artifact의 이양 버튼과 중복이라 제거됨.
+    # 인사팀 문의 — 이동할 화면이 아직 없음. screen 없는 action은 프론트가 '준비 중' 안내
+    blocks.append({
+        "kind": "action",
+        "label": "인사팀 문의",
+    })
+
+    # NOTE: ambient 편성 합의(2026-06-11): 단순 페이지 이동 액션은 두지 않는다(이양 버튼이 대체).
+    # 규정 doc 블록(발화 기반 벡터 검색)과 조회 턴 table 블록은 후속 — jarvis-panel-design.md 참조.
 
     return {
         "domain": "leave",
@@ -146,23 +151,24 @@ def compose_leave(
     }
 
 
-# ── 잔여 연차 조회 SQL ────────────────────────────────────────────────────────
+# ── 연차 현황 조회 SQL ────────────────────────────────────────────────────────
 # 출처: backend/src/main/resources/mapper/LeaveBalanceMapper.xml
-# f_leave_calc($1): DB 함수로 부여 연차 계산
-# 차감: 당해연도 승인(aprv_rslt_se='3') + 차감대상(ded_yn='Y') 휴가 사용일수 합계
+# entitled: f_leave_calc($1) — DB 함수로 부여 연차 계산
+# used    : 당해연도 승인(aprv_rslt_se='3') + 차감대상(ded_yn='Y') 휴가 사용일수 합계
 
-_REMAINING_LEAVE_SQL = """
-SELECT f_leave_calc($1) - COALESCE((
-  SELECT SUM(t.leave_use_dcnt) FROM (
-    SELECT m.req_sn, m.leave_use_dcnt
-    FROM int_leave_req_mst m
-    JOIN int_leave_req_dtl d ON d.req_user_id = m.req_user_id AND d.req_sn = m.req_sn
-    JOIN int_leave_mst lm ON lm.leave_cd = m.leave_cd
-    WHERE m.req_user_id = $1 AND m.aprv_rslt_se = '3' AND lm.ded_yn = 'Y'
-    GROUP BY m.req_sn, m.leave_use_dcnt
-    HAVING SUBSTR(MIN(d.leave_use_ymd), 1, 4) = TO_CHAR(CURRENT_DATE, 'YYYY')
-  ) t
-), 0)
+_LEAVE_BALANCE_SQL = """
+SELECT f_leave_calc($1) AS entitled,
+       COALESCE((
+         SELECT SUM(t.leave_use_dcnt) FROM (
+           SELECT m.req_sn, m.leave_use_dcnt
+           FROM int_leave_req_mst m
+           JOIN int_leave_req_dtl d ON d.req_user_id = m.req_user_id AND d.req_sn = m.req_sn
+           JOIN int_leave_mst lm ON lm.leave_cd = m.leave_cd
+           WHERE m.req_user_id = $1 AND m.aprv_rslt_se = '3' AND lm.ded_yn = 'Y'
+           GROUP BY m.req_sn, m.leave_use_dcnt
+           HAVING SUBSTR(MIN(d.leave_use_ymd), 1, 4) = TO_CHAR(CURRENT_DATE, 'YYYY')
+         ) t
+       ), 0) AS used
 """.strip()
 
 
@@ -221,14 +227,16 @@ async def resolve(
             label = b.get("label", "")
             value = "조회 불가"  # 기본값 — DB 조회 성공 시 교체
 
-            if query == "remaining_leave":
+            if query == "leave_balance":
                 try:
                     pool = await get_pool()
-                    raw = await pool.fetchval(_REMAINING_LEAVE_SQL, user_id)
-                    if raw is not None:
-                        value = f"{float(raw):g}일"
+                    row = await pool.fetchrow(_LEAVE_BALANCE_SQL, user_id)
+                    if row is not None and row["entitled"] is not None:
+                        entitled = float(row["entitled"])
+                        used = float(row["used"] or 0)
+                        value = f"잔여 {entitled - used:g}일 / {entitled:g}일"
                 except Exception as exc:
-                    log.warning("잔여 연차 조회 실패 (user_id=%s): %s", user_id, exc)
+                    log.warning("연차 현황 조회 실패 (user_id=%s): %s", user_id, exc)
 
             resolved_blocks.append(AiContextBlock(kind="fact", label=label, value=value))
 

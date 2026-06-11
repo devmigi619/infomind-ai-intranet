@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Platform } from 'react-native';
 import { ClipboardEdit, ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../../../shared/hooks/useTheme';
+import { useToast } from '../../../shared/hooks/useToast';
 import { useUiStore } from '../../../store/uiStore';
 import { useChatStore } from '../../../store/chatStore';
 import { useAiContextStore } from '../store';
@@ -202,6 +203,7 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
 
 function BlockRow({ block }: { block: AiContextBlock }) {
   const theme = useTheme();
+  const toast = useToast();
 
   if (block.kind === 'fact') {
     return (
@@ -229,6 +231,9 @@ function BlockRow({ block }: { block: AiContextBlock }) {
     const handlePress = () => {
       if (block.screen) {
         useUiStore.getState().setActiveFullScreen(block.screen as any);
+      } else {
+        // 이동 화면이 정해지지 않은 액션 (예: 인사팀 문의)
+        toast.warning('준비 중인 기능입니다.');
       }
     };
 
