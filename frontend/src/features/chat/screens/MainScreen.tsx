@@ -25,6 +25,7 @@ import { MobileInterruptSheet } from '../components/MobileInterruptSheet';
 import { useChatSessionMessages } from '../api';
 import { useCurrentUser } from '../../auth/api';
 import { getAssistantResponseByIntent } from '../../ai-assistant/api';
+import { useAiContextStore } from '../../ai-context/store';
 import { apiClient } from '../../../shared/api/client';
 import type { Message } from '../types';
 
@@ -66,6 +67,8 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setInterruptFormTitle,
     pendingQuickMessage,
     setPendingQuickMessage,
+    pendingResumeValue,
+    setPendingResumeValue,
     resetSession,
     hydrateFromStorage,
   } = useChatStore();
@@ -87,6 +90,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const setLastUserMessage = useUiStore((s) => s.setLastUserMessage);
   const markAiUnread = useUiStore((s) => s.markAiUnread);
   const chatResetCounter = useUiStore((s) => s.chatResetCounter);
+  const currentIntent = useUiStore((s) => s.currentIntent);
   const theme = useTheme();
 
   // ─── 마운트 시 이전 상태 복원 ────────────────────────────────────────────
@@ -125,6 +129,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     if (chatResetCounter === 0) return;
     resetSession();
     setSelectedSessId(null);
+    useAiContextStore.getState().clear();
   }, [chatResetCounter, resetSession]);
 
   // ─── 핸들러: 새 세션 ─────────────────────────────────────────────────────
@@ -135,6 +140,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setInterruptFormFields(null);
     setInterruptFormTitle('');
     setDrawerOpen(false);
+    useAiContextStore.getState().clear();
   }, [resetSession, setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle]);
 
   // ─── 핸들러: 세션 선택 ───────────────────────────────────────────────────
@@ -152,6 +158,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setActiveSessionId(sessId);
     setSelectedSessId(sessId);
     setDrawerOpen(false);
+    useAiContextStore.getState().clear();
   }, [
     setMessages, setPendingInterrupt, setHumanInterruptQuestion,
     setInterruptAprvlList, setInterruptRefList,
@@ -201,8 +208,15 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
               if (data.type === 'turn_id') {
                 // 백엔드가 매 턴마다 생성한 MemorySaver thread_id — /chat/resume 식별용
                 setTurnId(data.turn_id);
+              } else if (data.type === 'ai_context') {
+                // 자비스패널(사물 채널) 스냅샷 — 매 이벤트가 전체 화면
+                useAiContextStore.getState().setSnapshot(data);
               } else if (data.type === 'meta') {
                 actions = data.actions ?? [];
+                // 도메인 전환 소멸 — leave 외 도메인 확정 시 자비스패널 정리
+                if (data.intent && data.intent !== 'leave') {
+                  useAiContextStore.getState().clear();
+                }
                 if (data.intent) {
                   // 백엔드 API에서 동적 카드 정보 조회 (Spring Boot)
                   apiClient.get(`/api/chat/assistant/cards`, { params: { intent: data.intent } })
@@ -445,6 +459,16 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingQuickMessage]);
 
+  // ─── 자비스패널(ai-context) 버튼 → resume 합류 ──────────────────────────
+  // 패널의 제출/취소는 구조화된 사용자 발화 — 채팅과 같은 대화 상태로 합류한다
+  useEffect(() => {
+    if (!pendingResumeValue || isStreaming) return;
+    const { value, display } = pendingResumeValue;
+    setPendingResumeValue(null);
+    sendResume(value, display);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingResumeValue]);
+
   const isEmpty = messages.length === 0;
 
   // ─── 사이드바 (공통) ─────────────────────────────────────────────────────
@@ -533,12 +557,17 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   };
 
   // ─── PC 레이아웃 ─────────────────────────────────────────────────────────
+  // leave 도메인의 excu/form 확인은 자비스패널(RP AI 탭)이 담당 — InterruptPanel 억제.
+  // 다른 도메인은 기존 동작 유지 (파일럿 공존 원칙). 모바일 시트는 변경 없음.
   if (!isMobile) {
     return (
       <View className="flex-1 flex-row">
         {sidebar}
         {chatArea}
-        <InterruptPanel {...panelProps} />
+        <InterruptPanel
+          {...panelProps}
+          isOpen={panelProps.isOpen && currentIntent !== 'leave'}
+        />
       </View>
     );
   }

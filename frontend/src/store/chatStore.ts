@@ -31,6 +31,8 @@ interface ChatState {
   interruptFormTitle: string;
   /** 빠른 액션 클릭 시 자동 전송할 메시지. MainScreen이 감지해 sendMessage 호출 후 null 처리 */
   pendingQuickMessage: string | null;
+  /** 자비스패널(ai-context) 버튼이 요청한 resume 값. MainScreen이 감지해 sendResume 호출 후 null 처리 */
+  pendingResumeValue: { value: string; display?: string } | null;
 
   // ── 액션 ──────────────────────────────────────────────────────────────────
   setMessages: (msgs: Message[] | ((prev: Message[]) => Message[])) => void;
@@ -44,6 +46,7 @@ interface ChatState {
   setInterruptFormFields: (fields: FormField[] | null) => void;
   setInterruptFormTitle: (title: string) => void;
   setPendingQuickMessage: (msg: string | null) => void;
+  setPendingResumeValue: (v: { value: string; display?: string } | null) => void;
   /** 새 세션 시작 — state 초기화 + AsyncStorage 삭제 */
   resetSession: () => void;
   /** 마운트 시 AsyncStorage에서 이전 상태 복원 */
@@ -62,6 +65,7 @@ const BLANK_SESSION = () => ({
   interruptFormFields: null as FormField[] | null,
   interruptFormTitle: '',
   pendingQuickMessage: null as string | null,
+  pendingResumeValue: null as { value: string; display?: string } | null,
 });
 
 export const useChatStore = create<ChatState>((set) => ({
@@ -81,6 +85,7 @@ export const useChatStore = create<ChatState>((set) => ({
   setInterruptFormFields: (fields) => set({ interruptFormFields: fields }),
   setInterruptFormTitle: (title) => set({ interruptFormTitle: title }),
   setPendingQuickMessage: (msg) => set({ pendingQuickMessage: msg }),
+  setPendingResumeValue: (v) => set({ pendingResumeValue: v }),
 
   resetSession: () => {
     set(BLANK_SESSION());
