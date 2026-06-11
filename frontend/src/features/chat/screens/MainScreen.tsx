@@ -77,6 +77,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [aiContextEnabled, setAiContextEnabled] = useState(true);
 
   // 현재 사용자 ID (AprvLineEditorPanel에서 본인 제외용)
   const { data: currentUser } = useCurrentUser();
@@ -196,6 +197,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         let firstTokenReceived = false;
         let detectedInterrupt: 'human' | 'excu' | 'form' | null = null;
         let interruptQuestion: string | null = null; // interrupt payload의 question/preview 텍스트
+        let streamAiContextEnabled = aiContextEnabled;
 
         for (;;) {
           const { done, value } = await reader.read();
@@ -210,9 +212,16 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
                 setTurnId(data.turn_id);
               } else if (data.type === 'ai_context') {
                 // 자비스패널(사물 채널) 스냅샷 — 매 이벤트가 전체 화면
-                useAiContextStore.getState().setSnapshot(data);
+                if (streamAiContextEnabled) {
+                  useAiContextStore.getState().setSnapshot(data);
+                }
               } else if (data.type === 'meta') {
                 actions = data.actions ?? [];
+                streamAiContextEnabled = data.ai_context_enabled !== false;
+                setAiContextEnabled(streamAiContextEnabled);
+                if (!streamAiContextEnabled) {
+                  useAiContextStore.getState().clear();
+                }
                 // 도메인 전환 소멸 — leave 외 도메인 확정 시 자비스패널 정리
                 if (data.intent && data.intent !== 'leave') {
                   useAiContextStore.getState().clear();
@@ -378,7 +387,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
       setMessages, setTurnId, setHumanInterruptQuestion,
       setInterruptAprvlList, setInterruptRefList, setPendingInterrupt,
       setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle,
-      markAiUnread, onAiResponseComplete,
+      markAiUnread, onAiResponseComplete, aiContextEnabled,
     ],
   );
 
@@ -555,10 +564,11 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     onApprove: (val: string, display?: string) => sendResume(val, display),
     onCancel: () => sendResume('취소'),
   };
+  const hideInterruptPanelForAiContext = aiContextEnabled && currentIntent === 'leave';
 
   // ─── PC 레이아웃 ─────────────────────────────────────────────────────────
-  // leave 도메인의 excu/form 확인은 자비스패널(RP AI 탭)이 담당 — InterruptPanel 억제.
-  // 다른 도메인은 기존 동작 유지 (파일럿 공존 원칙). 모바일 시트는 변경 없음.
+  // 자비스패널이 켜진 경우에만 leave excu/form 확인을 RP AI 탭이 담당한다.
+  // 꺼져 있으면 main처럼 일반 InterruptPanel을 표시한다.
   if (!isMobile) {
     return (
       <View className="flex-1 flex-row">
@@ -566,7 +576,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         {chatArea}
         <InterruptPanel
           {...panelProps}
-          isOpen={panelProps.isOpen && currentIntent !== 'leave'}
+          isOpen={panelProps.isOpen && !hideInterruptPanelForAiContext}
         />
       </View>
     );

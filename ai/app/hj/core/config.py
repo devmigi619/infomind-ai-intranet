@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     qdrant_url: str = "http://qdrant:6333"
     allowed_origins: list[str] = ["http://localhost:8081"]
     database_url: str = "http://192.168.0.248:5434"
+    ai_context_enabled: bool = True
 
     class Config:
         env_file = ".env.local"

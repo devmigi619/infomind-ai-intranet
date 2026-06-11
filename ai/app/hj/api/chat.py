@@ -7,6 +7,7 @@ from fastapi.responses import StreamingResponse
 from langgraph.types import Command
 
 from app.hj.core.auth import verify_token
+from app.hj.core.config import settings
 from app.hj.services import graph as graph_module
 from app.hj.services import ai_context as ai_ctx
 from app.hj.services.graph import BLOCK_MESSAGES, DEFAULT_BLOCK, build_graph
@@ -38,6 +39,16 @@ def _extract_update(output) -> dict:
     return {}
 
 
+def _build_meta_event(payload: dict) -> str:
+    """SSE meta 이벤트를 구성한다."""
+    data = {
+        "type": "meta",
+        "ai_context_enabled": settings.ai_context_enabled,
+        **payload,
+    }
+    return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
 async def _build_leave_context_event(g, config, *, submit_enabled: bool) -> str | None:
     """
     ai_context(자비스패널) SSE 이벤트 생성 — leave intent 한정 (파일럿 공존 원칙).
@@ -45,6 +56,9 @@ async def _build_leave_context_event(g, config, *, submit_enabled: bool) -> str 
     interrupt 시점에 호출: 체크포인트에서 pending_artifact·결재선을 읽어
     artifact 포함 스냅샷을 만든다. 실패해도 채팅 스트림을 깨지 않도록 None 반환.
     """
+    if not settings.ai_context_enabled:
+        return None
+
     try:
         snap = await g.aget_state(config)
         vals = snap.values if snap else {}
@@ -215,7 +229,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 grdl_se = update.get("grdl_se", "")
                 msg = BLOCK_MESSAGES.get(grdl_se, DEFAULT_BLOCK)
                 if not meta_sent:
-                    yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
+                    yield _build_meta_event({"actions": []})
                 yield f"data: {json.dumps({'type': 'token', 'content': msg})}\n\n"
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 return
@@ -241,7 +255,11 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
         # 성공("처리가 완료...") → 완료 fact 변환, 취소·오류 → 드래프트 폐기 후 ambient만.
         if kind == "on_chain_end" and name == "node_excu_confirm":
             state_in = event.get("data", {}).get("input") or {}
-            if state_in.get("intent") == "leave" and (ctx_sess := state_in.get("session_id") or ""):
+            if (
+                settings.ai_context_enabled
+                and state_in.get("intent") == "leave"
+                and (ctx_sess := state_in.get("session_id") or "")
+            ):
                 update = _extract_update(event["data"]["output"])
                 _msgs = update.get("messages") or []
                 _content = getattr(_msgs[-1], "content", "") if _msgs else ""
@@ -266,7 +284,11 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             actions = update.get("actions", [])
             intent = update.get("intent")
             action_type = update.get("action_type")
-            yield f"data: {json.dumps({'type': 'meta', 'intent': intent, 'action_type': action_type, 'actions': actions}, ensure_ascii=False)}\n\n"
+            yield _build_meta_event({
+                "intent": intent,
+                "action_type": action_type,
+                "actions": actions,
+            })
             meta_sent = True
 
             # ── ai_context(자비스패널) — 도메인 확정 시 ambient 스냅샷 ─────────
@@ -274,7 +296,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             state_in = event.get("data", {}).get("input") or {}
             ctx_sess = state_in.get("session_id") or ""
             ctx_user = state_in.get("user_id") or ""
-            if intent and ctx_sess:
+            if settings.ai_context_enabled and intent and ctx_sess:
                 ai_ctx.clear_on_domain_switch(ctx_sess, intent)
                 if intent == "leave":
                     try:
@@ -307,7 +329,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             )
 
             if not meta_sent:
-                yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
+                yield _build_meta_event({"actions": []})
                 meta_sent = True
 
             # ai_context — leave interrupt면 artifact 스냅샷 선행 방출
@@ -349,7 +371,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 iv = pending[0].value
                 it = iv.get("type", "") if isinstance(iv, dict) else ""
                 if not meta_sent:
-                    yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
+                    yield _build_meta_event({"actions": []})
                 if ctx_event := await _build_leave_context_event(
                     g, config, submit_enabled=(it == "excu"),
                 ):
