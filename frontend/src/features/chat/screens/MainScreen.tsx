@@ -134,6 +134,15 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   }, [chatResetCounter, resetSession]);
 
   // ─── 핸들러: 새 세션 ─────────────────────────────────────────────────────
+  // uiStore의 어시스턴트 컨텍스트(lastUserMessage/intent/카드) 정리 — 새 대화·세션 전환 공통.
+  // 이걸 빼먹으면 RP AI 탭에 직전 대화의 도메인 컨텍스트가 잔존한다.
+  const clearUiAssistantContext = useCallback(() => {
+    const ui = useUiStore.getState();
+    ui.setLastUserMessage(null);
+    ui.setAiContext(null, null);
+    ui.setAssistantContext([]);
+  }, []);
+
   const handleNewSession = useCallback(() => {
     resetSession();
     setSelectedSessId(null);
@@ -142,7 +151,8 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setInterruptFormTitle('');
     setDrawerOpen(false);
     useAiContextStore.getState().clear();
-  }, [resetSession, setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle]);
+    clearUiAssistantContext();
+  }, [resetSession, setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle, clearUiAssistantContext]);
 
   // ─── 핸들러: 세션 선택 ───────────────────────────────────────────────────
   const handleSelectSession = useCallback((sessId: string) => {
@@ -160,7 +170,9 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     setSelectedSessId(sessId);
     setDrawerOpen(false);
     useAiContextStore.getState().clear();
+    clearUiAssistantContext();
   }, [
+    clearUiAssistantContext,
     setMessages, setPendingInterrupt, setHumanInterruptQuestion,
     setInterruptAprvlList, setInterruptRefList,
     setInterruptPreviewText, setInterruptFormFields, setInterruptFormTitle,
@@ -244,11 +256,12 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
                     });
 
                   useUiStore.getState().setAiContext(data.intent, data.action_type || null);
-                  
-                  // 🌟 자동으로 AI 탭 포커싱 및 우측 패널 열기
-                  useUiStore.getState().setRpTab('ai');
-                  if (!useUiStore.getState().isRightPanelOpen) {
-                    useUiStore.setState({ isRightPanelOpen: true });
+
+                  // 자비스 원칙: 패널을 강제로 열거나 탭을 빼앗지 않는다.
+                  // 사용자가 다른 탭/닫힘 상태면 빨간점(unread)으로만 알린다.
+                  const ui = useUiStore.getState();
+                  if (!ui.isRightPanelOpen || ui.rpTab !== 'ai') {
+                    ui.markAiUnread();
                   }
                 }
               } else if (data.type === 'progress') {
@@ -475,8 +488,10 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     const { value, display } = pendingResumeValue;
     setPendingResumeValue(null);
     sendResume(value, display);
+  // isStreaming을 의존성에 포함 — 스트리밍 중 버튼을 눌러도 종료 후 재시도된다.
+  // (빠지면 pendingResumeValue가 영원히 소비되지 않아 입력창이 잠기는 교착 발생)
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingResumeValue]);
+  }, [pendingResumeValue, isStreaming]);
 
   const isEmpty = messages.length === 0;
 
