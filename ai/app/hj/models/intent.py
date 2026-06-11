@@ -43,6 +43,15 @@ class PreflightResult(BaseModel):
             "관련 참조 데이터가 없거나 자유 입력 항목이면 null."
         ),
     )
+    extracted: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            "사용자 메시지·컨텍스트에서 확인된 값들. "
+            "키: 시작날짜/종료날짜/휴가유형/사유 등 [필수 입력 항목]의 항목명, "
+            "값: 사용자 표현 그대로 (예: {'시작날짜': '내일', '휴가유형': '연차'}). "
+            "확인된 값이 하나도 없으면 null."
+        ),
+    )
 
 
 class SqlResult(BaseModel):

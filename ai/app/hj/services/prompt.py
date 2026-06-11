@@ -29,6 +29,13 @@ PREFLIGHT_SYSTEM_PROMPT = """
 - 코드값(LEAVE_00001, A01 등) 절대 포함 금지 — 사용자 표시명(leave_nm, mtgr_nm 등)만 사용
 - 참조 데이터가 없거나 자유 입력 항목만 누락된 경우 show_options=null
 
+[extracted 규칙]
+- 사용자 메시지·컨텍스트에서 이미 확인된 항목들을 extracted 객체로 출력하라
+- 키는 [필수 입력 항목]의 항목명 그대로, 값은 사용자 표현 그대로 (날짜를 숫자로 변환하지 말 것)
+  예) "내일 연차 써줘" → extracted={{"시작날짜": "내일", "종료날짜": "내일", "휴가유형": "연차"}}
+- is_complete=false여도 확인된 항목은 모두 extracted에 담아라 (부분 추출)
+- 확인된 항목이 하나도 없으면 extracted=null
+
 [필수 입력 항목]
 {required_fields}
 """.strip()

@@ -322,6 +322,7 @@ async def chat(request: dict, user=Depends(verify_token)):
         "system_status":             "OK",
         "preflight_retry":           0,
         "pending_preflight_question": None,
+        "pending_artifact":          None,
     }
     return StreamingResponse(
         _sse_stream(state, config, turn_id=turn_id),

@@ -359,9 +359,17 @@ async def node_excu_preflight(state: GraphState) -> Command:
             update={"messages": [AIMessage("죄송합니다. 서버 오류로 인해 답변드리기 어렵습니다.")]},
         )
 
+    # ── artifact 필드 보존 (ai_context/자비스패널용) ──────────────────────────
+    # 이번 호출에서 추출된 값이 있으면 갱신, 없으면 이전 턴 값 유지
+    pending_artifact = result.extracted or state.get("pending_artifact")
+
     # ── 라우팅 결정 ──────────────────────────────────────────────────────────
     if result.is_complete:
-        return Command(goto="node_excu", update={"preflight_retry": 0, "pending_preflight_question": None})
+        return Command(goto="node_excu", update={
+            "preflight_retry": 0,
+            "pending_preflight_question": None,
+            "pending_artifact": pending_artifact,
+        })
 
     # 정보 부족 — 질문 텍스트 조립
     question = result.question or (
@@ -376,7 +384,10 @@ async def node_excu_preflight(state: GraphState) -> Command:
     # pending_preflight_question을 읽어 Q&A를 항상 정상 처리할 수 있다.
     return Command(
         goto="node_excu_preflight_ask",
-        update={"pending_preflight_question": question},
+        update={
+            "pending_preflight_question": question,
+            "pending_artifact": pending_artifact,
+        },
     )
 
 
