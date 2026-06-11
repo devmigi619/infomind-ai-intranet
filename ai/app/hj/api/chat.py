@@ -8,6 +8,7 @@ from langgraph.types import Command
 
 from app.hj.core.auth import verify_token
 from app.hj.services import graph as graph_module
+from app.hj.services import ai_context as ai_ctx
 from app.hj.services.graph import BLOCK_MESSAGES, DEFAULT_BLOCK, build_graph
 from app.hj.models.state import GraphState
 
@@ -35,6 +36,30 @@ def _extract_update(output) -> dict:
     if isinstance(output, dict):
         return output
     return {}
+
+
+async def _build_leave_context_event(g, config, *, submit_enabled: bool) -> str | None:
+    """
+    ai_context(자비스패널) SSE 이벤트 생성 — leave intent 한정 (파일럿 공존 원칙).
+
+    interrupt 시점에 호출: 체크포인트에서 pending_artifact·결재선을 읽어
+    artifact 포함 스냅샷을 만든다. 실패해도 채팅 스트림을 깨지 않도록 None 반환.
+    """
+    try:
+        snap = await g.aget_state(config)
+        vals = snap.values if snap else {}
+        if vals.get("intent") != "leave":
+            return None
+        payload = await ai_ctx.build_leave_payload(
+            session_id=vals.get("session_id") or "",
+            user_id=vals.get("user_id") or "",
+            pending_artifact=vals.get("pending_artifact"),
+            submit_enabled=submit_enabled,
+            aprvl_list=vals.get("pending_aprvl_list"),
+        )
+        return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+    except Exception:
+        return None
 
 
 def _build_interrupt_event(interrupt_type: str, interrupt_value: dict) -> str:
@@ -211,6 +236,28 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                     if content:
                         yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
 
+        # ── ai_context — leave 실행 확정/취소 후 artifact 소멸 스냅샷 ────────────
+        # node_excu_confirm은 interrupt 후 resume에서만 정상 종료(on_chain_end)한다.
+        # 성공("처리가 완료...") → 완료 fact 변환, 취소·오류 → 드래프트 폐기 후 ambient만.
+        if kind == "on_chain_end" and name == "node_excu_confirm":
+            state_in = event.get("data", {}).get("input") or {}
+            if state_in.get("intent") == "leave" and (ctx_sess := state_in.get("session_id") or ""):
+                update = _extract_update(event["data"]["output"])
+                _msgs = update.get("messages") or []
+                _content = getattr(_msgs[-1], "content", "") if _msgs else ""
+                _completed = str(_content).startswith("처리가 완료")
+                try:
+                    if not _completed:
+                        ai_ctx.clear_session(ctx_sess)  # 취소·오류: 드래프트 폐기 (재부활 방지)
+                    ctx_payload = await ai_ctx.build_leave_payload(
+                        session_id=ctx_sess,
+                        user_id=state_in.get("user_id") or "",
+                        completed=_completed,
+                    )
+                    yield f"data: {json.dumps(ctx_payload, ensure_ascii=False)}\n\n"
+                except Exception:
+                    pass  # 패널 이벤트 실패가 채팅 스트림을 깨지 않도록
+
         # ── classify 완료 → meta 이벤트 (+ 파싱 오류 시 오류 메시지) ────────────
         # 파싱 오류 시 classify가 messages를 담아 save_history로 직행하므로
         # meta 전송 후 곧바로 오류 token을 방출한다 (meta → token 순서 보장).
@@ -221,6 +268,23 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             action_type = update.get("action_type")
             yield f"data: {json.dumps({'type': 'meta', 'intent': intent, 'action_type': action_type, 'actions': actions}, ensure_ascii=False)}\n\n"
             meta_sent = True
+
+            # ── ai_context(자비스패널) — 도메인 확정 시 ambient 스냅샷 ─────────
+            # leave 한정 (파일럿 공존 원칙). 다른 도메인 확정 시 세션 드래프트 소멸.
+            state_in = event.get("data", {}).get("input") or {}
+            ctx_sess = state_in.get("session_id") or ""
+            ctx_user = state_in.get("user_id") or ""
+            if intent and ctx_sess:
+                ai_ctx.clear_on_domain_switch(ctx_sess, intent)
+                if intent == "leave":
+                    try:
+                        ctx_payload = await ai_ctx.build_leave_payload(
+                            session_id=ctx_sess, user_id=ctx_user,
+                        )
+                        yield f"data: {json.dumps(ctx_payload, ensure_ascii=False)}\n\n"
+                    except Exception:
+                        pass  # 패널 이벤트 실패가 채팅 스트림을 깨지 않도록
+
             msgs = update.get("messages", [])
             if msgs:
                 last = msgs[-1]
@@ -245,6 +309,13 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             if not meta_sent:
                 yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
                 meta_sent = True
+
+            # ai_context — leave interrupt면 artifact 스냅샷 선행 방출
+            # (excu 대기 중에만 제출 버튼 활성)
+            if ctx_event := await _build_leave_context_event(
+                g, config, submit_enabled=(interrupt_type == "excu"),
+            ):
+                yield ctx_event
 
             if interrupt_type in ("human", "excu", "form"):
                 yield _build_interrupt_event(interrupt_type, interrupt_value)
@@ -279,6 +350,10 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 it = iv.get("type", "") if isinstance(iv, dict) else ""
                 if not meta_sent:
                     yield f"data: {json.dumps({'type': 'meta', 'actions': []})}\n\n"
+                if ctx_event := await _build_leave_context_event(
+                    g, config, submit_enabled=(it == "excu"),
+                ):
+                    yield ctx_event
                 if it in ("human", "excu", "form"):
                     yield _build_interrupt_event(it, iv)
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
