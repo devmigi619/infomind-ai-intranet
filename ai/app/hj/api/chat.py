@@ -183,6 +183,11 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
     meta_sent = False
     is_resume = isinstance(input_, Command)
 
+    # ai_context(자비스패널) — 턴 종결 시 방출 판단용 스트림 스코프 메타
+    stream_intent: str | None = None
+    stream_sess = (input_.get("session_id") or "") if isinstance(input_, dict) else ""
+    stream_user = (input_.get("user_id") or "") if isinstance(input_, dict) else ""
+
     # turn_id 이벤트 — /chat 신규 요청 시 프론트에 전달
     # 프론트는 이 값을 저장해 /chat/resume 요청 시 turn_id 필드로 전송한다.
     if turn_id:
@@ -291,21 +296,16 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             })
             meta_sent = True
 
-            # ── ai_context(자비스패널) — 도메인 확정 시 ambient 스냅샷 ─────────
-            # leave 한정 (파일럿 공존 원칙). 다른 도메인 확정 시 세션 드래프트 소멸.
+            # ── ai_context(자비스패널) — 분류 시점엔 방출하지 않는다 ──────────
+            # 패널은 '턴의 종결 형태'에 따라 방출한다 (설계 개정 2026-06-12):
+            #   묻고 끝난 턴(human)=침묵 / 확인 준비(excu)=artifact / 답하고 끝남=스냅샷.
+            # 여기서는 도메인 전환 소멸과 턴 메타 기록만 수행.
             state_in = event.get("data", {}).get("input") or {}
-            ctx_sess = state_in.get("session_id") or ""
-            ctx_user = state_in.get("user_id") or ""
-            if settings.ai_context_enabled and intent and ctx_sess:
-                ai_ctx.clear_on_domain_switch(ctx_sess, intent)
-                if intent == "leave":
-                    try:
-                        ctx_payload = await ai_ctx.build_leave_payload(
-                            session_id=ctx_sess, user_id=ctx_user,
-                        )
-                        yield f"data: {json.dumps(ctx_payload, ensure_ascii=False)}\n\n"
-                    except Exception:
-                        pass  # 패널 이벤트 실패가 채팅 스트림을 깨지 않도록
+            stream_intent = intent
+            stream_sess = state_in.get("session_id") or stream_sess
+            stream_user = state_in.get("user_id") or stream_user
+            if settings.ai_context_enabled and intent and stream_sess:
+                ai_ctx.clear_on_domain_switch(stream_sess, intent)
 
             msgs = update.get("messages", [])
             if msgs:
@@ -332,12 +332,13 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 yield _build_meta_event({"actions": []})
                 meta_sent = True
 
-            # ai_context — leave interrupt면 artifact 스냅샷 선행 방출
-            # (excu 대기 중에만 제출 버튼 활성)
-            if ctx_event := await _build_leave_context_event(
-                g, config, submit_enabled=(interrupt_type == "excu"),
-            ):
-                yield ctx_event
+            # ai_context — excu(확인 준비) interrupt에서만 artifact 스냅샷 방출.
+            # human(묻는 중) interrupt는 침묵 — 패널이 촐랑대지 않는다 (설계 개정)
+            if interrupt_type == "excu":
+                if ctx_event := await _build_leave_context_event(
+                    g, config, submit_enabled=True,
+                ):
+                    yield ctx_event
 
             if interrupt_type in ("human", "excu", "form"):
                 yield _build_interrupt_event(interrupt_type, interrupt_value)
@@ -372,16 +373,29 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 it = iv.get("type", "") if isinstance(iv, dict) else ""
                 if not meta_sent:
                     yield _build_meta_event({"actions": []})
-                if ctx_event := await _build_leave_context_event(
-                    g, config, submit_enabled=(it == "excu"),
-                ):
-                    yield ctx_event
+                if it == "excu":
+                    if ctx_event := await _build_leave_context_event(
+                        g, config, submit_enabled=True,
+                    ):
+                        yield ctx_event
                 if it in ("human", "excu", "form"):
                     yield _build_interrupt_event(it, iv)
                 yield f"data: {json.dumps({'type': 'done'})}\n\n"
                 return
     except Exception:
         pass  # fallback 실패 시 무시하고 일반 done 전송
+
+    # ── ai_context — 답하고 정상 종결한 턴의 스냅샷 방출 ────────────────────────
+    # (interrupt로 끝난 턴은 위에서 return — 여기 도달 = 묻지 않고 답한 턴)
+    # 세션에 살아 있는 드래프트가 있으면 함께 실려 유지된다.
+    if settings.ai_context_enabled and stream_intent == "leave" and stream_sess:
+        try:
+            ctx_payload = await ai_ctx.build_leave_payload(
+                session_id=stream_sess, user_id=stream_user,
+            )
+            yield f"data: {json.dumps(ctx_payload, ensure_ascii=False)}\n\n"
+        except Exception:
+            pass  # 패널 이벤트 실패가 채팅 스트림을 깨지 않도록
 
     yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
@@ -442,4 +456,17 @@ async def chat_resume(request: dict, user=Depends(verify_token)):
         _sse_stream(Command(resume=resume_value), config),
         media_type="text/event-stream",
     )
+
+
+@router.post("/context/clear")
+async def context_clear(request: dict, user=Depends(verify_token)):
+    """
+    자비스패널 세션 드래프트 정리.
+
+    드래프트가 채팅 밖 경로로 소비됐을 때(예: '폼에서 이어 작성' 후 폼에서 직접 제출)
+    클라이언트가 호출해 서버 세션 스토어를 동기화한다 — 2채널은 한 화자.
+    """
+    session_id = request.get("session_id", "") or str(user.get("sub", ""))
+    ai_ctx.clear_session(session_id)
+    return {"ok": True}
 

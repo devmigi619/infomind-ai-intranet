@@ -79,6 +79,25 @@ def clear_session(session_id: str) -> None:
     _SESSION_CONTEXT.pop(session_id, None)
 
 
+def describe_session_context(session_id: str) -> str | None:
+    """
+    현재 세션의 자비스패널 표시 내용을 응답 생성 LLM에게 알려줄 한 줄 요약.
+
+    2채널은 한 화자 — AI가 자기 패널에 뭘 띄웠는지 알아야
+    "패널에 이미 표시되어 있습니다" 같은 참조 응답이 가능하다.
+    표시 중인 게 없으면 None.
+    """
+    entry = _SESSION_CONTEXT.get(session_id)
+    artifact = entry.get("artifact") if entry else None
+    if not artifact:
+        return None
+    fields = ", ".join(f"{k}={v}" for k, v in artifact.items())
+    return (
+        f"휴가 신청 드래프트({fields})와 잔여 연차 현황, "
+        "신청/취소/폼 이동 버튼이 우측 패널에 표시되어 있음"
+    )
+
+
 def clear_on_domain_switch(session_id: str, new_intent: str) -> None:
     """
     도메인 전환 감지 — 설계(jarvis-panel-design.md §3):

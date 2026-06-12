@@ -1058,6 +1058,18 @@ async def node_generate(state: GraphState) -> Command:
     # node_search/excu 이후 context는 SQL 결과로 교체되어 날짜 참조가 사라지므로
     # date_reference 필드에서 별도 주입해 응답 생성 시 날짜 정보가 유지되도록 한다.
     full_context = f"{date_ref}\n\n{context}" if date_ref else context
+
+    # ── 자비스패널 인지 주입 — 2채널은 한 화자 ────────────────────────────────
+    # AI가 자기 패널(사물 채널)에 띄운 내용을 알아야 중복 답변 대신 참조할 수 있다.
+    from app.hj.services.ai_context import describe_session_context
+    panel_desc = describe_session_context(state.get("session_id") or "")
+    if panel_desc:
+        full_context += (
+            f"\n\n[자비스패널 표시 중]\n{panel_desc}\n"
+            "(위 내용이 사용자 화면 우측 패널에 이미 표시되어 있다. "
+            "관련 질문이면 다시 나열하지 말고 패널을 참조하도록 안내하라.)"
+        )
+
     system_msg = f"{GENERATE_SYSTEM_PROMPT}\n\n[컨텍스트]\n{full_context}\n====추가내용====\n[intent]\n{intent}\n[action_type]\n{action_type}"
 
     messages = [SystemMessage(content=system_msg)] + list(state["messages"])
