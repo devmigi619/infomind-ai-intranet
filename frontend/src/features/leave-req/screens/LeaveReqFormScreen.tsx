@@ -30,6 +30,9 @@ import {
 } from '../api';
 import { AprvlTmplModal } from '../components/AprvlTmplModal';
 import { AprvLineEditorPanel } from '../components/AprvLineEditorPanel';
+import { useAiContextStore } from '../../ai-context/store';
+import { clearAiContextSession } from '../../ai-context/api';
+import { useChatStore } from '../../../store/chatStore';
 import {
   useUploadAttachments,
   type DocumentAsset,
@@ -586,6 +589,15 @@ export function LeaveReqFormScreen() {
         refList: refList.map(r => r.aprvUserId),
       });
       toast.success('휴가신청이 완료되었습니다.');
+
+      // 자비스패널 드래프트가 이 폼으로 이양된 경우 완료 동기화 — 2채널은 한 화자.
+      // (드래프트 없이 일반 제출이면 둘 다 no-op)
+      useAiContextStore.getState().completeArtifact();
+      clearAiContextSession(useChatStore.getState().activeSessionId);
+      if (useChatStore.getState().pendingInterrupt === 'excu') {
+        useChatStore.getState().setPendingInterrupt(null); // 유기된 확인 건 정리
+      }
+
       setActiveFullScreen('leave-req' as any);
     } catch {
       toast.error('신청 중 오류가 발생했습니다.');

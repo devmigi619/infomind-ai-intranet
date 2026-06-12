@@ -407,6 +407,20 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isStreaming) return;
+
+      // 패널 확인(excu)을 두고 새 메시지를 보내는 경우 — 이전 확인 건은 유기(abandon).
+      // 패널은 별도 공간이므로 말 채널을 잠그지 않는다. 새 턴이 새 스냅샷을 가져오고,
+      // 패널 제출은 항상 최신 턴 기준이 된다.
+      if (pendingInterrupt) {
+        setPendingInterrupt(null);
+        setHumanInterruptQuestion('');
+        setInterruptAprvlList(null);
+        setInterruptRefList([]);
+        setInterruptPreviewText('');
+        setInterruptFormFields(null);
+        setInterruptFormTitle('');
+      }
+
       setLastUserMessage(text.trim());
 
       const history = messages.map((m) => ({ role: m.role, content: m.content }));
@@ -423,7 +437,12 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
         token,
       );
     },
-    [isStreaming, messages, activeSessionId, setLastUserMessage, setMessages, _runSseStream],
+    [
+      isStreaming, messages, activeSessionId, pendingInterrupt,
+      setLastUserMessage, setMessages, setPendingInterrupt, setHumanInterruptQuestion,
+      setInterruptAprvlList, setInterruptRefList, setInterruptPreviewText,
+      setInterruptFormFields, setInterruptFormTitle, _runSseStream,
+    ],
   );
 
   const sendResume = useCallback(
@@ -559,7 +578,13 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
           value={inputText}
           onChangeText={setInputText}
           onSend={handleSend}
-          disabled={isStreaming || pendingInterrupt === 'excu' || pendingInterrupt === 'form'}
+          disabled={
+            isStreaming ||
+            // 자비스패널이 확인을 담당하는 leave에서는 입력을 잠그지 않는다 (별도 공간 원칙).
+            // 새 메시지를 보내면 sendMessage가 이전 확인 건을 유기 처리한다.
+            (pendingInterrupt === 'excu' && currentIntent !== 'leave') ||
+            pendingInterrupt === 'form'
+          }
           theme={theme}
         />
       )}

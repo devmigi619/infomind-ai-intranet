@@ -37,7 +37,8 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
   };
 
   // 드래프트 이양(handoff) — 내용을 들고 휴가신청 폼으로 이동.
-  // 설계(jarvis-panel-design.md §3 소멸 조건 ⑤): 이양 시 채팅 쪽 드래프트는 회수한다.
+  // 설계 개정(2026-06-12): 이양은 회수가 아니라 공유다. 드래프트와 대화는 그 자리에 두고,
+  // 폼에서 제출되면 폼 쪽이 완료를 동기화한다 — 아무것도 안 하고 돌아오면 artifact 생존.
   const handleHandoff = () => {
     const get = (k: string) => artifact.fields.find((f) => f.key === k)?.value;
     const toYmd = (s?: string) =>
@@ -64,12 +65,8 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
 
     const ui = useUiStore.getState();
     ui.setLeaveReqHandoff({ dates, leaveNm: get('휴가유형'), reason: get('사유') });
-
-    // 대기 중인 excu interrupt 해소 — 대화 관점에선 '직접 작성'으로 정리
-    const chat = useChatStore.getState();
-    if (chat.pendingInterrupt === 'excu') {
-      chat.setPendingResumeValue({ value: '취소', display: '폼에서 직접 작성할게요' });
-    }
+    // resume을 보내지 않는다 — 이동+프리필만. 확인 대기 건은 살아 있고,
+    // 사용자가 채팅으로 새 메시지를 보내면 그때 유기(abandon)된다.
     ui.setActiveFullScreen('leave-req-form' as any);
   };
 
