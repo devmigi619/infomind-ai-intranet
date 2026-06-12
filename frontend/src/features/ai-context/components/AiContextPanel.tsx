@@ -24,7 +24,7 @@ const DOMAIN_LABEL: Record<string, string> = {
 
 // ─── ArtifactCard ─────────────────────────────────────────────────────────────
 
-function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
+function ArtifactCard({ artifact, domain }: { artifact: AiContextArtifact; domain: string }) {
   const theme = useTheme();
   const hasAprvl = artifact.aprvl_list && artifact.aprvl_list.length > 0;
 
@@ -40,6 +40,8 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
   // 설계 개정(2026-06-12): 이양은 회수가 아니라 공유다. 드래프트와 대화는 그 자리에 두고,
   // 폼에서 제출되면 폼 쪽이 완료를 동기화한다 — 아무것도 안 하고 돌아오면 artifact 생존.
   const handleHandoff = () => {
+    if (domain !== 'leave') return;
+
     const get = (k: string) => artifact.fields.find((f) => f.key === k)?.value;
     const toYmd = (s?: string) =>
       s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s.replace(/-/g, '') : undefined;
@@ -169,19 +171,21 @@ function ArtifactCard({ artifact }: { artifact: AiContextArtifact }) {
                 취소
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.75}
-              onPress={handleHandoff}
-              style={{ borderColor: theme.border.default }}
-              className="flex-1 border rounded-lg py-2 items-center"
-            >
-              <Text
-                style={{ color: theme.text.body, fontFamily: WEB_FONT }}
-                className="text-[13px] font-medium"
+            {domain === 'leave' ? (
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={handleHandoff}
+                style={{ borderColor: theme.border.default }}
+                className="flex-1 border rounded-lg py-2 items-center"
               >
-                폼에서 이어 작성
-              </Text>
-            </TouchableOpacity>
+                <Text
+                  style={{ color: theme.text.body, fontFamily: WEB_FONT }}
+                  className="text-[13px] font-medium"
+                >
+                  폼에서 이어 작성
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       ) : artifact.fields.length > 0 ? (
@@ -283,7 +287,7 @@ export function AiContextPanel() {
 
       {/* Artifact */}
       {snapshot.artifact ? (
-        <ArtifactCard artifact={snapshot.artifact} />
+        <ArtifactCard artifact={snapshot.artifact} domain={snapshot.domain} />
       ) : null}
 
       {/* Blocks */}

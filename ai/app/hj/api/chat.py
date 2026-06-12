@@ -49,9 +49,9 @@ def _build_meta_event(payload: dict) -> str:
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
 
 
-async def _build_leave_context_event(g, config, *, submit_enabled: bool) -> str | None:
+async def _build_ai_context_event(g, config, *, submit_enabled: bool) -> str | None:
     """
-    ai_context(자비스패널) SSE 이벤트 생성 — leave intent 한정 (파일럿 공존 원칙).
+    ai_context(자비스패널) SSE 이벤트 생성.
 
     interrupt 시점에 호출: 체크포인트에서 pending_artifact·결재선을 읽어
     artifact 포함 스냅샷을 만든다. 실패해도 채팅 스트림을 깨지 않도록 None 반환.
@@ -62,9 +62,12 @@ async def _build_leave_context_event(g, config, *, submit_enabled: bool) -> str 
     try:
         snap = await g.aget_state(config)
         vals = snap.values if snap else {}
-        if vals.get("intent") != "leave":
+        intent = vals.get("intent")
+        if not ai_ctx.supports_domain(intent):
             return None
-        payload = await ai_ctx.build_leave_payload(
+        payload = await ai_ctx.build_payload(
+            domain=intent,
+            operation=ai_ctx.infer_operation(vals.get("generated_sql")),
             session_id=vals.get("session_id") or "",
             user_id=vals.get("user_id") or "",
             pending_artifact=vals.get("pending_artifact"),
@@ -255,14 +258,14 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                     if content:
                         yield f"data: {json.dumps({'type': 'token', 'content': content})}\n\n"
 
-        # ── ai_context — leave 실행 확정/취소 후 artifact 소멸 스냅샷 ────────────
+        # ── ai_context — 실행 확정/취소 후 artifact 소멸 스냅샷 ────────────────
         # node_excu_confirm은 interrupt 후 resume에서만 정상 종료(on_chain_end)한다.
         # 성공("처리가 완료...") → 완료 fact 변환, 취소·오류 → 드래프트 폐기 후 ambient만.
         if kind == "on_chain_end" and name == "node_excu_confirm":
             state_in = event.get("data", {}).get("input") or {}
             if (
                 settings.ai_context_enabled
-                and state_in.get("intent") == "leave"
+                and ai_ctx.supports_domain(state_in.get("intent"))
                 and (ctx_sess := state_in.get("session_id") or "")
             ):
                 update = _extract_update(event["data"]["output"])
@@ -272,7 +275,9 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 try:
                     if not _completed:
                         ai_ctx.clear_session(ctx_sess)  # 취소·오류: 드래프트 폐기 (재부활 방지)
-                    ctx_payload = await ai_ctx.build_leave_payload(
+                    ctx_payload = await ai_ctx.build_payload(
+                        domain=state_in.get("intent") or "",
+                        operation=ai_ctx.infer_operation(state_in.get("generated_sql")),
                         session_id=ctx_sess,
                         user_id=state_in.get("user_id") or "",
                         completed=_completed,
@@ -335,7 +340,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
             # ai_context — excu(확인 준비) interrupt에서만 artifact 스냅샷 방출.
             # human(묻는 중) interrupt는 침묵 — 패널이 촐랑대지 않는다 (설계 개정)
             if interrupt_type == "excu":
-                if ctx_event := await _build_leave_context_event(
+                if ctx_event := await _build_ai_context_event(
                     g, config, submit_enabled=True,
                 ):
                     yield ctx_event
@@ -374,7 +379,7 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
                 if not meta_sent:
                     yield _build_meta_event({"actions": []})
                 if it == "excu":
-                    if ctx_event := await _build_leave_context_event(
+                    if ctx_event := await _build_ai_context_event(
                         g, config, submit_enabled=True,
                     ):
                         yield ctx_event
@@ -388,12 +393,10 @@ async def _sse_stream(input_, config: dict, turn_id: str | None = None):
     # ── ai_context — 답하고 정상 종결한 턴의 스냅샷 방출 ────────────────────────
     # (interrupt로 끝난 턴은 위에서 return — 여기 도달 = 묻지 않고 답한 턴)
     # 세션에 살아 있는 드래프트가 있으면 함께 실려 유지된다.
-    if settings.ai_context_enabled and stream_intent == "leave" and stream_sess:
+    if settings.ai_context_enabled and ai_ctx.supports_domain(stream_intent) and stream_sess:
         try:
-            ctx_payload = await ai_ctx.build_leave_payload(
-                session_id=stream_sess, user_id=stream_user,
-            )
-            yield f"data: {json.dumps(ctx_payload, ensure_ascii=False)}\n\n"
+            if ctx_event := await _build_ai_context_event(g, config, submit_enabled=False):
+                yield ctx_event
         except Exception:
             pass  # 패널 이벤트 실패가 채팅 스트림을 깨지 않도록
 

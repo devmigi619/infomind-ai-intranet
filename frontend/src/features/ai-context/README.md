@@ -40,6 +40,12 @@ features/ai-context/
 artifact 제출/취소 버튼은 `useChatStore.getState().setPendingResumeValue(...)` 를 호출한다.
 이 값은 MainScreen이 감지해 `/chat/resume` 로 전송한다 (chatStore에 별도 추가).
 
+### 지원 범위
+
+- `leave`, `aprv`, `brd`, `schd`, `veh`, `mtgr`: 실행 확인 artifact와 완료 fact를 표시한다.
+- `rpt`: 조회/완료 스냅샷은 자비스패널에 표시하고, 내용 입력은 기존 동적 form interrupt를 유지한다.
+- 휴가만 `폼에서 이어 작성` 프리필 이동을 제공한다. 다른 도메인의 폼 프리필은 범위에 포함하지 않는다.
+
 ## 설계 문서
 
 `ai/migi/jarvis-panel-design.md`

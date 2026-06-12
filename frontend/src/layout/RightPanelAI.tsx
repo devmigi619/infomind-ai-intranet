@@ -6,12 +6,16 @@ import { AiContextPanel } from '../features/ai-context/components/AiContextPanel
 
 export function RightPanelAI() {
   const lastUserMessage = useUiStore((s) => s.lastUserMessage);
-  // 자비스패널 파일럿 공존 분기: ai_context 스냅샷(leave 도메인)이 있으면
-  // 자비스패널, 없으면 기존 ai-assistant 카드 경로
+  const aiContextEnabled = useUiStore((s) => s.aiContextEnabled);
+  // ai_context 스냅샷이 있으면 자비스패널, 없으면 기본 안내 화면을 표시한다.
   const snapshot = useAiContextStore((s) => s.snapshot);
 
-  if (snapshot) {
-    return <AiContextPanel />;
+  if (aiContextEnabled) {
+    if (snapshot) {
+      return <AiContextPanel />;
+    }
+    return <AssistantPanel lastUserMessage={null} userName="" />;
   }
+
   return <AssistantPanel lastUserMessage={lastUserMessage} userName="" />;
 }

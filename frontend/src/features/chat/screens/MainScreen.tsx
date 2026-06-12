@@ -77,7 +77,6 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const [inputText, setInputText] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [aiContextEnabled, setAiContextEnabled] = useState(true);
 
   // 현재 사용자 ID (AprvLineEditorPanel에서 본인 제외용)
   const { data: currentUser } = useCurrentUser();
@@ -92,6 +91,9 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   const markAiUnread = useUiStore((s) => s.markAiUnread);
   const chatResetCounter = useUiStore((s) => s.chatResetCounter);
   const currentIntent = useUiStore((s) => s.currentIntent);
+  const aiContextEnabled = useUiStore((s) => s.aiContextEnabled);
+  const setAiContextEnabled = useUiStore((s) => s.setAiContextEnabled);
+  const aiContextSnapshot = useAiContextStore((s) => s.snapshot);
   const theme = useTheme();
 
   // ─── 마운트 시 이전 상태 복원 ────────────────────────────────────────────
@@ -580,9 +582,13 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
           onSend={handleSend}
           disabled={
             isStreaming ||
-            // 자비스패널이 확인을 담당하는 leave에서는 입력을 잠그지 않는다 (별도 공간 원칙).
+            // 실제 artifact가 표시된 경우에는 자비스패널이 확인을 담당한다.
             // 새 메시지를 보내면 sendMessage가 이전 확인 건을 유기 처리한다.
-            (pendingInterrupt === 'excu' && currentIntent !== 'leave') ||
+            (pendingInterrupt === 'excu' && !(
+              aiContextEnabled &&
+              aiContextSnapshot?.domain === currentIntent &&
+              aiContextSnapshot.artifact
+            )) ||
             pendingInterrupt === 'form'
           }
           theme={theme}
@@ -604,10 +610,14 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
     onApprove: (val: string, display?: string) => sendResume(val, display),
     onCancel: () => sendResume('취소'),
   };
-  const hideInterruptPanelForAiContext = aiContextEnabled && currentIntent === 'leave';
+  const hideInterruptPanelForAiContext =
+    aiContextEnabled &&
+    pendingInterrupt === 'excu' &&
+    aiContextSnapshot?.domain === currentIntent &&
+    !!aiContextSnapshot.artifact;
 
   // ─── PC 레이아웃 ─────────────────────────────────────────────────────────
-  // 자비스패널이 켜진 경우에만 leave excu/form 확인을 RP AI 탭이 담당한다.
+  // 자비스패널에 실제 artifact가 도착한 excu만 RP AI 탭이 확인을 담당한다.
   // 꺼져 있으면 main처럼 일반 InterruptPanel을 표시한다.
   if (!isMobile) {
     return (

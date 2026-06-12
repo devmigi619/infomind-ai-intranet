@@ -30,14 +30,14 @@ class AiContextField(BaseModel):
 
 
 class AiContextSubmit(BaseModel):
-    label: str = "이 내용으로 신청"
+    label: str = "이 내용으로 실행"
     enabled: bool = False
 
 
 class AiContextArtifact(BaseModel):
     kind: str = "form"
     id: str
-    title: str = "휴가 신청"
+    title: str
     fields: list[AiContextField] = []
     aprvl_list: list[dict] | None = None  # 결재선 읽기 전용 표시용
     submit: AiContextSubmit = AiContextSubmit()
@@ -55,6 +55,104 @@ class AiContextPayload(BaseModel):
     domain: str
     artifact: AiContextArtifact | None = None
     blocks: list[AiContextBlock] = []
+
+
+_DOMAIN_CONFIG: dict[str, dict[str, str]] = {
+    "leave": {
+        "create_title": "휴가 신청",
+        "create_submit": "이 내용으로 신청",
+        "create_completed": "신청 완료 · 결재 진행",
+        "update_title": "휴가 신청 변경",
+        "delete_title": "휴가 신청 취소",
+        "delete_submit": "이 신청 취소",
+    },
+    "aprv": {
+        "create_title": "전자결재 상신",
+        "create_submit": "이 내용으로 상신",
+        "create_completed": "상신 완료 · 결재 진행",
+        "update_title": "전자결재 수정",
+        "delete_title": "전자결재 취소",
+        "delete_submit": "이 결재 취소",
+        "action_label": "전자결재 열기",
+        "screen": "approval",
+    },
+    "brd": {
+        "create_title": "게시글 등록",
+        "create_submit": "이 내용으로 게시",
+        "create_completed": "게시글 등록 완료",
+        "update_title": "게시글 수정",
+        "delete_title": "게시글 삭제",
+        "delete_submit": "이 게시글 삭제",
+        "action_label": "게시판 열기",
+        "screen": "board",
+    },
+    "schd": {
+        "create_title": "일정 등록",
+        "create_submit": "이 내용으로 등록",
+        "create_completed": "일정 등록 완료",
+        "update_title": "일정 수정",
+        "delete_title": "일정 삭제",
+        "delete_submit": "이 일정 삭제",
+        "action_label": "일정 캘린더 열기",
+        "screen": "calendar",
+    },
+    "veh": {
+        "create_title": "차량 예약",
+        "create_submit": "이 내용으로 예약",
+        "create_completed": "차량 예약 완료",
+        "update_title": "차량 예약 변경",
+        "delete_title": "차량 예약 취소",
+        "delete_submit": "이 예약 취소",
+        "action_label": "차량 예약 현황 열기",
+        "screen": "vehicle",
+    },
+    "mtgr": {
+        "create_title": "회의실 예약",
+        "create_submit": "이 내용으로 예약",
+        "create_completed": "회의실 예약 완료",
+        "update_title": "회의실 예약 변경",
+        "delete_title": "회의실 예약 취소",
+        "delete_submit": "이 예약 취소",
+        "action_label": "회의실 예약 현황 열기",
+        "screen": "meeting",
+    },
+    "rpt": {
+        "create_title": "업무보고 작성",
+        "create_submit": "이 내용으로 저장",
+        "create_completed": "업무보고 저장 완료",
+        "update_title": "업무보고 수정",
+        "delete_title": "업무보고 삭제",
+        "delete_submit": "이 보고 삭제",
+        "action_label": "업무보고 열기",
+        "screen": "report",
+    },
+}
+
+SUPPORTED_DOMAINS = frozenset(_DOMAIN_CONFIG)
+
+
+def supports_domain(domain: str | None) -> bool:
+    return bool(domain and domain in SUPPORTED_DOMAINS)
+
+
+def infer_operation(sql: str | None) -> str:
+    upper = (sql or "").lstrip().upper()
+    if upper.startswith("UPDATE"):
+        return "update"
+    if upper.startswith("DELETE"):
+        return "delete"
+    return "create"
+
+
+def _operation_labels(domain: str, operation: str) -> tuple[str, str, str]:
+    config = _DOMAIN_CONFIG[domain]
+    if operation == "update":
+        title = config.get("update_title", f"{config['create_title']} 수정")
+        return title, "이 내용으로 수정", f"{title} 완료"
+    if operation == "delete":
+        title = config.get("delete_title", f"{config['create_title']} 삭제")
+        return title, config.get("delete_submit", "이 내용으로 실행"), f"{title} 완료"
+    return config["create_title"], config["create_submit"], config["create_completed"]
 
 
 # ── 세션 스토어 (인메모리, 파일럿 한정) ──────────────────────────────────────
@@ -91,10 +189,12 @@ def describe_session_context(session_id: str) -> str | None:
     artifact = entry.get("artifact") if entry else None
     if not artifact:
         return None
+    domain = entry.get("domain") or ""
+    config = _DOMAIN_CONFIG.get(domain, {})
+    title = config.get("create_title", domain)
     fields = ", ".join(f"{k}={v}" for k, v in artifact.items())
     return (
-        f"휴가 신청 드래프트({fields})와 잔여 연차 현황, "
-        "신청/취소/폼 이동 버튼이 우측 패널에 표시되어 있음"
+        f"{title} 드래프트({fields})와 실행/취소 버튼이 우측 패널에 표시되어 있음"
     )
 
 
@@ -111,18 +211,20 @@ def clear_on_domain_switch(session_id: str, new_intent: str) -> None:
 
 # ── Composer (규칙 기반, DB 접근·값 없음) ────────────────────────────────────
 
-def compose_leave(
+def compose(
     *,
+    domain: str,
+    operation: str,
     pending_artifact: dict | None,
     session_id: str,
     submit_enabled: bool,
     completed: bool,
 ) -> dict:
     """
-    휴가 도메인 편성자 — "뭘 보여줄지"만 결정하고 값은 채우지 않는다.
+    공통 편성자 — "뭘 보여줄지"만 결정하고 값은 채우지 않는다.
 
     반환 plan dict:
-      - domain          : "leave"
+      - domain          : 업무 intent
       - artifact_source : 드래프트 dict 또는 None
                           · pending_artifact 우선
                           · 없으면 세션 스토어에서 복원 (노이즈 턴에도 유실 없음)
@@ -135,35 +237,40 @@ def compose_leave(
     else:
         artifact_source = pending_artifact or get_session_artifact(session_id)
 
+    config = _DOMAIN_CONFIG[domain]
+    artifact_title, submit_label, completed_label = _operation_labels(domain, operation)
     blocks: list[dict[str, Any]] = []
 
     if completed:
-        # 신청 완료 시에만 노출 — artifact 소멸 후 사실 블록으로 변환
         blocks.append({
             "kind": "fact",
-            "label": "휴가 신청",
-            "value": "신청 완료 · 결재 진행",
+            "label": artifact_title,
+            "value": completed_label,
         })
 
-    # 연차 현황 — "잔여 n일 / 부여 m일" 통합 fact. resolver가 DB 조회로 값을 채운다
-    blocks.append({
-        "kind": "fact_query",
-        "query": "leave_balance",
-        "label": "연차",
-    })
-
-    # 인사팀 문의 — 이동할 화면이 아직 없음. screen 없는 action은 프론트가 '준비 중' 안내
-    blocks.append({
-        "kind": "action",
-        "label": "인사팀 문의",
-    })
-
-    # NOTE: ambient 편성 합의(2026-06-11): 단순 페이지 이동 액션은 두지 않는다(이양 버튼이 대체).
-    # 규정 doc 블록(발화 기반 벡터 검색)과 조회 턴 table 블록은 후속 — jarvis-panel-design.md 참조.
+    if domain == "leave":
+        # 연차 현황 — resolver가 DB 조회로 값을 채운다.
+        blocks.append({
+            "kind": "fact_query",
+            "query": "leave_balance",
+            "label": "연차",
+        })
+        blocks.append({
+            "kind": "action",
+            "label": "인사팀 문의",
+        })
+    elif action_label := config.get("action_label"):
+        blocks.append({
+            "kind": "action",
+            "label": action_label,
+            "screen": config.get("screen"),
+        })
 
     return {
-        "domain": "leave",
+        "domain": domain,
         "artifact_source": artifact_source,
+        "artifact_title": artifact_title,
+        "submit_label": submit_label,
         "submit_enabled": submit_enabled,
         "completed": completed,
         "blocks": blocks,
@@ -218,6 +325,8 @@ async def resolve(
 
     domain: str = plan["domain"]
     artifact_source: dict | None = plan.get("artifact_source")
+    artifact_title: str = plan.get("artifact_title", "실행 내용")
+    submit_label: str = plan.get("submit_label", "이 내용으로 실행")
     submit_enabled: bool = plan.get("submit_enabled", False)
     plan_blocks: list[dict] = plan.get("blocks", [])
 
@@ -229,10 +338,11 @@ async def resolve(
             for k, v in artifact_source.items()
         ]
         artifact = AiContextArtifact(
-            id=f"leave-draft-{session_id[:8]}",
+            id=f"{domain}-draft-{session_id[:8]}",
+            title=artifact_title,
             fields=fields,
             aprvl_list=aprvl_list,
-            submit=AiContextSubmit(enabled=submit_enabled),
+            submit=AiContextSubmit(label=submit_label, enabled=submit_enabled),
         )
 
     # ── blocks 해석 ───────────────────────────────────────────────────────────
@@ -295,8 +405,10 @@ async def resolve(
 
 # ── 진입점 (SSE 레이어가 호출) ────────────────────────────────────────────────
 
-async def build_leave_payload(
+async def build_payload(
     *,
+    domain: str,
+    operation: str = "create",
     session_id: str,
     user_id: str,
     pending_artifact: dict | None = None,
@@ -305,7 +417,7 @@ async def build_leave_payload(
     completed: bool = False,
 ) -> dict:
     """
-    휴가 도메인 ai_context 페이로드를 빌드한다.
+    업무 도메인 ai_context 페이로드를 빌드한다.
 
     SSE 레이어(chat.py)가 이 함수 하나만 호출하면 된다.
 
@@ -318,7 +430,12 @@ async def build_leave_payload(
     aprvl_list      : 결재선 목록 [{aprvUserId, aprvUserNm, deptNm, jbgdNm}, ...]
     completed       : 신청 완료 턴이면 True — 드래프트 소멸 + 완료 fact 블록 표시
     """
-    plan = compose_leave(
+    if domain not in _DOMAIN_CONFIG:
+        raise ValueError(f"지원하지 않는 ai_context 도메인: {domain}")
+
+    plan = compose(
+        domain=domain,
+        operation=operation,
         pending_artifact=pending_artifact,
         session_id=session_id,
         submit_enabled=submit_enabled,

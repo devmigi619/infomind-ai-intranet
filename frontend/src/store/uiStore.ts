@@ -40,6 +40,7 @@ interface UiState {
   lastUserMessage: string | null;
   currentIntent: string | null;
   currentActionType: string | null;
+  aiContextEnabled: boolean;
   themePreference: ThemePreference;
   assistantStage: AssistantStage;
   assistantMode: AssistantMode;
@@ -67,6 +68,7 @@ interface UiState {
   setSettingsCategory: (category: SettingsCategory) => void;
   setLastUserMessage: (message: string | null) => void;
   setAiContext: (intent: string | null, actionType: string | null) => void;
+  setAiContextEnabled: (enabled: boolean) => void;
   setThemePreference: (pref: ThemePreference) => void;
   setAssistantStage: (stage: AssistantStage) => void;
   setAssistantMode: (mode: AssistantMode) => void;
@@ -101,6 +103,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   lastUserMessage: null,
   currentIntent: null,
   currentActionType: null,
+  aiContextEnabled: true,
   themePreference: DEFAULT_THEME,
   assistantStage: 'medium',
   assistantMode: 'quickAction',
@@ -158,6 +161,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   markAiRead: () => set({ hasUnreadAi: false }),
   setLastUserMessage: (message) => set({ lastUserMessage: message }),
   setAiContext: (intent, actionType) => set({ currentIntent: intent, currentActionType: actionType }),
+  setAiContextEnabled: (enabled) => set({ aiContextEnabled: enabled }),
 
   togglePinnedMenu: (panel, maxCount) =>
     set((s) => {
@@ -224,6 +228,7 @@ export const useUiStore = create<UiState>((set, get) => ({
       lastUserMessage: null,
       currentIntent: null,
       currentActionType: null,
+      aiContextEnabled: true,
       assistantMode: 'quickAction',
       assistantContextCards: [],
       assistantContextSeen: false,
