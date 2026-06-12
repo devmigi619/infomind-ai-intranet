@@ -34,12 +34,17 @@ export function PulseDot({ ringColor = '#FAFAFA', top = 6, right = 6 }: PulseDot
   return (
     <Animated.View
       style={{
+        position: 'absolute',
         top,
         right,
+        width: 8,
+        height: 8,
+        borderRadius: 999,
+        borderWidth: 2,
         borderColor: ringColor,
+        backgroundColor: '#EF4444',
         transform: [{ scale }],
       }}
-      className="absolute w-[8px] h-[8px] rounded-full border-2 bg-red-500"
       pointerEvents="none"
     />
   );
