@@ -6,7 +6,7 @@ from langgraph.types import Command, interrupt
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.messages import AIMessage, SystemMessage, HumanMessage
 
-from app.hj.core.llm import get_llm, get_slm, get_structured_slm, count_tokens, is_dev
+from app.hj.core.llm import get_llm, get_slm, get_structured_slm, count_tokens, uses_openai_client, get_sql_slm
 from app.hj.models.state import GraphState
 from app.hj.models.intent import IntentResult, PreflightResult, ReactDecisionResult
 from app.hj.services.guardrail import check_guardrail
@@ -31,12 +31,22 @@ BLOCK_MESSAGES = {
 DEFAULT_BLOCK = "요청하신 내용에 답변드리기 어렵습니다."
 
 
+def _recent_messages(state: GraphState, n: int) -> list:
+    """state["messages"]에서 최근 n개만 반환 — 슬라이딩 윈도우."""
+    return list(state["messages"])[-n:]
+
+
 # ── 가드레일 노드 ────────────────────────────────────────────────────────────
 
 async def node_guardrail_input(state: GraphState) -> Command:
     """사용자 입력 가드레일 — 차단 시 save_history로 라우팅 (GRDL 저장 후 종료)"""
     user_text = state["messages"][-1].content
-    hit = await check_guardrail(user_text)
+    try:
+        hit = await check_guardrail(user_text)
+    except Exception as e:
+        # embed 서버 장애 시 fail-open: 가드레일 우회하고 정상 흐름 진행
+        print(f"[GUARDRAIL] 가드레일 검사 실패 (fail-open): {e}")
+        hit = None
     if hit:
         return Command(
             goto="save_history",
@@ -53,7 +63,11 @@ async def node_guardrail_input(state: GraphState) -> Command:
 async def node_guardrail_output(state: GraphState) -> Command:
     """AI 출력 가드레일 — 검증 후 save_history로 라우팅 (BLOCKED·OK 모두)"""
     ai_text = state["messages"][-1].content
-    hit = await check_guardrail(ai_text)
+    try:
+        hit = await check_guardrail(ai_text)
+    except Exception as e:
+        print(f"[GUARDRAIL] 출력 가드레일 검사 실패 (fail-open): {e}")
+        hit = None
     if hit:
         # BLOCKED: save_history에서 실제 AI 내용 대신 고정 차단 메시지를 저장
         return Command(
@@ -71,14 +85,14 @@ async def node_guardrail_output(state: GraphState) -> Command:
 # ── 분류 노드 ────────────────────────────────────────────────────────────────
 
 async def node_classify(state: GraphState) -> Command:
-    """인텐트 + action_type 분류 — history 포함 전체 대화를 LLM에 전달"""
+    """인텐트 + action_type 분류 — 최근 4개 메시지만 사용 (슬라이딩 윈도우)"""
     structured = get_structured_slm(IntentResult)
-    messages = [SystemMessage(content=INTENT_SYSTEM_PROMPT)] + list(state["messages"])
+    messages = [SystemMessage(content=INTENT_SYSTEM_PROMPT)] + _recent_messages(state, 4)
 
     try:
         response = await structured.ainvoke(messages)
-        if is_dev():
-            result = response          # OpenAI: Pydantic 모델 직접 반환
+        if uses_openai_client():
+            result = response          # OpenAI 호환(dev/llama): Pydantic 모델 직접 반환
             tokens = 0
         else:
             result = parse_llm_json(response.content, IntentResult)
@@ -262,7 +276,7 @@ async def node_human(state: GraphState) -> Command:
     LLM이 명확화 질문 생성 → interrupt → 사용자 답변 수신 → node_generate로 라우팅
     """
     # 명확화 질문 생성
-    messages = [SystemMessage(content=HUMAN_CLARIFY_PROMPT)] + list(state["messages"])
+    messages = [SystemMessage(content=HUMAN_CLARIFY_PROMPT)] + _recent_messages(state, 4)
     response = await llm.ainvoke(messages)
     clarify_question = response.content.strip().strip('"\'').strip()
 
@@ -346,13 +360,13 @@ async def node_excu_preflight(state: GraphState) -> Command:
     if context:
         human_content += f"\n\n[추가 컨텍스트]\n{context}"
 
-    slm_pf = get_structured_slm(PreflightResult, "llm")
-    response = await slm_pf.ainvoke([
+    llm_pf = get_sql_slm(PreflightResult)
+    response = await llm_pf.ainvoke([
         SystemMessage(content=preflight_prompt),
         HumanMessage(content=human_content),
     ])
     try:
-        result = response if is_dev() else parse_llm_json(response.content, PreflightResult)
+        result = response if uses_openai_client() else parse_llm_json(response.content, PreflightResult)
     except Exception:
         return Command(
             goto="save_history",
@@ -364,6 +378,18 @@ async def node_excu_preflight(state: GraphState) -> Command:
     pending_artifact = result.extracted or state.get("pending_artifact")
 
     # ── 라우팅 결정 ──────────────────────────────────────────────────────────
+    # 0순위: 비즈니스 제약으로 실행 불가 — 즉시 최종 응답으로 종료
+    # (예: 작성기간 종료, 이미 결재완료 건 수정 요청 — DB 조회 결과로 확인된 경우만)
+    if result.infeasible and result.infeasible_reason:
+        print(f"[PREFLIGHT] 비즈니스 제약으로 실행 불가 → 즉시 응답: {result.infeasible_reason}")
+        return Command(
+            goto="guardrail_output",
+            update={
+                "messages":                   [AIMessage(content=result.infeasible_reason)],
+                "pending_preflight_question": None,
+            },
+        )
+
     if result.is_complete:
         return Command(goto="node_excu", update={
             "preflight_retry": 0,
@@ -478,12 +504,12 @@ async def node_excu_preflight_ask(state: GraphState) -> Command:
     slm_recheck = get_structured_slm(IntentResult)
     recheck_msgs = (
         [SystemMessage(content=INTENT_SYSTEM_PROMPT)]
-        + list(state["messages"])
+        + _recent_messages(state, 4)
         + [HumanMessage(content=str(user_answer))]
     )
     recheck_resp = await slm_recheck.ainvoke(recheck_msgs)
     try:
-        recheck = recheck_resp if is_dev() else parse_llm_json(recheck_resp.content, IntentResult)
+        recheck = recheck_resp if uses_openai_client() else parse_llm_json(recheck_resp.content, IntentResult)
         if recheck.intent != intent or recheck.action_type != state.get("action_type"):
             return Command(
                 goto="route",   # 그래프 등록명: g.add_node("route", node_route)
@@ -538,7 +564,7 @@ async def node_react_gather(state: GraphState) -> Command:
     from langchain_core.messages import ToolMessage as _ToolMessage
     from langchain_core.callbacks.manager import adispatch_custom_event
     from app.hj.core.config import settings
-    from app.hj.core.llm import is_dev
+    from app.hj.core.llm import is_dev, is_llama
     from app.hj.services.tools import execute_select_tool, execute_vector_sql, VECTOR_SEARCH_SQL, VECTOR_SEARCH_INTENTS
 
     _node_t0 = time.perf_counter()
@@ -560,8 +586,14 @@ async def node_react_gather(state: GraphState) -> Command:
     # react 루프는 get_llm(기본 모델)을 쓰고, 직전 node_classify는 get_structured_slm(경량 모델)을 쓴다.
     # 두 모델이 다르면 Ollama가 모델을 교체 적재(cold-start)하므로 첫 호출이 유독 느리다.
     # 아래 로그로 "모델명 + 호출별 소요시간"을 남겨 cold-start 여부를 판별한다.
-    _react_model = settings.openai_llm_model if is_dev() else settings.llm_model
-    _slm_model   = settings.openai_slm_model if is_dev() else settings.slm_model
+    if is_llama():
+        _react_model = _slm_model = settings.llama_cpp_model
+    elif is_dev():
+        _react_model = settings.openai_llm_model
+        _slm_model   = settings.openai_slm_model
+    else:
+        _react_model = settings.llm_model
+        _slm_model   = settings.slm_model
     print(
         f"[REACT] 진입 — intent={intent} action={action_type} | "
         f"react모델={_react_model} (분류모델={_slm_model}) | "
@@ -595,7 +627,7 @@ async def node_react_gather(state: GraphState) -> Command:
 
     loop_msgs: list = [
         SystemMessage(content=system_content),
-        *list(state["messages"]),   # 전체 대화 히스토리 포함 (마지막 = 현재 사용자 메시지)
+        *_recent_messages(state, 6),   # 최근 6개 슬라이딩 윈도우 (마지막 = 현재 사용자 메시지)
     ]
 
     MAX_ITER = 5
@@ -679,18 +711,33 @@ async def node_react_gather(state: GraphState) -> Command:
             except Exception:
                 pass  # 벡터 검색 실패 시 무시
 
-    # ── 추가 정보 요구 및 다음 노드 진행 여부 판단 (LLM) ──────────────────
+    # ── excu: 의사결정 LLM 생략 — preflight가 충족성·실행가능성 판단 전담 ────
+    # 정보 부족 질문은 node_excu_preflight(is_complete=false → ask)가,
+    # 비즈니스 제약 차단(작성기간 종료 등)은 preflight의 infeasible 판정이 처리한다.
+    # → 이중 질문 문제 해소 + LLM 호출 1회 절감.
+    if action_type != "search":
+        _node_el = time.perf_counter() - _node_t0
+        print(f"[REACT] 종료 — 노드 총 {_node_el:.1f}s, 수집 {len(tool_results)}건 → node_excu_preflight (decision 생략)")
+        return Command(
+            goto="node_excu_preflight",
+            update={
+                "context":    new_context,
+                "vector_sql": vector_sql_logged,
+            },
+        )
+
+    # ── search: 추가 정보 요구 및 직접 응답 가능 여부 판단 (LLM) ──────────────
     decision_slm = get_structured_slm(ReactDecisionResult).with_config(tags=["react_decision"])
     decision_messages = [
         SystemMessage(content=REACT_DECISION_PROMPT),
         SystemMessage(content=f"[현재 action_type] {action_type}"),
         SystemMessage(content=f"[수집된 컨텍스트]\n{new_context}"),
-        *list(state["messages"]),
+        *_recent_messages(state, 6),
     ]
 
     try:
         decision_resp = await decision_slm.ainvoke(decision_messages)
-        if is_dev():
+        if uses_openai_client():
             decision = decision_resp
         else:
             decision = parse_llm_json(decision_resp.content, ReactDecisionResult)
@@ -773,30 +820,53 @@ async def node_excu(state: GraphState) -> Command:
             lines.append(f"[{role}] {str(raw)[:200]}")
         history_text = "\n".join(lines)
 
-    # DML SQL 생성 (SqlResult 구조체)
-    sql_result = await generate_sql(
-        intent=intent,
-        action_type="excu",
-        user_message=user_message,
-        user_id=user_id,
-        context=ctx,
-        date_reference=state.get("date_reference") or "",
-        conversation_history=history_text,
-    )
-    sql = sql_result.sql
+    # DML SQL 생성 (SqlResult 구조체) — EXPLAIN 검증 실패 시 오류를 붙여 1회 재생성
+    from app.hj.services.tools import validate_sql_explain
 
-    # 실행 불가 판정 (핵심 정보 여전히 미확보)
-    if not sql_result.is_executable:
-        missing_str = ", ".join(sql_result.missing_info) if sql_result.missing_info else "알 수 없음"
-        return Command(
-            goto="node_generate",
-            update={"context": f"필요한 정보가 부족해 실행할 수 없습니다. 누락 정보: {missing_str}"},
+    sql = ""
+    gen_ctx = ctx
+    for attempt in range(2):
+        sql_result = await generate_sql(
+            intent=intent,
+            action_type="excu",
+            user_message=user_message,
+            user_id=user_id,
+            context=gen_ctx,
+            date_reference=state.get("date_reference") or "",
+            conversation_history=history_text,
         )
+        sql = sql_result.sql
+
+        # 실행 불가 판정 (핵심 정보 여전히 미확보)
+        if not sql_result.is_executable:
+            missing_str = ", ".join(sql_result.missing_info) if sql_result.missing_info else "알 수 없음"
+            return Command(
+                goto="node_generate",
+                update={"context": f"필요한 정보가 부족해 실행할 수 없습니다. 누락 정보: {missing_str}"},
+            )
+
+        # EXPLAIN 사전 검증 — 플래너 통과 여부 확인 (실제 실행 없음)
+        sql_error = await validate_sql_explain(sql)
+        if sql_error is None:
+            break
+        print(f"[EXCU] SQL EXPLAIN 검증 실패 (시도 {attempt + 1}/2): {sql_error}")
+        if attempt == 0:
+            # 오류 메시지를 컨텍스트에 붙여 재생성 1회
+            gen_ctx = (
+                f"{ctx}\n\n[이전 생성 SQL — PostgreSQL 검증 실패. 아래 오류를 수정해 다시 생성할 것]\n"
+                f"SQL: {sql}\n오류: {sql_error}"
+            )
+        else:
+            # 재생성도 실패 — 실행하지 않고 안내로 종료
+            return Command(
+                goto="node_generate",
+                update={"context": f"요청을 처리할 SQL 생성에 실패했습니다. (검증 오류: {sql_error})"},
+            )
 
     # 자연어 미리보기 생성 (SQL 직접 노출 없이)
     preview_messages = [
         SystemMessage(content=EXCU_PREVIEW_PROMPT),
-        *list(state["messages"]),
+        *_recent_messages(state, 4),
         SystemMessage(content=f"[생성된 실행 내용]\n{sql}"),
     ]
     preview_response = await slm.ainvoke(preview_messages)
@@ -1072,7 +1142,7 @@ async def node_generate(state: GraphState) -> Command:
 
     system_msg = f"{GENERATE_SYSTEM_PROMPT}\n\n[컨텍스트]\n{full_context}\n====추가내용====\n[intent]\n{intent}\n[action_type]\n{action_type}"
 
-    messages = [SystemMessage(content=system_msg)] + list(state["messages"])
+    messages = [SystemMessage(content=system_msg)] + _recent_messages(state, 4)
     response = await slm.ainvoke(messages)
 
     meta = response.response_metadata or {}

@@ -445,7 +445,7 @@ async def generate_sql(
                           사용자의 원래 의도를 파악하기 위한 맥락 제공용.
     """
     from langchain_core.messages import HumanMessage, SystemMessage
-    from app.hj.core.llm import get_sql_slm, is_dev
+    from app.hj.core.llm import get_sql_slm, uses_openai_client
     from app.hj.services.prompt import SQL_GENERATION_PROMPT
     from app.hj.services.schema import get_schema_for_intent
 
@@ -461,8 +461,8 @@ async def generate_sql(
         human_content += f"\n\n[추가 컨텍스트]\n{context}"
 
     # tags=["sql_generation"]: astream_events 에서 SQL 토큰 필터링
-    # prod(Ollama): format 제약으로 JSON 강제 → response.content 파싱 필요
-    # dev(OpenAI):  with_structured_output → SqlResult 직접 반환
+    # ollama: format 제약으로 JSON 강제 → response.content 파싱 필요
+    # openai 호환(dev/llama): with_structured_output → SqlResult 직접 반환
     slm = get_sql_slm(SqlResult)
 
     response = await slm.with_config(tags=["sql_generation"]).ainvoke([
@@ -470,8 +470,8 @@ async def generate_sql(
         HumanMessage(content=human_content),
     ])
 
-    if is_dev():
-        # OpenAI with_structured_output: SqlResult 직접 반환
+    if uses_openai_client():
+        # OpenAI 호환 with_structured_output: SqlResult 직접 반환
         result = response
     else:
         # prod(Ollama): format 제약을 모델이 무시하고 마크다운을 반환하는 경우 폴백 처리
@@ -761,6 +761,28 @@ def _split_sql_statements(sql: str) -> list[str]:
         return result if result else [sql]
     except Exception:
         return [sql]
+
+
+async def validate_sql_explain(sql: str) -> str | None:
+    """
+    실행 전 SQL 검증 — EXPLAIN으로 PostgreSQL 플래너 통과 여부를 확인한다.
+
+    EXPLAIN(ANALYZE 없이)은 플랜만 생성하고 실제 실행하지 않으므로 DML에도 안전하다.
+    부수 효과: EXPLAIN은 플랜 가능한 문장(SELECT/INSERT/UPDATE/DELETE)만 지원하므로
+    DDL 등 비정상 문장도 이 단계에서 걸러진다.
+
+    멀티 스테이트먼트는 _split_sql_statements()로 분리해 문장 단위로 검증한다.
+    반환: 첫 실패 문장의 오류 메시지, 전부 통과하면 None.
+    """
+    pool = await get_pool()
+    async with pool.acquire() as conn:
+        for stmt in _split_sql_statements(sql):
+            try:
+                async with conn.transaction():
+                    await conn.execute(f"EXPLAIN {stmt}")
+            except Exception as e:
+                return f"{type(e).__name__}: {e}"
+    return None
 
 
 async def execute_sql_transaction(sqls: list[str], user_id: str) -> int:

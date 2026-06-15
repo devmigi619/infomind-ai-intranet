@@ -23,7 +23,18 @@ class IntentResult(BaseModel):
 
 
 class PreflightResult(BaseModel):
-    """excu 실행 전 필요 정보 충족 여부 판단 결과"""
+    """excu 실행 전 필요 정보 충족 여부 + 비즈니스 실행 가능 여부 판단 결과"""
+    infeasible: bool = Field(
+        default=False,
+        description=(
+            "True=DB 조회 결과로 요청이 비즈니스 규칙상 불가능함이 확인됨 "
+            "(작성기간 종료, 이미 결재완료 등). 추측이나 에이전트 역할 제약 표현은 해당 없음."
+        ),
+    )
+    infeasible_reason: str = Field(
+        default="",
+        description="infeasible=True일 때 사용자에게 전달할 사유 (친절한 한국어 문장)",
+    )
     is_complete: bool = Field(
         description="True=정보 충분 → SQL 생성 가능, False=핵심 값 누락",
     )
@@ -68,16 +79,16 @@ class SqlResult(BaseModel):
 
 
 class ReactDecisionResult(BaseModel):
-    """ReAct 루프 종료 후 AI의 최종 흐름 의사결정 결과"""
+    """ReAct 루프 종료 후 조회(search) 흐름 의사결정 결과 — excu는 preflight가 전담하므로 미사용"""
     need_more_info: bool = Field(
-        description="사용자에게 추가적인 정보를 더 요구해서 받아야 하는지 여부. 필수 입력 항목(일자, 시간 등)이 모호하거나 누락되었을 때 True"
+        description="사용자에게 추가 정보를 받아야 하는지 여부. 조회 범위·대상이 모호해 결과를 결정할 수 없을 때만 True"
     )
     more_info_question: str = Field(
         default="",
         description="need_more_info가 True일 때, 사용자에게 추가 정보를 구체적으로 요청하는 친절한 한국어 질문"
     )
     proceed_to_next_node: bool = Field(
-        description="다음 노드(실행 node_excu_preflight 또는 조회 node_generate)로 계속 진행해야 하는지 여부. 단순 조회/응답만으로 충분하면 False"
+        description="응답 생성 노드(node_generate)로 진행해야 하는지 여부. 수집된 조회 결과만으로 완전히 답할 수 있으면 False"
     )
     direct_response: str = Field(
         default="",
