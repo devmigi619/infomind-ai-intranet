@@ -565,7 +565,8 @@ async def node_react_gather(state: GraphState) -> Command:
     from langchain_core.callbacks.manager import adispatch_custom_event
     from app.hj.core.config import settings
     from app.hj.core.llm import is_dev, is_llama
-    from app.hj.services.tools import execute_select_tool, execute_vector_sql, VECTOR_SEARCH_SQL, VECTOR_SEARCH_INTENTS
+    from app.hj.services.tools import execute_select_tool, execute_cypher_tool, execute_vector_sql, VECTOR_SEARCH_SQL, VECTOR_SEARCH_INTENTS
+    from app.hj.services.graph_schema import get_graph_schema, GRAPH_RAG_INTENTS
 
     _node_t0 = time.perf_counter()
 
@@ -577,10 +578,22 @@ async def node_react_gather(state: GraphState) -> Command:
     context     = state.get("context") or ""
     date_ref    = state.get("date_reference") or ""
 
-    tools_list = [execute_select_tool]
+    # ── 조회 백엔드 선택 (상호배타) ────────────────────────────────────────────
+    # search(순수 조회) + Neo4j 적재 도메인(veh/mtgr/leave) → Cypher 전용(GDB 추론).
+    # 그 외(excu 쓰기 전 수집, 미적재 도메인) → 기존 SQL 경로 유지.
+    use_graph = (
+        settings.graph_rag_enabled
+        and action_type == "search"
+        and intent in GRAPH_RAG_INTENTS
+    )
+    if use_graph:
+        tools_list = [execute_cypher_tool]
+        tools_map = {"execute_cypher_tool": execute_cypher_tool}
+    else:
+        tools_list = [execute_select_tool]
+        tools_map = {"execute_select_tool": execute_select_tool}
     # tool-calling 안정성을 위해 경량 모델(slm) 대신 기본 LLM 사용
     llm_with_tools = get_llm(streaming=False).bind_tools(tools_list)
-    tools_map = {"execute_select_tool": execute_select_tool}
 
     # ── cold-start 진단 로그 ──────────────────────────────────────────────────
     # react 루프는 get_llm(기본 모델)을 쓰고, 직전 node_classify는 get_structured_slm(경량 모델)을 쓴다.
@@ -601,13 +614,21 @@ async def node_react_gather(state: GraphState) -> Command:
         f"히스토리={len(state['messages'])}건"
     )
 
+    if use_graph:
+        _tool_guide = (
+            "- 오직 execute_cypher_tool(Neo4j Cypher, 읽기 전용)만 사용하세요. SQL 도구는 제공되지 않습니다.\n"
+            "  관계를 따라가는 멀티홉(결재선, 예약-차량/회의실 연결)과 상위개념 추론에 그래프를 활용하세요.\n"
+            "  (쓰기 구문 CREATE/MERGE/DELETE/SET 등은 제공되지 않습니다)\n"
+        )
+    else:
+        _tool_guide = "- SELECT 도구만 사용하세요. (INSERT/UPDATE/DELETE 도구는 제공되지 않습니다)\n"
     system_content = (
-        "당신은 postgreSQL DB에서 필요한 정보를 SELECT로 수집하는 **postgreSQL db 정보 수집 전용** 에이전트입니다.\n"
+        "당신은 사내 DB에서 필요한 정보를 조회로 수집하는 **정보 수집 전용** 에이전트입니다.\n"
         "당신의 유일한 임무는 **다음 실행 단계가 올바른 처리를 할 수 있도록 필요한 정보를 수집하고 요약하는 것**입니다.\n"
         "정보가 충분히 모이면 도구 호출 없이 **수집한 사실만 요약**하세요.\n\n"
         "★★★ 절대 금지 규칙 ★★★\n"
-        "- SELECT 도구만 사용하세요. (INSERT/UPDATE/DELETE 도구는 제공되지 않습니다)\n"
-        "- 절대로 '예약되었습니다', '등록 완료', '처리되었습니다', '삭제되었습니다' 등\n"
+        + _tool_guide
+        + "- 절대로 '예약되었습니다', '등록 완료', '처리되었습니다', '삭제되었습니다' 등\n"
         "  실행/완료/변경을 뜻하는 표현을 사용하지 마세요.\n"
         "- '저는 조회만 해요', '저는 INSERT 권한이 없어요', '저는 실행할 수 없어요' 등\n"
         "  자신의 역할 제약을 사용자에게 언급하지 마세요. 사용자 요청의 실행은 별도 단계가 처리합니다.\n"
@@ -620,7 +641,7 @@ async def node_react_gather(state: GraphState) -> Command:
         f"[현재 사용자 ID] {user_id}\n"
         "결재·휴가 등 본인 데이터 조회 시에만 WHERE 조건에 이 값을 사용하세요.\n"
         "마스터·코드 테이블(양식목록, 부서, 직급, 공통코드 등) 조회 시에는 user_id를 WHERE에 추가하지 마세요.\n\n"
-        f"[테이블 스키마]\n{schema}\n\n"
+        + (f"{get_graph_schema()}\n\n" if use_graph else f"[테이블 스키마]\n{schema}\n\n")
         + (f"[기존 컨텍스트]\n{context}\n\n" if context else "")
         + (date_ref or "")
     )

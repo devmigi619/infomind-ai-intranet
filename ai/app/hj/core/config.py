@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     database_url: str = "http://192.168.0.248:5434"
     ai_context_enabled: bool = True
 
+    # ── Neo4j (Graph RAG) ───────────────────────────────────────────────────────
+    # 단독 컨테이너(학습용) 기본값. 운영 시 .env.local 로 override.
+    neo4j_uri: str = ""
+    neo4j_user: str = ""
+    neo4j_password: str = ""
+    graph_rag_enabled: bool = True
+
     class Config:
         env_file = ".env.local"
         extra = "ignore"

@@ -184,7 +184,7 @@ export function MainScreen({ user, onNavigate, onAiResponseComplete }: MainScree
   // ─── SSE 스트림 ──────────────────────────────────────────────────────────
   const _runSseStream = useCallback(
     async (url: string, body: object, token: string | null) => {
-      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.178:8000';
+      const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://localhost:8000';
 
       setMessages((prev) => [
         ...prev,

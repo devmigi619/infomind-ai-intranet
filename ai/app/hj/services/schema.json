@@ -1,0 +1,692 @@
+{
+  "_meta": {
+    "desc": "intent별 테이블 구조·관계·규칙 정의 (JSON). 개발자가 테이블 확정 후 여기에만 추가한다.",
+    "column_fields": "name(컬럼명), type(타입), desc(설명), code_group(f_cm_cd 코드그룹), values(코드값=설명 매핑), note(주의사항)",
+    "omit": "DEFAULT, NOT NULL, 인덱스, 트리거는 생략",
+    "lookup_mode": "ReAct 조회 루프용 경량 스키마. insert_rules·examples·lookup_exclude=true 테이블 제거"
+  },
+
+  "functions": {
+    "f_cm_cd": {
+      "signature": "f_cm_cd(p_up_cd VARCHAR, p_cd VARCHAR) -> VARCHAR",
+      "desc": "USE_YN='Y' AND UP_CD=p_up_cd AND CD=p_cd 인 CD_NM 반환. 매칭 없으면 NULL.",
+      "args": 2,
+      "rules": [
+        "인자 반드시 2개 (3개 금지)",
+        "따옴표는 단일 따옴표만 사용 ('' 금지)"
+      ]
+    }
+  },
+
+  "global_rules": {
+    "se_columns": {
+      "rule": "모든 _SE 접미사 컬럼은 f_cm_cd('컬럼명대문자', 값) AS 컬럼명_nm 로 조회",
+      "examples": [
+        "t.user_se -> f_cm_cd('USER_SE', t.user_se) AS user_se_nm",
+        "t.gndr_se -> f_cm_cd('GNDR_SE', t.gndr_se) AS gndr_se_nm"
+      ],
+      "note": "각 컬럼의 up_cd는 해당 컬럼의 code_group 값을 참고"
+    }
+  },
+
+  "common_tables": [
+    {
+      "table": "int_user",
+      "desc": "사용자 — 전체 컬럼 (부서·직급 FK 포함)",
+      "pk": ["user_id"],
+      "fk": [
+        {"col": "jbgd_cd", "ref": "int_jbgd.jbgd_cd"},
+        {"col": "dept_cd", "ref": "int_dept.dept_cd"}
+      ],
+      "columns": [
+        {"name": "user_id", "type": "VARCHAR", "desc": "사용자 아이디"},
+        {"name": "user_nm", "type": "VARCHAR", "desc": "사용자 이름"},
+        {"name": "jbgd_cd", "type": "VARCHAR", "desc": "직급코드"},
+        {"name": "dept_cd", "type": "VARCHAR", "desc": "부서코드"},
+        {"name": "hire_ymd", "type": "VARCHAR(8)", "desc": "입사일 YYYYMMDD"},
+        {"name": "resg_ymd", "type": "VARCHAR(8)", "desc": "퇴사일 YYYYMMDD, NULL=재직중"},
+        {"name": "user_se", "type": "VARCHAR", "desc": "사용자 구분 코드", "code_group": "USER_SE"}
+      ]
+    },
+    {
+      "table": "int_dept",
+      "desc": "부서 마스터 — 부서명 조회, 조직도 계층 JOIN 시 필수",
+      "pk": ["dept_cd"],
+      "fk": [
+        {"col": "up_dept_cd", "ref": "int_dept.dept_cd", "note": "자기참조 계층"}
+      ],
+      "columns": [
+        {"name": "dept_cd", "type": "VARCHAR", "desc": "부서코드"},
+        {"name": "dept_nm", "type": "VARCHAR", "desc": "부서명"},
+        {"name": "up_dept_cd", "type": "VARCHAR", "desc": "상위부서코드"},
+        {"name": "dept_lvl", "type": "INT", "desc": "레벨 최상위=1"},
+        {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+      ],
+      "examples": ["JOIN int_dept d ON u.dept_cd = d.dept_cd"]
+    },
+    {
+      "table": "int_jbgd",
+      "desc": "직급 마스터 — 직급명 조회 시 필수",
+      "pk": ["jbgd_cd"],
+      "columns": [
+        {"name": "jbgd_cd", "type": "VARCHAR", "desc": "직급코드"},
+        {"name": "jbgd_nm", "type": "VARCHAR", "desc": "직급명"},
+        {"name": "jbgd_sn", "type": "INT", "desc": "정렬순서 낮을수록 상위"},
+        {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+      ],
+      "examples": ["JOIN int_jbgd j ON u.jbgd_cd = j.jbgd_cd"]
+    },
+    {
+      "table": "int_com_code",
+      "desc": "공통코드 마스터",
+      "pk": ["up_cd", "cd"],
+      "columns": [
+        {"name": "up_cd", "type": "VARCHAR", "desc": "코드그룹명=컬럼명과 동일"},
+        {"name": "cd", "type": "VARCHAR", "desc": "코드값"},
+        {"name": "cd_nm", "type": "VARCHAR", "desc": "코드명"},
+        {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}},
+        {"name": "cd_ord", "type": "INT", "desc": "정렬순서"}
+      ],
+      "uses_function": "f_cm_cd"
+    }
+  ],
+
+  "intents": {
+    "leave": {
+      "tables": [
+        {
+          "table": "int_leave_req_mst",
+          "desc": "휴가신청 마스터",
+          "pk": ["req_user_id", "req_sn"],
+          "fk": [
+            {"cols": ["leave_cd", "leave_dtl_cd"], "ref": "int_leave_dtl(leave_cd, leave_dtl_cd)", "kind": "physical", "note": "복합 FK — 두 값이 한 쌍으로 존재해야 함"}
+          ],
+          "join_hints": ["req_user_id ↔ int_user.user_id", "leave_cd ↔ int_leave_mst.leave_cd"],
+          "columns": [
+            {"name": "req_user_id", "type": "VARCHAR", "desc": "신청자ID"},
+            {"name": "req_sn", "type": "BIGINT", "desc": "자동증가"},
+            {"name": "leave_rsn", "type": "VARCHAR", "desc": "사유"},
+            {"name": "aprv_rslt_se", "type": "VARCHAR", "code_group": "APRV_RSLT_SE"},
+            {"name": "leave_cd", "type": "VARCHAR", "desc": "휴가코드"},
+            {"name": "leave_dtl_cd", "type": "VARCHAR", "desc": "휴가 상세 코드"},
+            {"name": "leave_use_dcnt", "type": "NUMERIC", "desc": "사용일수"},
+            {"name": "afile_id", "type": "VARCHAR", "desc": "첨부파일그룹ID NULL 허용"},
+            {"name": "dept_ref_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ],
+          "notes": ["[INSERT 주의] leave_cd·leave_dtl_cd는 int_leave_dtl에 함께 존재하는 쌍만 허용 (참조코드의 leave_cd= 표기 참고)"]
+        },
+        {
+          "table": "int_leave_req_dtl",
+          "desc": "휴가신청 일별 상세",
+          "pk": ["req_user_id", "req_sn", "leave_use_ymd"],
+          "fk": [
+            {"cols": ["req_user_id", "req_sn"], "ref": "int_leave_req_mst"}
+          ],
+          "columns": [
+            {"name": "leave_use_ymd", "type": "VARCHAR(8)", "desc": "사용날짜 YYYYMMDD"},
+            {"name": "leave_st_hhmm", "type": "VARCHAR(4)", "desc": "시작시간 HHMM"},
+            {"name": "leave_end_hhmm", "type": "VARCHAR(4)", "desc": "종료시간 HHMM"}
+          ],
+          "notes": [
+            "위 3개(+감사컬럼)가 전부 — leave_use_dcnt·leave_cd 등은 이 테이블에 없음(마스터 소속)",
+            "날짜 비교: TO_DATE(leave_use_ymd, 'YYYYMMDD')"
+          ]
+        },
+        {
+          "table": "int_leave_req_aprv",
+          "desc": "휴가결재라인",
+          "pk": ["req_user_id", "req_sn", "aprv_user_id"],
+          "fk": [
+            {"cols": ["req_user_id", "req_sn"], "ref": "int_leave_req_mst"}
+          ],
+          "columns": [
+            {"name": "aprv_user_id", "type": "VARCHAR", "desc": "결재자ID"},
+            {"name": "aprv_se", "type": "VARCHAR", "code_group": "APRV_SE"},
+            {"name": "aprv_ymd", "type": "VARCHAR(8)", "desc": "결재일 YYYYMMDD"},
+            {"name": "aprv_ord", "type": "BIGINT", "desc": "결재순서"},
+            {"name": "rmk", "type": "TEXT", "desc": "의견 또는 반려사유"}
+          ]
+        },
+        {
+          "table": "int_leave_mst",
+          "desc": "휴가유형 마스터",
+          "pk": ["leave_cd"],
+          "columns": [
+            {"name": "leave_cd", "type": "VARCHAR", "desc": "휴가코드"},
+            {"name": "leave_nm", "type": "VARCHAR", "desc": "휴가이름"},
+            {"name": "ded_yn", "type": "VARCHAR", "values": {"Y": "연차차감", "N": "미차감"}},
+            {"name": "paid_yn", "type": "VARCHAR", "values": {"Y": "유급", "N": "무급"}}
+          ]
+        },
+        {
+          "table": "int_leave_dtl",
+          "desc": "휴가유형 상세",
+          "pk": ["leave_cd", "leave_dtl_cd"],
+          "fk": [
+            {"col": "leave_cd", "ref": "int_leave_mst.leave_cd"}
+          ],
+          "columns": [
+            {"name": "leave_dtl_cd", "type": "VARCHAR", "desc": "휴가 상세 코드"},
+            {"name": "leave_dtl_nm", "type": "VARCHAR", "desc": "휴가 상세명"},
+            {"name": "leave_se", "type": "VARCHAR", "code_group": "LEAVE_SE", "values": {"F": "종일", "H": "부분"}},
+            {"name": "use_avl_dcnt", "type": "NUMERIC", "desc": "사용가능일수 NULL이면 무제한"},
+            {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_leave_pol",
+          "desc": "연차정책",
+          "pk": ["leave_pol_cd"],
+          "columns": [
+            {"name": "pol_st_mon", "type": "INT", "desc": "적용시작근속월"},
+            {"name": "pol_end_mon", "type": "INT", "desc": "적용종료근속월"},
+            {"name": "leave_dcnt", "type": "NUMERIC", "desc": "기본연차일수"},
+            {"name": "add_dcnt", "type": "NUMERIC", "desc": "추가일수"},
+            {"name": "add_cyc_mon", "type": "INT", "desc": "추가주기월"},
+            {"name": "max_dcnt", "type": "NUMERIC", "desc": "최대일수"}
+          ],
+          "functions": [
+            {"signature": "f_leave_calc(p_user_id VARCHAR) -> NUMERIC", "desc": "입사일 기반 부여 연차일수 반환"}
+          ],
+          "examples": [
+            "-- 잔여연차 계산\nSELECT f_leave_calc('user01')\n       - COALESCE((SELECT SUM(leave_use_dcnt) FROM int_leave_req_mst\n                   WHERE req_user_id='user01' AND leave_cd='LEAVE_00001'\n                     AND aprv_rslt_se IN ('1','2','3')), 0) AS remain_dcnt"
+          ]
+        },
+        {
+          "table": "int_leave_req_ref",
+          "desc": "휴가신청 참조자",
+          "pk": ["req_user_id", "req_sn", "ref_user_id"],
+          "fk": [
+            {"cols": ["req_user_id", "req_sn"], "ref": "int_leave_req_mst"}
+          ],
+          "columns": [
+            {"name": "ref_user_id", "type": "VARCHAR", "desc": "참조자ID"},
+            {"name": "qry_yn", "type": "VARCHAR", "values": {"Y": "조회함", "N": "미조회"}}
+          ]
+        }
+      ],
+      "insert_rules": {
+        "target_tables": ["int_leave_req_mst", "int_leave_req_dtl"],
+        "summary": "휴가신청 SQL은 마스터(int_leave_req_mst) + 일별상세(int_leave_req_dtl) 2개 테이블만 생성. 컬럼을 테이블 간 섞지 말 것",
+        "forbidden": "int_leave_req_aprv(결재라인)·int_leave_req_ref(참조자) INSERT는 절대 생성하지 말 것 — 사용자 결재선 확정 후 시스템이 자동 삽입함",
+        "rows": [
+          {
+            "table": "int_leave_req_mst",
+            "count": "1행",
+            "columns": "req_user_id, req_sn, leave_cd, leave_dtl_cd, leave_rsn, aprv_rslt_se, leave_use_dcnt (+감사컬럼)",
+            "rules": [
+              "leave_cd·leave_dtl_cd: [참조 코드]에서 같은 쌍 선택 (예: 연차 종일 → LEAVE_00001 + LEAVE_00011 / 연차 반차 → LEAVE_00001 + LEAVE_00021)",
+              "leave_rsn: 미입력 시 '개인 사정으로 휴가 신청합니다'",
+              "aprv_rslt_se: 신규 신청은 '1'(신청)",
+              "leave_use_dcnt(※마스터 전용 컬럼): 종일=1.0, 반차=0.5, 시간단위=(종료-시작)시간/8"
+            ]
+          },
+          {
+            "table": "int_leave_req_dtl",
+            "count": "신청일 수만큼 N행",
+            "columns": "leave_use_ymd, leave_st_hhmm, leave_end_hhmm 이 전부 (+감사컬럼)",
+            "rules": [
+              "leave_use_dcnt·leave_cd 등 다른 컬럼은 이 테이블에 존재하지 않으니 절대 넣지 말 것",
+              "신청 기간의 날짜별로 1행씩, 단일 날짜면 1행. 시간은 반차 등 시간단위에만 입력하고 종일이면 NULL"
+            ]
+          }
+        ],
+        "shared": ["req_sn: 컨텍스트의 [요청 시퀀스] 값을 마스터·상세에 동일하게 사용(서브쿼리 금지)"]
+      }
+    },
+
+    "aprv": {
+      "tables": [
+        {
+          "table": "int_aprv_form_mst",
+          "desc": "결재 양식 마스터",
+          "pk": ["aprv_form_id"],
+          "columns": [
+            {"name": "aprv_form_nm", "type": "VARCHAR", "desc": "양식명"},
+            {"name": "file_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}, "desc": "파일첨부가능"},
+            {"name": "rmk", "type": "TEXT", "desc": "비고"},
+            {"name": "del_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_aprv_form_dtl",
+          "desc": "결재 양식 항목 (EAV 패턴) — 양식별 입력 항목 정의. reqd_yn='Y' 항목이 사용자 필수 입력값",
+          "pk": ["aprv_form_id", "aprv_ref_cd"],
+          "fk": [
+            {"col": "aprv_form_id", "ref": "int_aprv_form_mst"}
+          ],
+          "columns": [
+            {"name": "aprv_ref_nm", "type": "VARCHAR", "desc": "항목명"},
+            {"name": "aprv_ref_se", "type": "VARCHAR", "desc": "항목구분/타입"},
+            {"name": "reqd_yn", "type": "VARCHAR", "values": {"Y": "필수", "N": "선택"}},
+            {"name": "del_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_aprv_req",
+          "desc": "결재 요청",
+          "pk": ["aprv_form_id", "req_user_id", "aprv_req_sn"],
+          "fk": [
+            {"col": "aprv_form_id", "ref": "int_aprv_form_mst"}
+          ],
+          "columns": [
+            {"name": "aprv_req_desc", "type": "JSONB", "desc": "양식 항목값 {aprv_ref_cd: 입력값}"},
+            {"name": "aprv_rslt_se", "type": "VARCHAR", "code_group": "APRV_RSLT_SE", "desc": "결재결과"},
+            {"name": "req_sum", "type": "TEXT", "desc": "요약/제목"},
+            {"name": "req_ymd", "type": "VARCHAR(8)", "desc": "요청일 YYYYMMDD"},
+            {"name": "afile_id", "type": "VARCHAR", "desc": "첨부파일그룹ID NULL허용"},
+            {"name": "dept_ref_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}},
+            {"name": "del_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ],
+          "examples": ["[JSONB 예시] aprv_req_desc = '{\"ref001\": \"출장 목적\", \"ref002\": \"20250610\"}'::jsonb"]
+        },
+        {
+          "table": "int_aprv_req_aprv",
+          "desc": "결재자 (시스템 자동 삽입)",
+          "pk": ["aprv_form_id", "req_user_id", "aprv_req_sn", "aprv_user_id"],
+          "fk": [
+            {"cols": ["aprv_form_id", "req_user_id", "aprv_req_sn"], "ref": "int_aprv_req"}
+          ],
+          "columns": [
+            {"name": "aprv_ord", "type": "BIGINT", "desc": "결재순서"},
+            {"name": "aprv_se", "type": "VARCHAR", "code_group": "APRV_SE", "desc": "NULL=미처리"},
+            {"name": "aprv_ymd", "type": "VARCHAR(8)", "desc": "결재일 YYYYMMDD"},
+            {"name": "rmk", "type": "TEXT", "desc": "의견/반려사유"}
+          ]
+        },
+        {
+          "table": "int_aprv_req_ref",
+          "desc": "참조자 (시스템 자동 삽입)",
+          "pk": ["aprv_form_id", "req_user_id", "aprv_req_sn", "ref_user_id"],
+          "fk": [
+            {"cols": ["aprv_form_id", "req_user_id", "aprv_req_sn"], "ref": "int_aprv_req"}
+          ],
+          "columns": [
+            {"name": "qry_yn", "type": "VARCHAR", "values": {"Y": "조회함", "N": "미조회"}}
+          ]
+        }
+      ],
+      "insert_rules": {
+        "target_tables": ["int_aprv_req"],
+        "summary": "결재신청 SQL은 int_aprv_req 1개 테이블만 생성",
+        "forbidden": "int_aprv_req_aprv(결재라인)·int_aprv_req_ref(참조자) INSERT는 절대 생성하지 말 것 — 사용자 결재선 확정 후 시스템이 자동 삽입함",
+        "rows": [
+          {
+            "table": "int_aprv_req",
+            "count": "1행",
+            "columns": "aprv_form_id, req_user_id, aprv_req_sn, aprv_req_desc, aprv_rslt_se, req_sum, req_ymd (+감사컬럼)",
+            "rules": [
+              "aprv_req_desc: JSONB 캐스트 필수 — '{\"aprv_ref_cd\": \"입력값\", ...}'::jsonb",
+              "aprv_rslt_se: 신규 신청은 '1'(신청)",
+              "req_sum: 결재신청 내용을 한 줄 요약 — 양식명 + 핵심 항목값 조합 (예: '품의서 - OO 사유 신청', '출장신청서 - 2025-06-10 서울 출장')",
+              "req_ymd: 오늘 날짜 YYYYMMDD"
+            ]
+          }
+        ],
+        "shared": ["aprv_req_sn: 컨텍스트의 [요청 시퀀스] 값을 직접 사용(서브쿼리 금지)"]
+      }
+    },
+
+    "brd": {
+      "tables": [
+        {
+          "table": "int_brd",
+          "desc": "게시판 마스터",
+          "pk": ["brd_id"],
+          "columns": [
+            {"name": "brd_id", "type": "VARCHAR", "desc": "게시판 아이디"},
+            {"name": "brd_se", "type": "VARCHAR", "code_group": "BRD_SE"},
+            {"name": "brd_nm", "type": "VARCHAR", "desc": "게시판명"},
+            {"name": "file_use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}, "desc": "첨부파일사용"},
+            {"name": "cmt_use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}, "desc": "댓글사용"},
+            {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_pst",
+          "desc": "게시글",
+          "pk": ["brd_id", "pst_sn"],
+          "fk": [
+            {"col": "brd_id", "ref": "int_brd.brd_id"},
+            {"col": "user_id", "ref": "int_user.user_id"},
+            {"col": "afile_id", "ref": "int_com_file_grp.afile_id"}
+          ],
+          "columns": [
+            {"name": "brd_id", "type": "VARCHAR", "desc": "게시판 아이디"},
+            {"name": "pst_sn", "type": "BIGINT", "desc": "자동증가"},
+            {"name": "pst_ttl", "type": "VARCHAR", "desc": "제목"},
+            {"name": "pst_desc", "type": "TEXT", "desc": "본문"},
+            {"name": "user_id", "type": "VARCHAR", "desc": "작성자"},
+            {"name": "ntc_yn", "type": "VARCHAR", "values": {"Y": "공지글", "N": "일반글"}},
+            {"name": "del_yn", "type": "VARCHAR", "values": {"Y": "삭제", "N": "정상"}, "note": "조회 시 del_yn='N' 조건 필수"},
+            {"name": "qry_cnt", "type": "INT", "desc": "조회수"},
+            {"name": "like_num", "type": "INT", "desc": "좋아요수"},
+            {"name": "pub_st_ymd", "type": "VARCHAR(8)", "desc": "게시시작일 YYYYMMDD"},
+            {"name": "pub_end_ymd", "type": "VARCHAR(8)", "desc": "게시종료일 YYYYMMDD"},
+            {"name": "afile_id", "type": "VARCHAR", "desc": "첨부파일그룹ID"},
+            {"name": "crt_at", "type": "TIMESTAMP"}
+          ],
+          "notes": ["날짜 비교: TO_DATE(pub_st_ymd, 'YYYYMMDD')"]
+        },
+        {
+          "table": "int_pst_cmt",
+          "desc": "게시글 댓글",
+          "pk": ["pst_sn", "brd_id", "cmt_sn"],
+          "fk": [
+            {"cols": ["brd_id", "pst_sn"], "ref": "int_pst", "kind": "physical"}
+          ],
+          "join_hints": ["user_id ↔ int_user.user_id"],
+          "columns": [
+            {"name": "cmt_sn", "type": "INT", "desc": "댓글번호"},
+            {"name": "cmt_lvl", "type": "INT", "values": {"1": "댓글", "2": "대댓글"}},
+            {"name": "up_cmt_sn", "type": "INT", "desc": "부모댓글번호 대댓글일 때"},
+            {"name": "cmt_desc", "type": "TEXT", "desc": "내용"},
+            {"name": "user_id", "type": "VARCHAR", "desc": "작성자"},
+            {"name": "del_yn", "type": "VARCHAR", "values": {"Y": "삭제", "N": "정상"}, "note": "조회 시 del_yn='N' 조건 필수"},
+            {"name": "like_cnt", "type": "INT", "desc": "좋아요수"}
+          ]
+        },
+        {
+          "table": "int_com_file_grp",
+          "desc": "파일 그룹 — 첨부파일 묶음 식별자. int_pst.afile_id → int_com_file_grp.afile_id",
+          "pk": ["afile_id"]
+        },
+        {
+          "table": "int_com_file",
+          "desc": "파일 목록",
+          "pk": ["afile_id", "afile_sn"],
+          "fk": [
+            {"col": "afile_id", "ref": "int_com_file_grp.afile_id"}
+          ],
+          "columns": [
+            {"name": "afile_sn", "type": "BIGINT", "desc": "파일순번"},
+            {"name": "ori_file_nm", "type": "VARCHAR", "desc": "원본파일명"},
+            {"name": "file_nm", "type": "VARCHAR", "desc": "저장파일명"},
+            {"name": "file_ext", "type": "VARCHAR", "desc": "확장자"},
+            {"name": "file_sz", "type": "NUMERIC", "desc": "파일크기bytes"},
+            {"name": "rep_file_yn", "type": "VARCHAR", "values": {"Y": "대표파일", "N": "일반"}},
+            {"name": "del_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_com_file_emb",
+          "desc": "파일 임베딩 (RAG 벡터 검색)",
+          "lookup_exclude": true,
+          "pk": ["afile_id", "afile_sn", "emb_id"],
+          "fk": [
+            {"cols": ["afile_id", "afile_sn"], "ref": "int_com_file"}
+          ],
+          "columns": [
+            {"name": "emb_id", "type": "VARCHAR", "desc": "청크ID"},
+            {"name": "emb_rslt", "type": "vector(1024)", "desc": "bge-m3 임베딩"},
+            {"name": "emb_ttl", "type": "VARCHAR", "desc": "청크 제목/요약"},
+            {"name": "ori_desc", "type": "TEXT", "desc": "원본 텍스트 청크"},
+            {"name": "tag_rslt", "type": "JSONB", "desc": "태그"}
+          ],
+          "examples": [
+            "-- 벡터 검색 (파라미터로 임베딩 벡터 $1 전달)\nSELECT emb_ttl, ori_desc, 1-(emb_rslt <=> $1::vector) AS similarity\nFROM int_com_file_emb\nWHERE 1-(emb_rslt <=> $1::vector) >= 0.7\nORDER BY similarity DESC LIMIT 5"
+          ]
+        }
+      ],
+      "insert_rules": {
+        "summary": "게시글/댓글 INSERT 규칙",
+        "rules": [
+          "pst_sn: (SELECT COALESCE(MAX(pst_sn),0)+1 FROM int_pst WHERE brd_id='대상게시판ID') 서브쿼리로 설정",
+          "cmt_sn: (SELECT COALESCE(MAX(cmt_sn),0)+1 FROM int_pst_cmt WHERE brd_id='대상게시판ID' AND pst_sn=대상게시글번호) 서브쿼리로 설정"
+        ]
+      }
+    },
+
+    "schd": {
+      "tables": [
+        {
+          "table": "int_schd",
+          "desc": "일정 마스터",
+          "pk": ["schd_sn"],
+          "fk": [
+            {"col": "user_id", "ref": "int_user", "note": "작성자"},
+            {"col": "dept_cd", "ref": "int_dept", "note": "NULL=전사 공통"}
+          ],
+          "columns": [
+            {"name": "schd_sn", "type": "BIGINT", "desc": "자동증가"},
+            {"name": "user_id", "type": "VARCHAR", "desc": "작성자"},
+            {"name": "dept_cd", "type": "VARCHAR", "desc": "NULL=전사 공통"},
+            {"name": "schd_nm", "type": "VARCHAR", "desc": "일정명"},
+            {"name": "rmk", "type": "TEXT", "desc": "상세내용"},
+            {"name": "schd_st_ymd", "type": "VARCHAR(8)", "desc": "시작일 YYYYMMDD"},
+            {"name": "schd_st_hr", "type": "VARCHAR(4)", "desc": "시작시간 HHMM, NULL=종일"},
+            {"name": "schd_end_ymd", "type": "VARCHAR(8)", "desc": "종료일 YYYYMMDD"},
+            {"name": "schd_end_hr", "type": "VARCHAR(4)", "desc": "종료시간 HHMM, NULL=종일"},
+            {"name": "loop_yn", "type": "VARCHAR", "values": {"Y": "반복", "N": "단일"}},
+            {"name": "loop_se", "type": "VARCHAR", "code_group": "LOOP_SE", "values": {"DAY": "매일", "WEEK": "매주", "MONTH": "매월", "YEAR": "매년"}, "note": "loop_yn='Y'일 때만 유효"}
+          ],
+          "notes": ["[반복 일정] schd_end_ymd는 각 발생 건의 기간(길이)이며 반복 종료일이 아님. 반복 종료는 int_schd_excp.end_yn='Y'로 제어"]
+        },
+        {
+          "table": "int_schd_excp",
+          "desc": "반복 일정 예외",
+          "pk": ["schd_sn", "excp_ymd"],
+          "fk": [
+            {"col": "schd_sn", "ref": "int_schd"}
+          ],
+          "columns": [
+            {"name": "end_yn", "type": "VARCHAR", "values": {"N": "해당일만 건너뜀", "Y": "해당일 이후 반복 전체 종료"}}
+          ]
+        },
+        {
+          "table": "int_schd_attd",
+          "desc": "일정 참석자",
+          "pk": ["schd_sn", "attd_user_id"],
+          "fk": [
+            {"col": "schd_sn", "ref": "int_schd"},
+            {"col": "attd_user_id", "ref": "int_user"}
+          ],
+          "columns": [
+            {"name": "user_attd_yn", "type": "VARCHAR", "values": {"Y": "참석", "N": "불참"}, "note": "default='N'"},
+            {"name": "user_qry_yn", "type": "VARCHAR", "values": {"Y": "확인", "N": "미확인"}, "note": "default='N'"}
+          ]
+        }
+      ],
+      "functions": [
+        {
+          "signature": "F_LOOP_SCHD_CALC(p_schd_sn BIGINT, p_from_ymd VARCHAR(8), p_to_ymd VARCHAR(8))",
+          "returns": "TABLE(occur_st_ymd VARCHAR(8), occur_end_ymd VARCHAR(8))",
+          "desc": "반복 일정 1건의 실제 발생일을 조회 범위 내에서 전개. int_schd_excp 예외 자동 반영"
+        },
+        {
+          "signature": "F_SCHD_QRY(p_user_id VARCHAR, p_dept_cd VARCHAR, p_from_ymd VARCHAR(8), p_to_ymd VARCHAR(8))",
+          "returns": "TABLE(schd_sn, schd_nm, occur_st_ymd, occur_end_ymd, schd_st_hr, schd_end_hr, loop_yn, loop_se, writer_id, dept_cd, rmk, user_attd_yn)",
+          "desc": "단일+반복 일정 통합 조회. 참석자 등록 일정 + 전사 공통(dept_cd IS NULL) + 소속 부서 일정 포함. 일정 조회 시 우선 사용할 것",
+          "example": "SELECT * FROM F_SCHD_QRY('{user_id}', '{dept_cd}', '20250601', '20250630')"
+        }
+      ],
+      "insert_rules": {
+        "summary": "일정 INSERT 규칙",
+        "rules": [
+          "날짜: '내일', '다음주 월요일' 등 단일 날짜 표현이면 schd_st_ymd = schd_end_ymd (같은 날)",
+          "schd_sn: (SELECT COALESCE(MAX(schd_sn),0)+1 FROM int_schd) 서브쿼리로 설정"
+        ]
+      }
+    },
+
+    "veh": {
+      "tables": [
+        {
+          "table": "int_veh",
+          "desc": "차량 마스터",
+          "pk": ["veh_id"],
+          "columns": [
+            {"name": "veh_id", "type": "VARCHAR", "desc": "차량 아이디"},
+            {"name": "veh_nm", "type": "VARCHAR", "desc": "차량명"},
+            {"name": "veh_no", "type": "VARCHAR", "desc": "차량번호"},
+            {"name": "veh_se", "type": "VARCHAR", "code_group": "VEH_SE"},
+            {"name": "dept_cd", "type": "VARCHAR", "desc": "차량 사용 부서코드"},
+            {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_veh_rsv",
+          "desc": "차량예약",
+          "pk": ["veh_id", "rsv_sn"],
+          "fk": [
+            {"col": "veh_id", "ref": "int_veh.veh_id"},
+            {"col": "user_id", "ref": "int_user.user_id"}
+          ],
+          "columns": [
+            {"name": "rsv_sn", "type": "BIGINT", "desc": "자동증가"},
+            {"name": "user_id", "type": "VARCHAR", "desc": "예약자"},
+            {"name": "rsv_st_ymd", "type": "VARCHAR(8)", "desc": "예약시작일 YYYYMMDD"},
+            {"name": "rsv_st_hhmm", "type": "VARCHAR(4)", "desc": "시작시간 HHMM"},
+            {"name": "rsv_end_ymd", "type": "VARCHAR(8)", "desc": "예약종료일 YYYYMMDD"},
+            {"name": "rsv_end_hhmm", "type": "VARCHAR(4)", "desc": "종료시간 HHMM"},
+            {"name": "ext_yn", "type": "VARCHAR", "values": {"Y": "연장", "N": "미연장"}},
+            {"name": "ext_ymd", "type": "VARCHAR(8)", "desc": "연장일 YYYYMMDD"},
+            {"name": "ext_hhmm", "type": "VARCHAR(4)", "desc": "연장시간 HHMM"},
+            {"name": "rtn_yn", "type": "VARCHAR", "values": {"Y": "반납완료", "N": "미반납"}},
+            {"name": "rtn_ymd", "type": "VARCHAR(8)", "desc": "반납일 YYYYMMDD"},
+            {"name": "rtn_hhmm", "type": "VARCHAR(4)", "desc": "반납시간 HHMM"},
+            {"name": "rtn_plc", "type": "TEXT", "desc": "반납장소"},
+            {"name": "rmk", "type": "TEXT", "desc": "비고"}
+          ],
+          "notes": [
+            "날짜 비교: TO_DATE(rsv_st_ymd, 'YYYYMMDD')",
+            "DML: 본인 예약만 허용 (user_id 조건 필수)"
+          ]
+        }
+      ],
+      "insert_rules": {
+        "summary": "차량예약 INSERT 규칙",
+        "rules": [
+          "rsv_sn: (SELECT COALESCE(MAX(rsv_sn),0)+1 FROM int_veh_rsv WHERE veh_id='선택차량ID') 서브쿼리로 설정"
+        ]
+      }
+    },
+
+    "mtgr": {
+      "tables": [
+        {
+          "table": "int_mtgr",
+          "desc": "회의실 마스터",
+          "pk": ["mtgr_id"],
+          "columns": [
+            {"name": "mtgr_id", "type": "VARCHAR", "desc": "회의실 아이디"},
+            {"name": "mtgr_nm", "type": "VARCHAR", "desc": "회의실명"},
+            {"name": "mtgr_plc", "type": "VARCHAR", "desc": "위치"},
+            {"name": "mtgr_se", "type": "VARCHAR", "code_group": "MTGR_SE"},
+            {"name": "dept_cd", "type": "VARCHAR", "desc": "회의실 사용 부서코드"},
+            {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}}
+          ]
+        },
+        {
+          "table": "int_mtgr_rsv",
+          "desc": "회의실예약",
+          "pk": ["mtgr_id", "rsv_sn"],
+          "fk": [
+            {"col": "mtgr_id", "ref": "int_mtgr.mtgr_id"},
+            {"col": "user_id", "ref": "int_user.user_id"}
+          ],
+          "columns": [
+            {"name": "rsv_sn", "type": "BIGINT", "desc": "자동증가"},
+            {"name": "user_id", "type": "VARCHAR", "desc": "예약자"},
+            {"name": "rsv_st_ymd", "type": "VARCHAR(8)", "desc": "예약시작일 YYYYMMDD"},
+            {"name": "rsv_st_hhmm", "type": "VARCHAR(4)", "desc": "시작시간 HHMM"},
+            {"name": "rsv_end_ymd", "type": "VARCHAR(8)", "desc": "예약종료일 YYYYMMDD"},
+            {"name": "rsv_end_hhmm", "type": "VARCHAR(4)", "desc": "종료시간 HHMM"},
+            {"name": "ext_yn", "type": "VARCHAR", "values": {"Y": "연장", "N": "미연장"}},
+            {"name": "ext_ymd", "type": "VARCHAR(8)", "desc": "연장일 YYYYMMDD"},
+            {"name": "ext_hhmm", "type": "VARCHAR(4)", "desc": "연장시간 HHMM"},
+            {"name": "rmk", "type": "TEXT", "desc": "비고"}
+          ],
+          "notes": [
+            "날짜 비교: TO_DATE(rsv_st_ymd, 'YYYYMMDD')",
+            "중복 예약 확인: rsv_st_ymd/hhmm ~ rsv_end_ymd/hhmm 범위 겹침 여부 체크 필수",
+            "DML: 본인 예약만 허용 (user_id 조건 필수)"
+          ]
+        }
+      ],
+      "insert_rules": {
+        "summary": "회의실예약 INSERT 규칙",
+        "rules": [
+          "rsv_sn: (SELECT COALESCE(MAX(rsv_sn),0)+1 FROM int_mtgr_rsv WHERE mtgr_id='선택회의실ID') 서브쿼리로 설정"
+        ]
+      }
+    },
+
+    "rpt": {
+      "tables": [
+        {
+          "table": "int_rpt_form",
+          "desc": "보고 양식 마스터",
+          "pk": ["rpt_form_id"],
+          "fk": [
+            {"col": "dept_cd", "ref": "int_dept.dept_cd"},
+            {"col": "rpt_adm_id", "ref": "int_user.user_id"}
+          ],
+          "columns": [
+            {"name": "rpt_form_id", "type": "VARCHAR", "desc": "양식 ID 예:RPT_001"},
+            {"name": "rpt_ttl", "type": "VARCHAR", "desc": "양식 제목 예:주간보고"},
+            {"name": "rpt_desc", "type": "TEXT", "desc": "양식 설명"},
+            {"name": "rpt_dt_se", "type": "VARCHAR", "values": {"DAILY": "일간", "WEEKLY": "주간", "MONTHLY": "월간"}, "desc": "보고주기"},
+            {"name": "rpt_adm_id", "type": "VARCHAR", "desc": "양식 관리자 user_id — 회차 등록/수정/삭제 권한 보유"},
+            {"name": "st_ymd", "type": "VARCHAR(8)", "desc": "양식 시작일 YYYYMMDD"},
+            {"name": "dept_cd", "type": "VARCHAR", "desc": "부서코드"},
+            {"name": "open_yn", "type": "VARCHAR", "values": {"Y": "공개", "N": "비공개"}},
+            {"name": "use_yn", "type": "VARCHAR", "values": {"Y": "", "N": ""}},
+            {"name": "rmk", "type": "TEXT", "desc": "비고"}
+          ]
+        },
+        {
+          "table": "int_rpt_round",
+          "desc": "보고 회차",
+          "pk": ["rpt_form_id", "round_sn"],
+          "fk": [
+            {"col": "rpt_form_id", "ref": "int_rpt_form.rpt_form_id"}
+          ],
+          "join_hints": ["rpt_form_id ↔ int_rpt_form.rpt_form_id"],
+          "columns": [
+            {"name": "round_sn", "type": "BIGINT", "desc": "자동증가"},
+            {"name": "round_nm", "type": "TEXT", "desc": "회차명 예:1회차·2회차"},
+            {"name": "round_ymd", "type": "VARCHAR(8)", "desc": "회차 기준 날짜 YYYYMMDD"},
+            {"name": "rpt_sum", "type": "TEXT", "desc": "회차 전체 요약 — 관리자 작성"}
+          ],
+          "permissions": ["INSERT/UPDATE/DELETE: 해당 양식의 rpt_adm_id = 요청 user_id 인 경우만 허용"]
+        },
+        {
+          "table": "int_rpt_desc",
+          "desc": "업무보고 내용",
+          "pk": ["rpt_form_id", "round_sn", "user_id"],
+          "fk": [
+            {"cols": ["rpt_form_id", "round_sn"], "ref": "int_rpt_round"}
+          ],
+          "columns": [
+            {"name": "user_id", "type": "VARCHAR", "desc": "작성자 FK→int_user"},
+            {"name": "exec_desc", "type": "TEXT", "desc": "수행 업무 내용 — 이번 기간 한 일"},
+            {"name": "plan_desc", "type": "TEXT", "desc": "계획 업무 내용 — 다음 기간 할 일"},
+            {"name": "sbmt_yn", "type": "VARCHAR", "values": {"Y": "제출완료", "N": "미제출"}, "note": "제출완료 건 수정/삭제 금지"},
+            {"name": "sbmt_ymd", "type": "VARCHAR(8)", "desc": "제출 일자 YYYYMMDD"}
+          ],
+          "permissions": [
+            "UPDATE/DELETE: WHERE user_id=요청user_id AND sbmt_yn='N' 조건 필수. 타인 보고 수정/삭제 금지 / 제출완료(sbmt_yn='Y') 건 변경 금지",
+            "SELECT: user_id 조건 없이 전체 조회 가능 (open_yn='Y' 양식 기준)"
+          ]
+        }
+      ],
+      "insert_rules": {
+        "summary": "[DML 규칙] 업무보고(int_rpt_desc) 작성·수정",
+        "react_hint": "작성·수정 요청 시 반드시 아래 전체 조회:\nSELECT exec_desc, plan_desc, sbmt_yn FROM int_rpt_desc\nWHERE rpt_form_id=확정값 AND round_sn=확정값 AND user_id=요청user_id",
+        "rules": [
+          "조회 결과 있음 → UPDATE (기존 레코드 덮어쓰기):\nUPDATE int_rpt_desc\nSET exec_desc=NULL, plan_desc=NULL, sbmt_yn='N'\nWHERE rpt_form_id=? AND round_sn=? AND user_id=요청user_id AND sbmt_yn='N'",
+          "조회 결과 없음 → INSERT (신규 작성):\nINSERT INTO int_rpt_desc (rpt_form_id, round_sn, user_id, exec_desc, plan_desc, sbmt_yn)\nVALUES (?, ?, 요청user_id, NULL, NULL, 'N')",
+          "exec_desc·plan_desc·sbmt_yn → NULL/'N'으로 두면 폼 패널 입력값이 자동 주입됨",
+          "round_sn: [참조 코드] 확정값 사용. 없으면 (SELECT COALESCE(MAX(round_sn),0)+1 FROM int_rpt_round WHERE rpt_form_id=?)",
+          "회차(int_rpt_round) INSERT: 관리자만. 컬럼 rpt_form_id·round_sn·round_nm·round_ymd"
+        ]
+      }
+    },
+
+    "general": {
+      "tables": [],
+      "note": "일반 대화 — 보통 DB 조회 불필요"
+    }
+  }
+}

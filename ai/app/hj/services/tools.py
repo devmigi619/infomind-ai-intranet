@@ -570,6 +570,29 @@ async def execute_select_tool(sql: str) -> str:
 
 
 @tool
+async def execute_cypher_tool(cypher: str) -> str:
+    """
+    Neo4j 그래프 DB에 읽기 전용 Cypher를 실행하고 결과를 JSON 문자열로 반환합니다.
+
+    사람·예약·휴가결재처럼 **관계를 따라가는 질문**(멀티홉)이나
+    "누가 누구를 결재했는지", "특정 사용자가 예약한 차량" 같은 연결 질의,
+    "시설/휴가 도메인 전체"처럼 상위 개념(온톨로지 추론) 질의에 사용하세요.
+    단순 단일 테이블 조회는 SQL 도구가 더 적합합니다.
+
+    MATCH/RETURN/WITH/OPTIONAL MATCH 등 읽기 구문만 허용됩니다.
+    (CREATE/MERGE/DELETE/SET 등 쓰기 구문은 차단됩니다)
+    """
+    from app.hj.services.neo4j_client import run_read
+    try:
+        rows = await run_read(cypher)
+    except PermissionError as e:
+        return f"오류: {e}"
+    except Exception as e:  # Cypher 문법 오류 등 — LLM이 재시도할 수 있게 메시지 반환
+        return f"오류: Cypher 실행 실패 - {e}"
+    return json.dumps(rows, ensure_ascii=False, default=str)
+
+
+@tool
 async def execute_sql(sql: str, user_id: str) -> list[dict] | int:
     """
     SQL을 ParadeDB에 실행합니다.

@@ -60,7 +60,7 @@ SQL_GENERATION_PROMPT = """
   예) leave_cd → JOIN int_leave_mst lm ON m.leave_cd=lm.leave_cd → lm.leave_nm 선택
 - _SE 접미사 컬럼: f_cm_cd('컬럼명대문자', 값) 2인자 호출로 코드명 조회 — 인자 3개 사용 금지
   예) aprv_rslt_se → f_cm_cd('APRV_RSLT_SE', m.aprv_rslt_se) AS aprv_rslt_nm
-  각 컬럼의 up_cd는 스키마의 → f_cm_cd('UP_CD') 표기를 참고할 것
+  각 컬럼의 up_cd는 스키마의 "code_group" 필드를 참고할 것
 
 [코드 변환 규칙 — INSERT/WHERE 필수]
 - 사용자가 자연어로 말한 항목(휴가유형·회의실·차량·게시판·반복주기·결재상태 등)은
