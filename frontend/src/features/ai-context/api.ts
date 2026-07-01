@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://192.168.0.178:8000';
+const AI_URL = process.env.EXPO_PUBLIC_AI_URL ?? 'http://localhost:8000';
 
 /**
  * 자비스패널 세션 드래프트 정리 (FastAPI).
