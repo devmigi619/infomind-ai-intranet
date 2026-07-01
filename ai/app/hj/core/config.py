@@ -37,6 +37,13 @@ class Settings(BaseSettings):
     database_url: str = "http://192.168.0.248:5434"
     ai_context_enabled: bool = True
 
+    # ── Fuseki (SPARQL 추론 Graph RAG) ──────────────────────────────────────────
+    # 추론 데이터셋(/intranet-r, OWLMicro 리즈너) 베이스 URL. 운영 시 .env.local override.
+    fuseki_url: str = ""
+    fuseki_user: str = ""
+    fuseki_password: str = ""
+    fuseki_rag_enabled: bool = True
+
     class Config:
         env_file = ".env.local"
         extra = "ignore"

@@ -570,6 +570,28 @@ async def execute_select_tool(sql: str) -> str:
 
 
 @tool
+async def execute_sparql_tool(sparql: str) -> str:
+    """
+    Fuseki 추론 데이터셋(SPARQL)에 읽기 전용 질의를 실행하고 결과를 JSON으로 반환합니다.
+
+    사람·예약·휴가결재의 **관계 탐색**(누가 예약/신청/결재했는지), 그리고
+    "시설/휴가 도메인 전체"처럼 **상위 개념 추론**(리즈너가 하위 인스턴스 자동 포함)
+    질의에 사용하세요. 온톨로지 기반 추론이 필요할 때 적합합니다.
+
+    SELECT / ASK 읽기 구문만 허용됩니다.
+    (INSERT/DELETE/DROP 등 SPARQL Update 는 차단됩니다)
+    """
+    from app.hj.services.fuseki_client import run_select
+    try:
+        rows = await run_select(sparql)
+    except PermissionError as e:
+        return f"오류: {e}"
+    except Exception as e:  # SPARQL 문법 오류 등 — LLM이 재시도할 수 있게 메시지 반환
+        return f"오류: SPARQL 실행 실패 - {e}"
+    return json.dumps(rows, ensure_ascii=False, default=str)
+
+
+@tool
 async def execute_sql(sql: str, user_id: str) -> list[dict] | int:
     """
     SQL을 ParadeDB에 실행합니다.
